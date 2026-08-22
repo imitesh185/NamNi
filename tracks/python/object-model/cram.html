@@ -6,18 +6,14 @@
 <title>Object Model 1.1–1.3 · CRAM</title>
 <link rel="stylesheet" href="../../../assets/base.css" />
 <link rel="stylesheet" href="../../../assets/cram.css" />
-<script src="../../../assets/nav.js" defer></script>
 </head>
 <body>
 
 <header>
   <div class="hwrap">
     <div class="brand">Object Model 1.1–1.3 <span>·</span> CRAM</div>
-    <button class="btn" id="blind">Blind mode</button>
-    <button class="btn" id="revealAll">Reveal all</button>
-    <button class="btn" id="hideAll">Hide all</button>
-    <button class="btn" id="shuffle">Shuffle</button>
-    <button class="btn" id="onlyBad">Wrong only</button>
+    <button class="btn" id="onlyBad">Shaky only</button>
+    <button class="btn" id="clearFlags">Clear flags</button>
     <button class="btn" onclick="window.print()">Print</button>
     <span class="spacer" id="stat"></span>
   </div>
@@ -25,245 +21,623 @@
 
 <main>
 
-<!-- ================= 1. CHANT ================= -->
+<!-- ================= CHANT ================= -->
 <section>
-  <h2>1 · The chant</h2>
-  <p class="cap">Five lines. Say them until they are reflex. Every other page is a consequence.</p>
+  <h2>The chant</h2>
+  <p class="cap">Five lines. Everything below is a consequence of them.</p>
   <ol class="chant">
-    <li><div>A name is a key, not a box.<span class="g">Binding inserts a key. It never copies the object.</span></div></li>
-    <li><div>A container holds references, not objects.<span class="g">Name · index · key · attribute = one mechanism, four key types.</span></div></li>
-    <li><div><code>=</code> changes a slot. A method changes the object.<span class="g">Rebind vs mutate. This is 80% of every trap.</span></div></li>
-    <li><div>Shared + mutated = visible. Everything else is private.<span class="g">Two questions only: is it shared, and did you mutate it?</span></div></li>
-    <li><div>Nothing is copied unless you ask — and then only one level.<span class="g">Slice, <code>list()</code>, <code>copy()</code> are all the same shallow copy.</span></div></li>
+    <li><div>A name is a key, not a box.</div></li>
+    <li><div>A container holds references, not objects.</div></li>
+    <li><div><code>=</code> changes a slot. A method changes the object.</div></li>
+    <li><div>Shared + mutated = visible. Everything else is private.</div></li>
+    <li><div>Nothing is copied unless you ask — and then only one level.</div></li>
   </ol>
 </section>
 
-<!-- ================= 2. INSTANT RECALL ================= -->
-<section>
-  <h2>2 · Must be instant <span style="font:600 11px var(--sans);color:var(--tx3);letter-spacing:0;text-transform:none">— no thinking allowed</span></h2>
-  <p class="cap">Hit <b>Blind mode</b>, cover the answer column, go down the list out loud. Hover any cell to peek.</p>
-  <table id="cold">
-    <thead><tr><th style="width:44%">Code</th><th style="width:26%">Result</th><th>One-word reason</th></tr></thead>
-    <tbody>
-      <tr><td class="x">r=[[]]*3; r[0].append('x')</td><td class="r">[['x'],['x'],['x']]</td><td class="w">one object, mutated</td></tr>
-      <tr><td class="x">r=[[]]*3; r[0]=9</td><td class="r">[9,[],[]]</td><td class="w">slot rebound</td></tr>
-      <tr><td class="x">r=[[] for _ in range(3)]; r[0].append('x')</td><td class="r">[['x'],[],[]]</td><td class="w">body re-evaluated</td></tr>
-      <tr><td class="x">s=m[:]; s.append(9) → m</td><td class="r">unchanged</td><td class="w">new outer</td></tr>
-      <tr><td class="x">s=m[:]; s[0].append(9) → m</td><td class="r">changed</td><td class="w">shared inner</td></tr>
-      <tr><td class="x">b=a; a+=[3] → b</td><td class="r">[1,2,3]</td><td class="w">in-place</td></tr>
-      <tr><td class="x">b=a; a=a+[3] → b</td><td class="r">[1,2]</td><td class="w">rebound</td></tr>
-      <tr><td class="x">t=([1,2],3); t[0]+=[9]</td><td class="r">TypeError + t mutated</td><td class="w">load/op/store</td></tr>
-      <tr><td class="x">def f(x,bucket=[]) → f(1);f(2)</td><td class="r">[1,2]</td><td class="w">once at def</td></tr>
-      <tr><td class="x">b=a; a[:]=[9] → b</td><td class="r">[9]</td><td class="w">mutated</td></tr>
-      <tr><td class="x">b=a; a=[9] → b</td><td class="r">[1,2,3]</td><td class="w">rebound</td></tr>
-      <tr><td class="x">y=x; x.sort() → y</td><td class="r">sorted</td><td class="w">mutates</td></tr>
-      <tr><td class="x">y=x; x=sorted(x) → y</td><td class="r">original order</td><td class="w">new object</td></tr>
-      <tr><td class="x">copy.deepcopy(9) is 9</td><td class="r">True</td><td class="w">atomic</td></tr>
-      <tr><td class="x">m=[[1,2]]; d=deepcopy(m); d[0].append(9) → m</td><td class="r">unchanged</td><td class="w">unshared</td></tr>
-      <tr><td class="x">i=[1]; m=[i,i]; d=deepcopy(m); d[0].append(2)</td><td class="r">[[1,2],[1,2]]</td><td class="w">memo</td></tr>
-    </tbody>
-  </table>
-</section>
+<!-- ================= C1 ================= -->
+<div class="concept" data-k="k1">
+  <div class="chead"><span class="cn">01</span><span class="ct">Object</span><span class="flag">✗ shaky</span></div>
 
-<!-- ================= 3. FLASHCARDS ================= -->
-<section>
-  <h2>3 · Why-cards <span style="font:600 11px var(--sans);color:var(--tx3);letter-spacing:0;text-transform:none">— answer aloud, then click</span></h2>
-  <p class="cap">Knowing the output is not knowing. Mark <b>✗ wrong</b> on any you fumble — they collect below and survive a reload.</p>
-  <div class="cards" id="cards">
+  <div class="blk d"><div class="bl">Definition</div>
+    <p>Everything is an object: a thing with an <b>identity</b>, a <b>type</b> and a <b>value</b>.</p></div>
 
-    <div class="fc" data-k="c1"><span class="tag">CORE</span>
-      <div class="q">What is the difference between <code>nums[0] = 9</code> and <code>nums[0].append(9)</code>?</div>
-      <div class="a">First overwrites the <b>pointer stored in slot 0</b>. Second follows that pointer and changes <b>the object</b>. Only the second is visible through other references.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c2"><span class="tag">CORE</span>
-      <div class="q">Does an object's address ever change?</div>
-      <div class="a"><b>Never.</b> An object sits at one address for its whole life. Only which pointer a slot holds changes. "The id changed" always means "a different object is there now".<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c3"><span class="tag">1.1</span>
-      <div class="q">When is it safe to compare with <code>is</code>?</div>
-      <div class="a">Singletons only — <code>None</code>, <code>True</code>, <code>False</code>, your own sentinels. <code>is</code> asks identity and cannot be overridden; <code>==</code> calls <code>__eq__</code>.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c4"><span class="tag">1.1</span>
-      <div class="q">Two objects show the same <code>id()</code>. What can you conclude?</div>
-      <div class="a">Nothing, unless both are <b>alive at the same time</b>. Dead objects' addresses are reused instantly. Never cache or compare ids across time.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c5"><span class="tag">1.2</span>
-      <div class="q"><code>TypeError: 'list' object is not callable</code> — first thing you check?</div>
-      <div class="a">You shadowed the builtin: somewhere <code>list = [...]</code>. Builtins are searched <b>last</b> (L→E→G→B), so any earlier binding wins. Fix: <code>del list</code>.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c6"><span class="tag">1.2</span>
-      <div class="q">Does <code>del x</code> free memory?</div>
-      <div class="a">No. It removes a <b>binding</b>. The object dies only when its <em>last</em> reference goes. <code>del</code> is a namespace operation.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c7"><span class="tag">1.3</span>
-      <div class="q"><code>m is t</code> is False but every element id matches. Which copy is it?</div>
-      <div class="a"><b>Shallow.</b> New outer object, same element pointers. Matching element ids is the <em>proof</em> of shallowness, not evidence of aliasing.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c8"><span class="tag">1.3</span>
-      <div class="q">Two booleans that fully identify copy depth?</div>
-      <div class="a"><code>b is a</code> and <code>b[0] is a[0]</code>. True/True = alias. False/True = shallow. False/False = deep.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c9"><span class="tag">1.3</span>
-      <div class="q">Why does <code>deepcopy</code> return the same <code>int</code> / <code>str</code> object?</div>
-      <div class="a">Deep copy exists to stop mutation leaking. Immutables can't be mutated, so a copy is <b>indistinguishable</b> from the original. True at any size — not just cached small ints.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c10"><span class="tag">1.3</span>
-      <div class="q">Why is <code>[0]*3</code> "fine" but <code>[[]]*3</code> "broken"?</div>
-      <div class="a">Neither is broken — both share one object three times. <code>int</code> has no mutating method, so the sharing is <b>unobservable</b>. The rule never changed; mutability revealed it.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c11"><span class="tag">1.3</span>
-      <div class="q">Explain the <code>+=</code> tuple paradox in 3 steps.</div>
-      <div class="a">1) load <code>t[0]</code> · 2) <code>__iadd__</code> mutates the list <b>in place — commits</b> · 3) store back into the tuple — <b>fails</b>, TypeError. Mutation already happened.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c12"><span class="tag">1.3</span>
-      <div class="q">Is Python pass-by-value or pass-by-reference?</div>
-      <div class="a">Neither — <b>don't use the phrase.</b> Parameters are bindings in a new namespace. Mutation is visible to the caller, rebinding is not. Same rule as everywhere else.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c13"><span class="tag">1.3</span>
-      <div class="q">Why does <code>bucket=[]</code> accumulate across calls?</div>
-      <div class="a">The default is evaluated <b>once, at <code>def</code> time</b>, and stored in <code>f.__defaults__</code>. Every call rebinds the same object. Fix: <code>=None</code> sentinel.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c14"><span class="tag">1.3</span>
-      <div class="q">Safe copy of <code>{"hosts": ["a","b"]}</code> for untrusted code — which depth?</div>
-      <div class="a"><b>Deep.</b> Shallow gives a new dict but the same inner list, so they can still mutate your data through it. Deep only works if you own the whole graph.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c15"><span class="tag">TRAP</span>
-      <div class="q">A comprehension leaks its variable — true or false?</div>
-      <div class="a"><b>False.</b> Comprehensions get their own scope. <code>for</code> loops do <b>not</b> — the loop variable survives after the loop.<span class="miss">✗ wrong</span></div></div>
-
-    <div class="fc" data-k="c16"><span class="tag">TRAP</span>
-      <div class="q">Why does a bare class attribute name fail inside a method?</div>
-      <div class="a">A class body is a namespace but <b>not an enclosing scope</b>. LEGB skips it. Use <code>self.x</code> or <code>C.x</code>.<span class="miss">✗ wrong</span></div></div>
-
+  <div class="blk i">
+    <svg viewBox="0 0 640 128" role="img" aria-label="An object has identity, type and value">
+      <rect x="150" y="16" width="340" height="94" rx="12" fill="#fdfaf4" stroke="#b45f35" stroke-width="1.8"/>
+      <text x="320" y="10" class="sxs" text-anchor="middle">ONE OBJECT</text>
+      <rect x="166" y="30" width="100" height="30" rx="7" fill="#f7e4d7" stroke="#eccdb8"/>
+      <text x="216" y="50" class="sm" text-anchor="middle">identity</text>
+      <rect x="270" y="30" width="100" height="30" rx="7" fill="#dcf0e9" stroke="#b5ddd1"/>
+      <text x="320" y="50" class="sm" text-anchor="middle">type</text>
+      <rect x="374" y="30" width="100" height="30" rx="7" fill="#ddedf7" stroke="#b8d8e9"/>
+      <text x="424" y="50" class="sm" text-anchor="middle">value</text>
+      <text x="216" y="82" class="ss" text-anchor="middle">fixed for life</text>
+      <text x="320" y="82" class="ss" text-anchor="middle">fixed for life</text>
+      <text x="424" y="82" class="ss" text-anchor="middle">may change</text>
+      <text x="320" y="102" class="ss" text-anchor="middle">only if the type is mutable</text>
+    </svg>
   </div>
 
-  <div class="errbox" id="errbox" style="display:none">
-    <b>Error log — drill these first tomorrow</b>
-    <ol id="errlist"></ol>
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li><b>identity</b> — its address, for its whole life</li>
+        <li><b>type</b> — a pointer to one <i>shared</i> type object</li>
+        <li><b>value</b> — whatever the type says it is</li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li>An object's address <span class="warn">never</span> changes.</li>
+        <li>"The id changed" always means <b>a different object is there</b>.</li>
+      </ul>
+<pre><code>a = [<span class="n">1</span>,<span class="n">2</span>]
+<span class="f">id</span>(a); a.<span class="f">append</span>(<span class="n">3</span>); <span class="f">id</span>(a)  <span class="c"># same  → mutation</span>
+a = a + [<span class="n">4</span>];       <span class="f">id</span>(a)  <span class="c"># new   → rebinding</span></code></pre></div>
   </div>
-</section>
+</div>
 
-<!-- ================= 4. KILL LIST ================= -->
+<!-- ================= C2 ================= -->
+<div class="concept" data-k="k2">
+  <div class="chead"><span class="cn">02</span><span class="ct">Identity — <code>is</code> vs <code>==</code></span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p><code>is</code> asks <b>“same object?”</b>. <code>==</code> asks <b>“same value?”</b> and runs the type's <code>__eq__</code>.</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 150" role="img" aria-label="is compares identity, equals compares value">
+      <text x="20" y="18" class="sxs">SAME OBJECT</text>
+      <rect x="20" y="28" width="60" height="26" rx="6" fill="#f8f1e5" stroke="#cdbb9e"/>
+      <text x="50" y="46" class="sm" text-anchor="middle">a</text>
+      <rect x="20" y="62" width="60" height="26" rx="6" fill="#f8f1e5" stroke="#cdbb9e"/>
+      <text x="50" y="80" class="sm" text-anchor="middle">b</text>
+      <path d="M80 41 C 130 41 140 55 176 57" stroke="#5d8a41" stroke-width="1.8" fill="none" marker-end="url(#m2)"/>
+      <path d="M80 75 C 130 75 140 63 176 61" stroke="#5d8a41" stroke-width="1.8" fill="none" marker-end="url(#m2)"/>
+      <rect x="182" y="42" width="96" height="34" rx="9" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.6"/>
+      <text x="230" y="64" class="sm" text-anchor="middle">[1, 2]</text>
+      <text x="150" y="112" class="ss" text-anchor="middle">a is b → True     a == b → True</text>
+
+      <text x="360" y="18" class="sxs">EQUAL BUT DISTINCT</text>
+      <rect x="360" y="28" width="60" height="26" rx="6" fill="#f8f1e5" stroke="#cdbb9e"/>
+      <text x="390" y="46" class="sm" text-anchor="middle">a</text>
+      <rect x="360" y="62" width="60" height="26" rx="6" fill="#f8f1e5" stroke="#cdbb9e"/>
+      <text x="390" y="80" class="sm" text-anchor="middle">b</text>
+      <path d="M420 41 L516 34" stroke="#c0503f" stroke-width="1.8" fill="none" marker-end="url(#m2b)"/>
+      <path d="M420 75 L516 82" stroke="#c0503f" stroke-width="1.8" fill="none" marker-end="url(#m2b)"/>
+      <rect x="522" y="18" width="96" height="32" rx="9" fill="#f9e0d9" stroke="#c0503f" stroke-width="1.6"/>
+      <text x="570" y="39" class="sm" text-anchor="middle">[1, 2]</text>
+      <rect x="522" y="66" width="96" height="32" rx="9" fill="#f9e0d9" stroke="#c0503f" stroke-width="1.6"/>
+      <text x="570" y="87" class="sm" text-anchor="middle">[1, 2]</text>
+      <text x="490" y="112" class="ss" text-anchor="middle">a is b → False    a == b → True</text>
+      <text x="320" y="138" class="ss" text-anchor="middle">two questions, two answers — never use one to mean the other</text>
+      <defs>
+        <marker id="m2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#5d8a41"/></marker>
+        <marker id="m2b" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#c0503f"/></marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li><code>id(x)</code> holds an <b>address</b> <span class="ss">[CPython]</span></li>
+        <li>unique only among objects <b>alive at the same time</b></li>
+        <li>a dead object's address is reused immediately</li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li><code>is</code> only for <code>None</code>, <code>True</code>, <code>False</code>, sentinels.</li>
+        <li><span class="warn">Never</span> store or compare ids across time.</li>
+        <li><code>x is 5</code> works by accident — small ints are cached.</li>
+      </ul></div>
+  </div>
+</div>
+
+<!-- ================= C3 ================= -->
+<div class="concept" data-k="k3">
+  <div class="chead"><span class="cn">03</span><span class="ct">Name &amp; binding</span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p>A <b>name</b> is a key in a namespace mapping to an object reference. A <b>namespace</b> is that mapping.</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 132" role="img" aria-label="A namespace maps names to references">
+      <rect x="24" y="20" width="230" height="92" rx="12" fill="#f8f1e5" stroke="#cdbb9e" stroke-width="1.6"/>
+      <text x="139" y="14" class="sxs" text-anchor="middle">NAMESPACE (a mapping)</text>
+      <rect x="40" y="34" width="70" height="26" rx="6" fill="#fdfaf4" stroke="#e3d6c0"/>
+      <text x="75" y="52" class="sm" text-anchor="middle">"a"</text>
+      <rect x="40" y="70" width="70" height="26" rx="6" fill="#fdfaf4" stroke="#e3d6c0"/>
+      <text x="75" y="88" class="sm" text-anchor="middle">"b"</text>
+      <text x="150" y="52" class="ss">→ ref</text>
+      <text x="150" y="88" class="ss">→ ref</text>
+      <path d="M200 47 C 300 47 330 62 402 64" stroke="#b45f35" stroke-width="1.8" fill="none" marker-end="url(#m3)"/>
+      <path d="M200 83 C 300 83 330 70 402 68" stroke="#b45f35" stroke-width="1.8" fill="none" marker-end="url(#m3)"/>
+      <rect x="410" y="48" width="180" height="36" rx="10" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.8"/>
+      <text x="500" y="72" class="st" text-anchor="middle" fill="#b45f35">ONE object</text>
+      <text x="500" y="106" class="ss" text-anchor="middle">binding never copies it</text>
+      <defs><marker id="m3" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#b45f35"/></marker></defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li>the namespace holds <b>name → reference</b> pairs</li>
+        <li>the <b>object</b> holds the data — never the name</li>
+        <li>binds: <code>=</code> <code>def</code> <code>class</code> <code>import</code> <code>for</code> <code>as</code> <code>:=</code> params</li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li><code>b = a</code> → two keys, <b>one object</b>.</li>
+        <li><code>del x</code> removes the <b>binding</b>, not the object.</li>
+        <li>The object dies only when its <b>last</b> reference goes.</li>
+      </ul></div>
+  </div>
+</div>
+
+<!-- ================= C4 ================= -->
+<div class="concept" data-k="k4">
+  <div class="chead"><span class="cn">04</span><span class="ct">LEGB &amp; shadowing</span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p>Name lookup searches <b>Local → Enclosing → Global → Builtins</b>. First hit wins; miss all four → <code>NameError</code>.</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 116" role="img" aria-label="LEGB lookup order">
+      <rect x="24" y="34" width="122" height="42" rx="10" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.7"/>
+      <text x="85" y="53" class="st" text-anchor="middle" fill="#b45f35">Local</text>
+      <text x="85" y="68" class="ss" text-anchor="middle">array slots</text>
+      <rect x="176" y="34" width="122" height="42" rx="10" fill="#dcf0e9" stroke="#2b7d6d" stroke-width="1.7"/>
+      <text x="237" y="53" class="st" text-anchor="middle" fill="#2b7d6d">Enclosing</text>
+      <text x="237" y="68" class="ss" text-anchor="middle">closure</text>
+      <rect x="328" y="34" width="122" height="42" rx="10" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.7"/>
+      <text x="389" y="53" class="st" text-anchor="middle" fill="#2f7a9e">Global</text>
+      <text x="389" y="68" class="ss" text-anchor="middle">module dict</text>
+      <rect x="480" y="34" width="136" height="42" rx="10" fill="#faedc9" stroke="#a87c12" stroke-width="1.7"/>
+      <text x="548" y="53" class="st" text-anchor="middle" fill="#8f6a0f">Builtins</text>
+      <text x="548" y="68" class="ss" text-anchor="middle">searched LAST</text>
+      <path d="M146 55 L170 55" stroke="#9c8d78" stroke-width="2" marker-end="url(#m4)"/>
+      <path d="M298 55 L322 55" stroke="#9c8d78" stroke-width="2" marker-end="url(#m4)"/>
+      <path d="M450 55 L474 55" stroke="#9c8d78" stroke-width="2" marker-end="url(#m4)"/>
+      <text x="320" y="20" class="sxs" text-anchor="middle">FIRST HIT WINS</text>
+      <text x="320" y="100" class="ss" text-anchor="middle">scope is a search order over mappings — not a region of memory</text>
+      <defs><marker id="m4" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#9c8d78"/></marker></defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li>each level is an <b>ordinary mapping</b> — builtins included</li>
+        <li><code>globals()</code> is <b>live</b>; <code>locals()</code> is a <b>snapshot</b></li>
+        <li>function locals are array slots, not a dict <span class="ss">[CPython]</span></li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules &amp; traps</div>
+      <ul>
+        <li>Builtins are shadowable → <span class="warn"><code>'list' object is not callable</code></span>. Fix: <code>del list</code>.</li>
+        <li>A <b>class body is not an enclosing scope</b> — use <code>self.x</code> / <code>C.x</code>.</li>
+        <li><code>for</code> leaks its variable; a <b>comprehension does not</b>.</li>
+        <li><code>except … as e</code> <b>deletes</b> <code>e</code> at block exit.</li>
+      </ul></div>
+  </div>
+</div>
+
+<!-- ================= C5 ================= -->
+<div class="concept" data-k="k5">
+  <div class="chead"><span class="cn">05</span><span class="ct">Container = array of references</span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p>A list does not contain objects. It contains <b>references</b> to objects — a contiguous array of pointers.</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 158" role="img" aria-label="Repeated reference versus a comprehension">
+      <text x="20" y="16" class="sxs">[[]] * 3 — ONE object, three pointers</text>
+      <rect x="20" y="26" width="250" height="50" rx="10" fill="#f9e0d9" stroke="#c0503f" stroke-width="1.6"/>
+      <rect x="34" y="38" width="66" height="26" rx="6" fill="#fdfaf4" stroke="#eec2b6"/><text x="67" y="56" class="sm" text-anchor="middle">[0]</text>
+      <rect x="112" y="38" width="66" height="26" rx="6" fill="#fdfaf4" stroke="#eec2b6"/><text x="145" y="56" class="sm" text-anchor="middle">[1]</text>
+      <rect x="190" y="38" width="66" height="26" rx="6" fill="#fdfaf4" stroke="#eec2b6"/><text x="223" y="56" class="sm" text-anchor="middle">[2]</text>
+      <path d="M67 66 C 130 106 330 84 396 74" stroke="#c0503f" stroke-width="1.6" fill="none" marker-end="url(#m5)"/>
+      <path d="M145 66 C 200 106 330 86 396 77" stroke="#c0503f" stroke-width="1.6" fill="none" marker-end="url(#m5)"/>
+      <path d="M223 66 C 270 106 330 88 396 80" stroke="#c0503f" stroke-width="1.6" fill="none" marker-end="url(#m5)"/>
+      <rect x="404" y="58" width="216" height="38" rx="10" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.8"/>
+      <text x="512" y="82" class="st" text-anchor="middle" fill="#b45f35">ONE list — append hits all 3</text>
+
+      <text x="20" y="126" class="sxs">[[] for _ in range(3)] — body runs 3× → three objects</text>
+      <rect x="20" y="134" width="600" height="18" rx="7" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.4"/>
+      <defs><marker id="m5" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#c0503f"/></marker></defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li>a contiguous array of <b>pointers</b> — the objects live elsewhere</li>
+        <li>same for dict values, tuple slots and <code>obj.__dict__</code></li>
+        <li><code>*</code> and slicing copy the <b>pointers</b>, never the objects</li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li><span class="warn">Never</span> <code>[[...]] * n</code>. Use a comprehension.</li>
+        <li><code>[0]*3</code> shares too — you just can't <i>observe</i> it.</li>
+      </ul>
+<pre><code>r = [[]] * <span class="n">3</span>
+r[<span class="n">0</span>].<span class="f">append</span>(<span class="s">'x'</span>)   <span class="c"># [['x'],['x'],['x']]</span></code></pre></div>
+  </div>
+</div>
+
+<!-- ================= C6 ================= -->
+<div class="concept" data-k="k6">
+  <div class="chead"><span class="cn">06</span><span class="ct">Aliasing</span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p><b>Two or more references to one object</b> — regardless of where those references live.</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 140" role="img" aria-label="Four kinds of reference to one object">
+      <rect x="20" y="16" width="150" height="26" rx="7" fill="#f8f1e5" stroke="#cdbb9e"/><text x="95" y="34" class="sm" text-anchor="middle">a name</text>
+      <rect x="20" y="48" width="150" height="26" rx="7" fill="#f8f1e5" stroke="#cdbb9e"/><text x="95" y="66" class="sm" text-anchor="middle">a list slot</text>
+      <rect x="20" y="80" width="150" height="26" rx="7" fill="#f8f1e5" stroke="#cdbb9e"/><text x="95" y="98" class="sm" text-anchor="middle">a dict value</text>
+      <rect x="20" y="112" width="150" height="26" rx="7" fill="#f8f1e5" stroke="#cdbb9e"/><text x="95" y="130" class="sm" text-anchor="middle">an attribute</text>
+      <path d="M170 29 L392 62" stroke="#2b7d6d" stroke-width="1.5" fill="none" marker-end="url(#m6)"/>
+      <path d="M170 61 L392 68" stroke="#2b7d6d" stroke-width="1.5" fill="none" marker-end="url(#m6)"/>
+      <path d="M170 93 L392 74" stroke="#2b7d6d" stroke-width="1.5" fill="none" marker-end="url(#m6)"/>
+      <path d="M170 125 L392 80" stroke="#2b7d6d" stroke-width="1.5" fill="none" marker-end="url(#m6)"/>
+      <rect x="400" y="52" width="220" height="40" rx="11" fill="#dcf0e9" stroke="#2b7d6d" stroke-width="1.9"/>
+      <text x="510" y="77" class="st" text-anchor="middle" fill="#2b7d6d">ONE object</text>
+      <text x="510" y="112" class="ss" text-anchor="middle">mutate through any one → all four see it</text>
+      <defs><marker id="m6" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#2b7d6d"/></marker></defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li><b>n references, 1 object.</b> Nothing was duplicated.</li>
+        <li>even <code>a.append(a)</code> — a container can alias itself</li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li>Test sharing with <code>is</code>, <b>never</b> <code>==</code>.</li>
+        <li>Probe a container: <code>[hex(id(v)) for v in c]</code></li>
+      </ul></div>
+  </div>
+</div>
+
+<!-- ================= C7 ================= -->
+<div class="concept" data-k="k7">
+  <div class="chead"><span class="cn">07</span><span class="ct">Rebind vs Mutate <span style="font:700 11px var(--sans);color:var(--bad)">— THE ONE</span></span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p><b>Rebinding</b> (<code>x = …</code>, <code>x[i] = …</code>) changes <i>which object a slot points to</i>.
+    <b>Mutation</b> (<code>x.append(…)</code>) changes <i>the object itself</i>.</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 168" role="img" aria-label="Rebinding a slot versus mutating an object">
+      <text x="20" y="16" class="sxs">REBIND — nums[0] = 9</text>
+      <rect x="20" y="26" width="250" height="44" rx="10" fill="#fdfaf4" stroke="#cdbb9e" stroke-width="1.5"/>
+      <rect x="32" y="36" width="70" height="24" rx="6" fill="#f9e0d9" stroke="#c0503f"/><text x="67" y="53" class="sm" text-anchor="middle">slot 0</text>
+      <rect x="110" y="36" width="70" height="24" rx="6" fill="#fdfaf4" stroke="#e3d6c0"/><text x="145" y="53" class="sm" text-anchor="middle">slot 1</text>
+      <rect x="188" y="36" width="70" height="24" rx="6" fill="#fdfaf4" stroke="#e3d6c0"/><text x="223" y="53" class="sm" text-anchor="middle">slot 2</text>
+      <path d="M67 62 L67 84" stroke="#c0503f" stroke-width="2" marker-end="url(#m7)"/>
+      <text x="67" y="100" class="sm" text-anchor="middle" fill="#c0503f">9</text>
+      <path d="M145 62 C 150 92 190 96 214 96" stroke="#9c8d78" stroke-width="1.5" fill="none" marker-end="url(#m7b)"/>
+      <path d="M223 62 C 226 90 216 96 214 96" stroke="#9c8d78" stroke-width="1.5" fill="none" marker-end="url(#m7b)"/>
+      <rect x="128" y="112" width="120" height="26" rx="8" fill="#f1e7d6" stroke="#cdbb9e"/>
+      <text x="188" y="130" class="sm" text-anchor="middle">[] untouched</text>
+      <text x="140" y="158" class="ss" text-anchor="middle">the object never knew</text>
+
+      <text x="352" y="16" class="sxs">MUTATE — nums[0].append('x')</text>
+      <rect x="352" y="26" width="250" height="44" rx="10" fill="#fdfaf4" stroke="#cdbb9e" stroke-width="1.5"/>
+      <rect x="364" y="36" width="70" height="24" rx="6" fill="#e7f1d7" stroke="#5d8a41"/><text x="399" y="53" class="sm" text-anchor="middle">slot 0</text>
+      <rect x="442" y="36" width="70" height="24" rx="6" fill="#e7f1d7" stroke="#5d8a41"/><text x="477" y="53" class="sm" text-anchor="middle">slot 1</text>
+      <rect x="520" y="36" width="70" height="24" rx="6" fill="#e7f1d7" stroke="#5d8a41"/><text x="555" y="53" class="sm" text-anchor="middle">slot 2</text>
+      <path d="M399 62 C 410 90 460 96 476 96" stroke="#5d8a41" stroke-width="1.7" fill="none" marker-end="url(#m7c)"/>
+      <path d="M477 62 L477 90" stroke="#5d8a41" stroke-width="1.7" fill="none" marker-end="url(#m7c)"/>
+      <path d="M555 62 C 546 90 496 96 480 96" stroke="#5d8a41" stroke-width="1.7" fill="none" marker-end="url(#m7c)"/>
+      <rect x="408" y="112" width="140" height="26" rx="8" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.6"/>
+      <text x="478" y="130" class="sm" text-anchor="middle">['x'] — changed</text>
+      <text x="478" y="158" class="ss" text-anchor="middle">all three slots see it</text>
+      <defs>
+        <marker id="m7" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#c0503f"/></marker>
+        <marker id="m7b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9c8d78"/></marker>
+        <marker id="m7c" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5d8a41"/></marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li>rebinding touches <b>the slot</b> — the object is untouched</li>
+        <li>mutation touches <b>the object</b> — every slot pointing at it sees the change</li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li>Ask only two things: <b>rebind or mutate?</b> then <b>is it shared?</b></li>
+        <li>Only <b>mutation of a shared object</b> is visible elsewhere.</li>
+      </ul>
+<pre><code>r = [[]] * <span class="n">3</span>
+r[<span class="n">0</span>] = <span class="n">9</span>            <span class="c"># [9, [], []]</span>
+r[<span class="n">0</span>].<span class="f">append</span>(<span class="s">'x'</span>)   <span class="c"># [['x'],['x'],['x']]</span></code></pre></div>
+  </div>
+</div>
+
+<!-- ================= C8 ================= -->
+<div class="concept" data-k="k8">
+  <div class="chead"><span class="cn">08</span><span class="ct">Copy depths</span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p>Three depths only: <b>alias</b> (nothing new), <b>shallow</b> (new outer, shared inner), <b>deep</b> (new everything mutable).</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 176" role="img" aria-label="Alias, shallow copy and deep copy compared">
+      <text x="16" y="18" class="sxs">ALIAS — b = a</text>
+      <rect x="16" y="26" width="120" height="26" rx="7" fill="#f9e0d9" stroke="#c0503f"/><text x="76" y="44" class="sm" text-anchor="middle">a  b</text>
+      <path d="M136 39 L186 39" stroke="#c0503f" stroke-width="1.6" marker-end="url(#m8)"/>
+      <rect x="192" y="26" width="86" height="26" rx="7" fill="#f7e4d7" stroke="#b45f35"/><text x="235" y="44" class="sm" text-anchor="middle">outer</text>
+      <path d="M278 39 L320 39" stroke="#c0503f" stroke-width="1.6" marker-end="url(#m8)"/>
+      <rect x="326" y="26" width="86" height="26" rx="7" fill="#f7e4d7" stroke="#b45f35"/><text x="369" y="44" class="sm" text-anchor="middle">inner</text>
+      <text x="470" y="44" class="ss">same outer · same inner</text>
+
+      <text x="16" y="82" class="sxs">SHALLOW — a[:] · list(a) · copy.copy(a)</text>
+      <rect x="16" y="90" width="120" height="26" rx="7" fill="#ddedf7" stroke="#2f7a9e"/><text x="76" y="108" class="sm" text-anchor="middle">b</text>
+      <path d="M136 103 L186 103" stroke="#2f7a9e" stroke-width="1.6" marker-end="url(#m8b)"/>
+      <rect x="192" y="90" width="86" height="26" rx="7" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.7"/><text x="235" y="108" class="sm" text-anchor="middle">NEW</text>
+      <path d="M278 103 L320 103" stroke="#c0503f" stroke-width="1.6" marker-end="url(#m8)"/>
+      <rect x="326" y="90" width="86" height="26" rx="7" fill="#f7e4d7" stroke="#b45f35"/><text x="369" y="108" class="sm" text-anchor="middle">inner</text>
+      <text x="470" y="108" class="ss">new outer · SHARED inner</text>
+
+      <text x="16" y="146" class="sxs">DEEP — copy.deepcopy(a)</text>
+      <rect x="16" y="152" width="120" height="26" rx="7" fill="#e7f1d7" stroke="#5d8a41"/><text x="76" y="170" class="sm" text-anchor="middle">b</text>
+      <path d="M136 165 L186 165" stroke="#5d8a41" stroke-width="1.6" marker-end="url(#m8c)"/>
+      <rect x="192" y="152" width="86" height="26" rx="7" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.7"/><text x="235" y="170" class="sm" text-anchor="middle">NEW</text>
+      <path d="M278 165 L320 165" stroke="#5d8a41" stroke-width="1.6" marker-end="url(#m8c)"/>
+      <rect x="326" y="152" width="86" height="26" rx="7" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.7"/><text x="369" y="170" class="sm" text-anchor="middle">NEW</text>
+      <text x="470" y="170" class="ss">new outer · new inner</text>
+      <defs>
+        <marker id="m8" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#c0503f"/></marker>
+        <marker id="m8b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#2f7a9e"/></marker>
+        <marker id="m8c" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5d8a41"/></marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li>the three <b>shallow spellings are identical</b> in effect</li>
+        <li>matching element ids are <b>proof of shallowness</b>, not of aliasing</li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li>Two booleans identify the depth, always:</li>
+      </ul>
+<pre><code>b <span class="k">is</span> a, b[<span class="n">0</span>] <span class="k">is</span> a[<span class="n">0</span>]
+<span class="c"># T,T alias   F,T shallow   F,F deep</span></code></pre></div>
+  </div>
+</div>
+
+<!-- ================= C9 ================= -->
+<div class="concept" data-k="k9">
+  <div class="chead"><span class="cn">09</span><span class="ct">deepcopy internals</span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p>Deep copy rebuilds <b>everything that could be mutated</b>, and returns immutables unchanged.</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 130" role="img" aria-label="deepcopy rebuilds mutables and passes immutables through">
+      <rect x="20" y="16" width="150" height="30" rx="8" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.6"/>
+      <text x="95" y="36" class="sm" text-anchor="middle">list · dict · set</text>
+      <path d="M170 31 L262 31" stroke="#5d8a41" stroke-width="1.8" marker-end="url(#m9)"/>
+      <text x="216" y="24" class="ss" text-anchor="middle">rebuild</text>
+      <rect x="270" y="16" width="120" height="30" rx="8" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.6"/>
+      <text x="330" y="36" class="sm" text-anchor="middle">NEW object</text>
+
+      <rect x="20" y="60" width="150" height="30" rx="8" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.6"/>
+      <text x="95" y="80" class="sm" text-anchor="middle">int · str · tuple*</text>
+      <path d="M170 75 L262 75" stroke="#2f7a9e" stroke-width="1.8" marker-end="url(#m9b)"/>
+      <text x="216" y="68" class="ss" text-anchor="middle">return as-is</text>
+      <rect x="270" y="60" width="120" height="30" rx="8" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.6"/>
+      <text x="330" y="80" class="sm" text-anchor="middle">SAME object</text>
+
+      <rect x="424" y="16" width="196" height="74" rx="11" fill="#faedc9" stroke="#a87c12" stroke-width="1.6"/>
+      <text x="522" y="38" class="st" text-anchor="middle" fill="#8f6a0f">memo: id → copy</text>
+      <text x="522" y="58" class="ss" text-anchor="middle">shared structure stays shared</text>
+      <text x="522" y="76" class="ss" text-anchor="middle">cycles terminate</text>
+      <text x="320" y="116" class="ss" text-anchor="middle">*a tuple is returned as-is only if every member copied to itself</text>
+      <defs>
+        <marker id="m9" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#5d8a41"/></marker>
+        <marker id="m9b" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#2f7a9e"/></marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li>a <b>memo</b> dict mapping <code>id(obj) → copy</code></li>
+        <li>a type dispatch table; immutables map to “return x”</li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li>Copy only what could be <b>mutated</b> — sharing an unmutatable object is unobservable.</li>
+        <li>True at <b>any size</b>, not just cached small ints.</li>
+      </ul>
+<pre><code>n = <span class="n">10</span>**<span class="n">50</span>
+copy.<span class="f">deepcopy</span>(n) <span class="k">is</span> n   <span class="c"># True</span></code></pre></div>
+  </div>
+</div>
+
+<!-- ================= C10 ================= -->
+<div class="concept" data-k="k10">
+  <div class="chead"><span class="cn">10</span><span class="ct">Arguments &amp; mutable defaults</span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p>Parameters are <b>bindings in the function's new namespace</b>. Not by-value, not by-reference — the same rule as everywhere else.</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 144" role="img" aria-label="Mutation is visible to the caller, rebinding is not">
+      <rect x="20" y="20" width="120" height="26" rx="7" fill="#f8f1e5" stroke="#cdbb9e"/><text x="80" y="38" class="sm" text-anchor="middle">caller: xs</text>
+      <rect x="20" y="56" width="120" height="26" rx="7" fill="#f8f1e5" stroke="#cdbb9e"/><text x="80" y="74" class="sm" text-anchor="middle">param: seq</text>
+      <path d="M140 33 C 190 33 200 46 232 48" stroke="#5d8a41" stroke-width="1.7" fill="none" marker-end="url(#m10)"/>
+      <path d="M140 69 C 190 69 200 56 232 52" stroke="#5d8a41" stroke-width="1.7" fill="none" marker-end="url(#m10)"/>
+      <rect x="240" y="34" width="110" height="32" rx="9" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.7"/>
+      <text x="295" y="55" class="sm" text-anchor="middle">one object</text>
+      <text x="185" y="100" class="ss" text-anchor="middle">seq.append(1) → caller sees it</text>
+
+      <rect x="400" y="20" width="120" height="26" rx="7" fill="#f8f1e5" stroke="#cdbb9e"/><text x="460" y="38" class="sm" text-anchor="middle">caller: xs</text>
+      <rect x="400" y="56" width="120" height="26" rx="7" fill="#f8f1e5" stroke="#cdbb9e"/><text x="460" y="74" class="sm" text-anchor="middle">seq = [9]</text>
+      <path d="M520 33 L568 26" stroke="#9c8d78" stroke-width="1.6" marker-end="url(#m10b)"/>
+      <path d="M520 69 L568 76" stroke="#c0503f" stroke-width="1.6" marker-end="url(#m10c)"/>
+      <rect x="574" y="14" width="52" height="24" rx="7" fill="#f1e7d6" stroke="#cdbb9e"/><text x="600" y="31" class="sm" text-anchor="middle">old</text>
+      <rect x="574" y="64" width="52" height="24" rx="7" fill="#f9e0d9" stroke="#c0503f"/><text x="600" y="81" class="sm" text-anchor="middle">new</text>
+      <text x="500" y="100" class="ss" text-anchor="middle">seq = [9] → caller sees nothing</text>
+      <text x="320" y="130" class="ss" text-anchor="middle">mutation crosses the boundary · rebinding does not</text>
+      <defs>
+        <marker id="m10" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5d8a41"/></marker>
+        <marker id="m10b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9c8d78"/></marker>
+        <marker id="m10c" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#c0503f"/></marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li>the call frame holds a <b>new binding</b> to the same object</li>
+        <li><code>f.__defaults__</code> holds default objects, built <b>once at <code>def</code> time</b></li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li><span class="warn">Never</span> a mutable default — it is shared by every call.</li>
+        <li><span class="warn">Never</span> say “by value / by reference”.</li>
+      </ul>
+<pre><code><span class="k">def</span> <span class="f">f</span>(x, bucket=<span class="k">None</span>):
+    bucket = [] <span class="k">if</span> bucket <span class="k">is</span> <span class="k">None</span> <span class="k">else</span> bucket</code></pre></div>
+  </div>
+</div>
+
+<!-- ================= C11 ================= -->
+<div class="concept" data-k="k11">
+  <div class="chead"><span class="cn">11</span><span class="ct">The <code>+=</code> paradox</span><span class="flag">✗ shaky</span></div>
+
+  <div class="blk d"><div class="bl">Definition</div>
+    <p><code>x[i] += v</code> is <b>three</b> operations: load the slot, run the in-place op, store the result back.</p></div>
+
+  <div class="blk i">
+    <svg viewBox="0 0 640 132" role="img" aria-label="Load, in-place operation, store back">
+      <rect x="24" y="34" width="150" height="46" rx="11" fill="#f1e7d6" stroke="#cdbb9e" stroke-width="1.6"/>
+      <text x="99" y="54" class="st" text-anchor="middle">1 · LOAD</text>
+      <text x="99" y="70" class="ss" text-anchor="middle">t[0] → the list</text>
+      <path d="M174 57 L212 57" stroke="#9c8d78" stroke-width="2" marker-end="url(#m11)"/>
+      <rect x="220" y="34" width="180" height="46" rx="11" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.8"/>
+      <text x="310" y="54" class="st" text-anchor="middle" fill="#4e7736">2 · __iadd__ — COMMITS</text>
+      <text x="310" y="70" class="ss" text-anchor="middle">the list is already mutated</text>
+      <path d="M400 57 L438 57" stroke="#9c8d78" stroke-width="2" marker-end="url(#m11)"/>
+      <rect x="446" y="34" width="170" height="46" rx="11" fill="#f9e0d9" stroke="#c0503f" stroke-width="1.8"/>
+      <text x="531" y="54" class="st" text-anchor="middle" fill="#c0503f">3 · STORE — FAILS</text>
+      <text x="531" y="70" class="ss" text-anchor="middle">TypeError on the tuple</text>
+      <text x="320" y="20" class="sxs" text-anchor="middle">t = ([1, 2], 3)   ·   t[0] += [9]</text>
+      <text x="320" y="108" class="ss" text-anchor="middle">the exception does NOT roll step 2 back — t is ([1, 2, 9], 3)</text>
+      <defs><marker id="m11" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#9c8d78"/></marker></defs>
+    </svg>
+  </div>
+
+  <div class="split">
+    <div class="blk h"><div class="bl">What it holds</div>
+      <ul>
+        <li><code>list</code> has <code>__iadd__</code>; <code>tuple</code> has none</li>
+        <li>in-place ops <b>return self</b> — that is why they are visible to aliases</li>
+      </ul></div>
+    <div class="blk r"><div class="bl">Thumb rules</div>
+      <ul>
+        <li><code>a += [3]</code> mutates → <b>every alias sees it</b>.</li>
+        <li><code>a = a + [3]</code> rebinds → <b>no alias sees it</b>.</li>
+        <li><span class="warn"><code>x[i] += v</code> is not atomic</span> — it can mutate <i>and</i> raise.</li>
+      </ul></div>
+  </div>
+</div>
+
+<!-- ================= KILL LIST ================= -->
 <section>
-  <h2>4 · Kill list</h2>
-  <p class="cap">Six habits. Each one is a bug you will otherwise ship.</p>
+  <h2>Kill list</h2>
+  <p class="cap">Six habits. Each is a bug you would otherwise ship.</p>
   <div class="g2">
-    <div class="kill"><b>NEVER <code>[[...]] * n</code></b><span>Use <code>[... for _ in range(n)]</code>. Always.</span></div>
+    <div class="kill"><b>NEVER <code>[[...]] * n</code></b><span>Use a comprehension. Always.</span></div>
     <div class="kill"><b>NEVER a mutable default</b><span><code>=None</code>, then build inside.</span></div>
     <div class="kill"><b>NEVER shadow a builtin</b><span><code>list</code> <code>dict</code> <code>str</code> <code>id</code> <code>type</code> <code>len</code>.</span></div>
-    <div class="kill"><b>NEVER trust "a copy"</b><span>Ask: shallow or deep? Check <code>b[0] is a[0]</code>.</span></div>
-    <div class="kill"><b>NEVER cache <code>id()</code></b><span>Addresses are recycled the moment an object dies.</span></div>
+    <div class="kill"><b>NEVER trust "a copy"</b><span>Check <code>b[0] is a[0]</code>.</span></div>
+    <div class="kill"><b>NEVER cache <code>id()</code></b><span>Addresses are recycled on death.</span></div>
     <div class="kill"><b>NEVER say by-value / by-reference</b><span>Say: rebinding vs mutation.</span></div>
   </div>
 </section>
 
-<!-- ================= 5. 60-SECOND TEST ================= -->
+<!-- ================= EXIT TEST ================= -->
 <section>
-  <h2>5 · Sixty-second exit test</h2>
-  <p class="cap">Cold, out loud, no scrolling. Any stumble = you are not done.</p>
+  <h2>Sixty-second exit test</h2>
+  <p class="cap">Cold, out loud, no scrolling. Any stumble = not done.</p>
   <ol class="test">
     <li>Explain <code>[[]]*3</code> vs <code>[0]*3</code> <b>without using the word "immutable".</b></li>
     <li>Name the three copy depths and the two booleans that tell them apart.</li>
     <li>Why does <code>deepcopy</code> refuse to copy an <code>int</code>?</li>
-    <li>The <code>+=</code> tuple paradox — which step commits, which step fails?</li>
+    <li>The <code>+=</code> paradox — which step commits, which step fails?</li>
     <li>Why does a mutable default accumulate, and where is it stored?</li>
     <li>Given a surprise in a container, what three questions do you ask, in order?</li>
   </ol>
   <p style="margin-top:12px;font-size:13.5px;color:var(--tx2)">
-    Answer to Q6, if you need it: <b>which slot → rebind or mutate → is it shared?</b>
+    Q6: <b>which slot → rebind or mutate → is it shared?</b>
     <span class="stamp">that is the whole stage</span></p>
-</section>
-
-<!-- ================= 6. FOOTNOTE ================= -->
-<section>
-  <h2>6 · Know it exists <span style="font:600 11px var(--sans);color:var(--tx3);letter-spacing:0;text-transform:none">— recognise, don't memorise</span></h2>
-  <ul class="tiny">
-    <li><b>LEGB</b> — Local → Enclosing → Global → Builtins, first hit wins. Scope = search order, not memory.</li>
-    <li><code>except … as e</code> <b>deletes</b> <code>e</code> at block exit. Copy it out first.</li>
-    <li><code>globals()</code> is live; <code>locals()</code> is a snapshot — writing to it does nothing. <span style="color:var(--b)">[CPython]</span></li>
-    <li><code>type(x)</code> reads the header and cannot lie; <code>__class__</code> is an ordinary attribute and can.</li>
-    <li>Types are objects; <code>type(type) is type</code>. Small ints and interned strings are cached. <span style="color:var(--b)">[CPython]</span></li>
-  </ul>
 </section>
 
 </main>
 
-<footer>Object Model · drills 1.1–1.3 · cram sheet. Error log stored in this browser only.</footer>
+<footer>Object Model · drills 1.1–1.3 · cram sheet. Flags stored in this browser only.</footer>
 
 <script>
-(function(){
-  var KEY='om-cram-wrong-v1';
-  var cards=[].slice.call(document.querySelectorAll('.fc'));
-  var box=document.getElementById('errbox'), list=document.getElementById('errlist');
-  var stat=document.getElementById('stat');
-  var wrong={};
-  try{wrong=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(e){wrong={};}
+(function () {
+  var KEY = 'om-cram-shaky-v1';
+  var cards = [].slice.call(document.querySelectorAll('.concept'));
+  var stat = document.getElementById('stat');
+  var flags = {};
+  try { flags = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { flags = {}; }
 
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(wrong));}catch(e){}}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(flags)); } catch (e) {} }
 
-  function paint(){
-    var n=0;
-    cards.forEach(function(c){
-      var bad=!!wrong[c.dataset.k];
-      c.classList.toggle('bad',bad);
-      if(bad)n++;
+  function paint() {
+    var n = 0;
+    cards.forEach(function (c) {
+      var bad = !!flags[c.dataset.k];
+      c.classList.toggle('shaky', bad);
+      if (bad) n++;
     });
-    list.innerHTML='';
-    cards.forEach(function(c){
-      if(wrong[c.dataset.k]){
-        var li=document.createElement('li');
-        li.textContent=c.querySelector('.q').textContent;
-        list.appendChild(li);
-      }
-    });
-    box.style.display=n?'block':'none';
-    stat.textContent=n?(n+' marked wrong'):'nothing marked';
+    stat.textContent = n ? (n + ' of ' + cards.length + ' shaky') : 'nothing flagged';
   }
 
-  cards.forEach(function(c){
-    c.addEventListener('click',function(e){
-      if(e.target.classList.contains('miss')){
-        var k=c.dataset.k;
-        if(wrong[k]){delete wrong[k];}else{wrong[k]=1;}
-        save();paint();
-        e.stopPropagation();
-        return;
-      }
-      c.classList.toggle('open');
+  cards.forEach(function (c) {
+    c.querySelector('.flag').addEventListener('click', function () {
+      var k = c.dataset.k;
+      if (flags[k]) { delete flags[k]; } else { flags[k] = 1; }
+      save();
+      paint();
     });
   });
 
-  document.getElementById('revealAll').onclick=function(){cards.forEach(function(c){c.classList.add('open');});};
-  document.getElementById('hideAll').onclick=function(){cards.forEach(function(c){c.classList.remove('open');});};
-
-  document.getElementById('shuffle').onclick=function(){
-    var wrap=document.getElementById('cards');
-    var arr=[].slice.call(wrap.children);
-    for(var i=arr.length-1;i>0;i--){
-      var j=Math.floor(Math.random()*(i+1));
-      wrap.appendChild(arr[j]);
-      arr.splice(j,1);
-      arr.push(null);
-      arr=arr.filter(Boolean);
-    }
-    cards.forEach(function(c){c.classList.remove('open');});
-  };
-
-  var badOnly=false;
-  document.getElementById('onlyBad').onclick=function(){
-    badOnly=!badOnly;
-    this.classList.toggle('on',badOnly);
-    cards.forEach(function(c){
-      c.classList.toggle('hidden',badOnly&&!wrong[c.dataset.k]);
+  var only = false;
+  document.getElementById('onlyBad').addEventListener('click', function () {
+    only = !only;
+    this.classList.toggle('on', only);
+    cards.forEach(function (c) {
+      c.classList.toggle('hidden', only && !flags[c.dataset.k]);
     });
-  };
+  });
 
-  var blind=false;
-  document.getElementById('blind').onclick=function(){
-    blind=!blind;
-    this.classList.toggle('on',blind);
-    document.getElementById('cold').classList.toggle('hidecol',blind);
-  };
+  document.getElementById('clearFlags').addEventListener('click', function () {
+    flags = {};
+    save();
+    cards.forEach(function (c) { c.classList.remove('hidden'); });
+    only = false;
+    document.getElementById('onlyBad').classList.remove('on');
+    paint();
+  });
 
   paint();
 })();

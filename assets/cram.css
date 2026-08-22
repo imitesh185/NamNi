@@ -106,3 +106,45 @@ footer{max-width:1080px;margin:auto;padding:18px 20px;color:var(--tx3);font-size
   .hwrap{gap:8px;row-gap:6px}
   table{display:block;overflow-x:auto}
 }
+
+/* ---------- concept cards: definition / image / holds / rules ---------- */
+.concept{border:1px solid var(--line2);border-radius:14px;background:var(--paper);
+  margin:16px 0;overflow:hidden;box-shadow:var(--sh)}
+.concept.shaky{border-color:var(--bad);box-shadow:0 0 0 2px var(--bad-s)}
+.concept.hidden{display:none}
+
+.chead{display:flex;align-items:center;gap:11px;padding:11px 16px;background:var(--tint);
+  border-bottom:1px solid var(--line)}
+.chead .cn{font:800 11px/1 var(--mono);color:#fff;padding:6px 8px;border-radius:7px;
+  background:linear-gradient(135deg,var(--acc),#cd7f43);flex:none}
+.chead .ct{font:700 16.5px var(--serif);color:var(--ink)}
+.chead .flag{margin-left:auto;font:800 9.5px var(--sans);letter-spacing:.9px;cursor:pointer;
+  border:1px solid var(--line2);background:var(--paper);color:var(--tx3);
+  border-radius:20px;padding:3px 10px;white-space:nowrap}
+.chead .flag:hover{border-color:var(--bad);color:var(--bad)}
+.concept.shaky .flag{border-color:var(--bad);background:var(--bad-s);color:var(--bad)}
+
+.blk{padding:13px 17px;border-bottom:1px dashed var(--line)}
+.blk:last-child{border-bottom:0}
+.bl{font:800 9.5px var(--sans);letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--acc2);margin-bottom:6px;display:flex;align-items:center;gap:7px}
+.bl::before{content:"";width:8px;height:8px;border-radius:2px;background:currentColor;flex:none}
+.blk.d .bl{color:var(--acc)}
+.blk.h .bl{color:var(--b)}
+.blk.r .bl{color:#8f6a0f}
+
+.blk.d p{margin:0;font:600 16px/1.45 var(--serif);color:var(--ink)}
+.blk.i{background:linear-gradient(180deg,#fdfaf4,#f7efe1);padding:14px 17px 10px}
+.blk.h ul,.blk.r ul{margin:0;padding-left:19px;font-size:14px}
+.blk.h li,.blk.r li{margin:4px 0}
+.blk.h li b,.blk.r li b{color:var(--ink)}
+.blk pre{margin:9px 0 0}
+.blk .warn{color:var(--bad);font-weight:700}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.split>.blk{border-bottom:0}
+.split>.blk:first-child{border-right:1px dashed var(--line)}
+@media(max-width:760px){
+  .split{grid-template-columns:1fr}
+  .split>.blk:first-child{border-right:0;border-bottom:1px dashed var(--line)}
+}
