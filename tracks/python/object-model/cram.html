@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Object Model 1.1–1.3 · CRAM</title>
+<link rel="stylesheet" href="../../../assets/base.css" />
+<link rel="stylesheet" href="../../../assets/cram.css" />
+<script src="../../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Object Model 1.1–1.3 <span>·</span> CRAM</div>
+    <button class="btn" id="blind">Blind mode</button>
+    <button class="btn" id="revealAll">Reveal all</button>
+    <button class="btn" id="hideAll">Hide all</button>
+    <button class="btn" id="shuffle">Shuffle</button>
+    <button class="btn" id="onlyBad">Wrong only</button>
+    <button class="btn" onclick="window.print()">Print</button>
+    <span class="spacer" id="stat"></span>
+  </div>
+</header>
+
+<main>
+
+<!-- ================= 1. CHANT ================= -->
+<section>
+  <h2>1 · The chant</h2>
+  <p class="cap">Five lines. Say them until they are reflex. Every other page is a consequence.</p>
+  <ol class="chant">
+    <li><div>A name is a key, not a box.<span class="g">Binding inserts a key. It never copies the object.</span></div></li>
+    <li><div>A container holds references, not objects.<span class="g">Name · index · key · attribute = one mechanism, four key types.</span></div></li>
+    <li><div><code>=</code> changes a slot. A method changes the object.<span class="g">Rebind vs mutate. This is 80% of every trap.</span></div></li>
+    <li><div>Shared + mutated = visible. Everything else is private.<span class="g">Two questions only: is it shared, and did you mutate it?</span></div></li>
+    <li><div>Nothing is copied unless you ask — and then only one level.<span class="g">Slice, <code>list()</code>, <code>copy()</code> are all the same shallow copy.</span></div></li>
+  </ol>
+</section>
+
+<!-- ================= 2. INSTANT RECALL ================= -->
+<section>
+  <h2>2 · Must be instant <span style="font:600 11px var(--sans);color:var(--tx3);letter-spacing:0;text-transform:none">— no thinking allowed</span></h2>
+  <p class="cap">Hit <b>Blind mode</b>, cover the answer column, go down the list out loud. Hover any cell to peek.</p>
+  <table id="cold">
+    <thead><tr><th style="width:44%">Code</th><th style="width:26%">Result</th><th>One-word reason</th></tr></thead>
+    <tbody>
+      <tr><td class="x">r=[[]]*3; r[0].append('x')</td><td class="r">[['x'],['x'],['x']]</td><td class="w">one object, mutated</td></tr>
+      <tr><td class="x">r=[[]]*3; r[0]=9</td><td class="r">[9,[],[]]</td><td class="w">slot rebound</td></tr>
+      <tr><td class="x">r=[[] for _ in range(3)]; r[0].append('x')</td><td class="r">[['x'],[],[]]</td><td class="w">body re-evaluated</td></tr>
+      <tr><td class="x">s=m[:]; s.append(9) → m</td><td class="r">unchanged</td><td class="w">new outer</td></tr>
+      <tr><td class="x">s=m[:]; s[0].append(9) → m</td><td class="r">changed</td><td class="w">shared inner</td></tr>
+      <tr><td class="x">b=a; a+=[3] → b</td><td class="r">[1,2,3]</td><td class="w">in-place</td></tr>
+      <tr><td class="x">b=a; a=a+[3] → b</td><td class="r">[1,2]</td><td class="w">rebound</td></tr>
+      <tr><td class="x">t=([1,2],3); t[0]+=[9]</td><td class="r">TypeError + t mutated</td><td class="w">load/op/store</td></tr>
+      <tr><td class="x">def f(x,bucket=[]) → f(1);f(2)</td><td class="r">[1,2]</td><td class="w">once at def</td></tr>
+      <tr><td class="x">b=a; a[:]=[9] → b</td><td class="r">[9]</td><td class="w">mutated</td></tr>
+      <tr><td class="x">b=a; a=[9] → b</td><td class="r">[1,2,3]</td><td class="w">rebound</td></tr>
+      <tr><td class="x">y=x; x.sort() → y</td><td class="r">sorted</td><td class="w">mutates</td></tr>
+      <tr><td class="x">y=x; x=sorted(x) → y</td><td class="r">original order</td><td class="w">new object</td></tr>
+      <tr><td class="x">copy.deepcopy(9) is 9</td><td class="r">True</td><td class="w">atomic</td></tr>
+      <tr><td class="x">m=[[1,2]]; d=deepcopy(m); d[0].append(9) → m</td><td class="r">unchanged</td><td class="w">unshared</td></tr>
+      <tr><td class="x">i=[1]; m=[i,i]; d=deepcopy(m); d[0].append(2)</td><td class="r">[[1,2],[1,2]]</td><td class="w">memo</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 3. FLASHCARDS ================= -->
+<section>
+  <h2>3 · Why-cards <span style="font:600 11px var(--sans);color:var(--tx3);letter-spacing:0;text-transform:none">— answer aloud, then click</span></h2>
+  <p class="cap">Knowing the output is not knowing. Mark <b>✗ wrong</b> on any you fumble — they collect below and survive a reload.</p>
+  <div class="cards" id="cards">
+
+    <div class="fc" data-k="c1"><span class="tag">CORE</span>
+      <div class="q">What is the difference between <code>nums[0] = 9</code> and <code>nums[0].append(9)</code>?</div>
+      <div class="a">First overwrites the <b>pointer stored in slot 0</b>. Second follows that pointer and changes <b>the object</b>. Only the second is visible through other references.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c2"><span class="tag">CORE</span>
+      <div class="q">Does an object's address ever change?</div>
+      <div class="a"><b>Never.</b> An object sits at one address for its whole life. Only which pointer a slot holds changes. "The id changed" always means "a different object is there now".<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c3"><span class="tag">1.1</span>
+      <div class="q">When is it safe to compare with <code>is</code>?</div>
+      <div class="a">Singletons only — <code>None</code>, <code>True</code>, <code>False</code>, your own sentinels. <code>is</code> asks identity and cannot be overridden; <code>==</code> calls <code>__eq__</code>.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c4"><span class="tag">1.1</span>
+      <div class="q">Two objects show the same <code>id()</code>. What can you conclude?</div>
+      <div class="a">Nothing, unless both are <b>alive at the same time</b>. Dead objects' addresses are reused instantly. Never cache or compare ids across time.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c5"><span class="tag">1.2</span>
+      <div class="q"><code>TypeError: 'list' object is not callable</code> — first thing you check?</div>
+      <div class="a">You shadowed the builtin: somewhere <code>list = [...]</code>. Builtins are searched <b>last</b> (L→E→G→B), so any earlier binding wins. Fix: <code>del list</code>.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c6"><span class="tag">1.2</span>
+      <div class="q">Does <code>del x</code> free memory?</div>
+      <div class="a">No. It removes a <b>binding</b>. The object dies only when its <em>last</em> reference goes. <code>del</code> is a namespace operation.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c7"><span class="tag">1.3</span>
+      <div class="q"><code>m is t</code> is False but every element id matches. Which copy is it?</div>
+      <div class="a"><b>Shallow.</b> New outer object, same element pointers. Matching element ids is the <em>proof</em> of shallowness, not evidence of aliasing.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c8"><span class="tag">1.3</span>
+      <div class="q">Two booleans that fully identify copy depth?</div>
+      <div class="a"><code>b is a</code> and <code>b[0] is a[0]</code>. True/True = alias. False/True = shallow. False/False = deep.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c9"><span class="tag">1.3</span>
+      <div class="q">Why does <code>deepcopy</code> return the same <code>int</code> / <code>str</code> object?</div>
+      <div class="a">Deep copy exists to stop mutation leaking. Immutables can't be mutated, so a copy is <b>indistinguishable</b> from the original. True at any size — not just cached small ints.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c10"><span class="tag">1.3</span>
+      <div class="q">Why is <code>[0]*3</code> "fine" but <code>[[]]*3</code> "broken"?</div>
+      <div class="a">Neither is broken — both share one object three times. <code>int</code> has no mutating method, so the sharing is <b>unobservable</b>. The rule never changed; mutability revealed it.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c11"><span class="tag">1.3</span>
+      <div class="q">Explain the <code>+=</code> tuple paradox in 3 steps.</div>
+      <div class="a">1) load <code>t[0]</code> · 2) <code>__iadd__</code> mutates the list <b>in place — commits</b> · 3) store back into the tuple — <b>fails</b>, TypeError. Mutation already happened.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c12"><span class="tag">1.3</span>
+      <div class="q">Is Python pass-by-value or pass-by-reference?</div>
+      <div class="a">Neither — <b>don't use the phrase.</b> Parameters are bindings in a new namespace. Mutation is visible to the caller, rebinding is not. Same rule as everywhere else.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c13"><span class="tag">1.3</span>
+      <div class="q">Why does <code>bucket=[]</code> accumulate across calls?</div>
+      <div class="a">The default is evaluated <b>once, at <code>def</code> time</b>, and stored in <code>f.__defaults__</code>. Every call rebinds the same object. Fix: <code>=None</code> sentinel.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c14"><span class="tag">1.3</span>
+      <div class="q">Safe copy of <code>{"hosts": ["a","b"]}</code> for untrusted code — which depth?</div>
+      <div class="a"><b>Deep.</b> Shallow gives a new dict but the same inner list, so they can still mutate your data through it. Deep only works if you own the whole graph.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c15"><span class="tag">TRAP</span>
+      <div class="q">A comprehension leaks its variable — true or false?</div>
+      <div class="a"><b>False.</b> Comprehensions get their own scope. <code>for</code> loops do <b>not</b> — the loop variable survives after the loop.<span class="miss">✗ wrong</span></div></div>
+
+    <div class="fc" data-k="c16"><span class="tag">TRAP</span>
+      <div class="q">Why does a bare class attribute name fail inside a method?</div>
+      <div class="a">A class body is a namespace but <b>not an enclosing scope</b>. LEGB skips it. Use <code>self.x</code> or <code>C.x</code>.<span class="miss">✗ wrong</span></div></div>
+
+  </div>
+
+  <div class="errbox" id="errbox" style="display:none">
+    <b>Error log — drill these first tomorrow</b>
+    <ol id="errlist"></ol>
+  </div>
+</section>
+
+<!-- ================= 4. KILL LIST ================= -->
+<section>
+  <h2>4 · Kill list</h2>
+  <p class="cap">Six habits. Each one is a bug you will otherwise ship.</p>
+  <div class="g2">
+    <div class="kill"><b>NEVER <code>[[...]] * n</code></b><span>Use <code>[... for _ in range(n)]</code>. Always.</span></div>
+    <div class="kill"><b>NEVER a mutable default</b><span><code>=None</code>, then build inside.</span></div>
+    <div class="kill"><b>NEVER shadow a builtin</b><span><code>list</code> <code>dict</code> <code>str</code> <code>id</code> <code>type</code> <code>len</code>.</span></div>
+    <div class="kill"><b>NEVER trust "a copy"</b><span>Ask: shallow or deep? Check <code>b[0] is a[0]</code>.</span></div>
+    <div class="kill"><b>NEVER cache <code>id()</code></b><span>Addresses are recycled the moment an object dies.</span></div>
+    <div class="kill"><b>NEVER say by-value / by-reference</b><span>Say: rebinding vs mutation.</span></div>
+  </div>
+</section>
+
+<!-- ================= 5. 60-SECOND TEST ================= -->
+<section>
+  <h2>5 · Sixty-second exit test</h2>
+  <p class="cap">Cold, out loud, no scrolling. Any stumble = you are not done.</p>
+  <ol class="test">
+    <li>Explain <code>[[]]*3</code> vs <code>[0]*3</code> <b>without using the word "immutable".</b></li>
+    <li>Name the three copy depths and the two booleans that tell them apart.</li>
+    <li>Why does <code>deepcopy</code> refuse to copy an <code>int</code>?</li>
+    <li>The <code>+=</code> tuple paradox — which step commits, which step fails?</li>
+    <li>Why does a mutable default accumulate, and where is it stored?</li>
+    <li>Given a surprise in a container, what three questions do you ask, in order?</li>
+  </ol>
+  <p style="margin-top:12px;font-size:13.5px;color:var(--tx2)">
+    Answer to Q6, if you need it: <b>which slot → rebind or mutate → is it shared?</b>
+    <span class="stamp">that is the whole stage</span></p>
+</section>
+
+<!-- ================= 6. FOOTNOTE ================= -->
+<section>
+  <h2>6 · Know it exists <span style="font:600 11px var(--sans);color:var(--tx3);letter-spacing:0;text-transform:none">— recognise, don't memorise</span></h2>
+  <ul class="tiny">
+    <li><b>LEGB</b> — Local → Enclosing → Global → Builtins, first hit wins. Scope = search order, not memory.</li>
+    <li><code>except … as e</code> <b>deletes</b> <code>e</code> at block exit. Copy it out first.</li>
+    <li><code>globals()</code> is live; <code>locals()</code> is a snapshot — writing to it does nothing. <span style="color:var(--b)">[CPython]</span></li>
+    <li><code>type(x)</code> reads the header and cannot lie; <code>__class__</code> is an ordinary attribute and can.</li>
+    <li>Types are objects; <code>type(type) is type</code>. Small ints and interned strings are cached. <span style="color:var(--b)">[CPython]</span></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>Object Model · drills 1.1–1.3 · cram sheet. Error log stored in this browser only.</footer>
+
+<script>
+(function(){
+  var KEY='om-cram-wrong-v1';
+  var cards=[].slice.call(document.querySelectorAll('.fc'));
+  var box=document.getElementById('errbox'), list=document.getElementById('errlist');
+  var stat=document.getElementById('stat');
+  var wrong={};
+  try{wrong=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(e){wrong={};}
+
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(wrong));}catch(e){}}
+
+  function paint(){
+    var n=0;
+    cards.forEach(function(c){
+      var bad=!!wrong[c.dataset.k];
+      c.classList.toggle('bad',bad);
+      if(bad)n++;
+    });
+    list.innerHTML='';
+    cards.forEach(function(c){
+      if(wrong[c.dataset.k]){
+        var li=document.createElement('li');
+        li.textContent=c.querySelector('.q').textContent;
+        list.appendChild(li);
+      }
+    });
+    box.style.display=n?'block':'none';
+    stat.textContent=n?(n+' marked wrong'):'nothing marked';
+  }
+
+  cards.forEach(function(c){
+    c.addEventListener('click',function(e){
+      if(e.target.classList.contains('miss')){
+        var k=c.dataset.k;
+        if(wrong[k]){delete wrong[k];}else{wrong[k]=1;}
+        save();paint();
+        e.stopPropagation();
+        return;
+      }
+      c.classList.toggle('open');
+    });
+  });
+
+  document.getElementById('revealAll').onclick=function(){cards.forEach(function(c){c.classList.add('open');});};
+  document.getElementById('hideAll').onclick=function(){cards.forEach(function(c){c.classList.remove('open');});};
+
+  document.getElementById('shuffle').onclick=function(){
+    var wrap=document.getElementById('cards');
+    var arr=[].slice.call(wrap.children);
+    for(var i=arr.length-1;i>0;i--){
+      var j=Math.floor(Math.random()*(i+1));
+      wrap.appendChild(arr[j]);
+      arr.splice(j,1);
+      arr.push(null);
+      arr=arr.filter(Boolean);
+    }
+    cards.forEach(function(c){c.classList.remove('open');});
+  };
+
+  var badOnly=false;
+  document.getElementById('onlyBad').onclick=function(){
+    badOnly=!badOnly;
+    this.classList.toggle('on',badOnly);
+    cards.forEach(function(c){
+      c.classList.toggle('hidden',badOnly&&!wrong[c.dataset.k]);
+    });
+  };
+
+  var blind=false;
+  document.getElementById('blind').onclick=function(){
+    blind=!blind;
+    this.classList.toggle('on',blind);
+    document.getElementById('cold').classList.toggle('hidecol',blind);
+  };
+
+  paint();
+})();
+</script>
+</body>
+</html>

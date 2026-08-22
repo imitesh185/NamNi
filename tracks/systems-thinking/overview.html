@@ -1,0 +1,1645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Systems Thinking &amp; System Dynamics — Working Note</title>
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/systems.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Systems Thinking <span>&amp;</span> System Dynamics</div>
+    <div class="tagline">Working note · MIT Sloan lineage (Forrester → Sterman) · think before you commit</div>
+    <button class="btn" onclick="window.print()">Print / PDF</button>
+    <button class="btn" id="resetBtn">Reset checklist</button>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Foundations</h4>
+  <a href="#why">00 · Why this exists</a>
+  <a href="#frameworks">01 · The six frameworks</a>
+  <a href="#defs">02 · What a system is</a>
+  <a href="#iceberg">03 · The iceberg</a>
+  <a href="#complexity">04 · Dynamic complexity</a>
+  <h4>The Machinery</h4>
+  <a href="#feedback">05 · Feedback loops</a>
+  <a href="#cld">06 · Causal loop diagrams</a>
+  <a href="#stocks">07 · Stocks &amp; flows</a>
+  <a href="#delays">08 · Delays</a>
+  <a href="#modes">09 · Modes of behaviour</a>
+  <a href="#nonlin">10 · Nonlinearity &amp; dominance</a>
+  <h4>Patterns</h4>
+  <a href="#archetypes">11 · System archetypes</a>
+  <a href="#leverage">12 · Leverage points</a>
+  <h4>Method</h4>
+  <a href="#process">13 · The modelling process</a>
+  <a href="#learning">14 · Learning &amp; mental models</a>
+  <h4>Application</h4>
+  <a href="#breakthrough">15 · The breakthrough playbook</a>
+  <a href="#protocol">16 · Personal design protocol</a>
+  <a href="#worked">17 · Worked examples</a>
+  <a href="#commit">18 · Pre-commitment checklist</a>
+  <a href="#traps">19 · Failure modes</a>
+  <h4>Reference</h4>
+  <a href="#glossary">20 · Glossary</a>
+  <a href="#sources">21 · Sources &amp; tools</a>
+</nav>
+
+<main>
+
+<div class="hero">
+  <div class="kicker">Operating note · v1</div>
+  <h1>Systems Thinking &amp; System Dynamics</h1>
+  <p class="dropcap">Systems thinking is the discipline of seeing <em>structure</em> instead of events,
+  and <em>circles of causality</em> instead of straight lines. System dynamics is its rigorous
+  half: an explicit method — stocks, flows, feedback, delays, simulation — developed at
+  MIT Sloan by Jay Forrester and taught today by John Sterman, for understanding why
+  complex systems behave the way they do and why our interventions so often backfire.</p>
+  <div class="why">
+    <b>Purpose of this note.</b> Not knowledge for its own sake. It is a thinking apparatus:
+    a way to slow down before committing to a path, to test whether a direction is even
+    <em>directionally correct</em>, and — most importantly — to stop chasing goals and start
+    <em>building the structure</em> that produces them. <mark>Goals set direction. Structure produces
+    behaviour.</mark> If the structure is wrong, effort is noise.
+  </div>
+  <div class="tags">
+    <span class="tag">#stocks-and-flows</span>
+    <span class="tag t2">#feedback-loops</span>
+    <span class="tag t3">#delays</span>
+    <span class="tag">#leverage-points</span>
+    <span class="tag t2">#archetypes</span>
+    <span class="tag t3">#mental-models</span>
+  </div>
+</div>
+
+<!-- ============================================================ 00 -->
+<section id="why">
+  <h2><span class="num">00</span> Why this exists</h2>
+  <p class="sub">The three sentences that justify the whole field.</p>
+
+  <div class="pq"><span class="n">1</span>
+    <b>“Today’s problems come from yesterday’s solutions.”</b>
+    Most persistent problems are not caused by outside forces or bad luck; they are the
+    delayed, displaced consequence of an earlier fix. <mark>The system is a closed loop and
+    you are inside it.</mark>
+  </div>
+  <div class="pq"><span class="n">2</span>
+    <b>“The behaviour of a system arises from its structure.”</b>
+    Not from the personalities, the effort level, or the events. Change who is in the role
+    and the structure will reproduce the same behaviour. Deming’s corollary:
+    <em>every system is perfectly designed to get the results it gets.</em>
+  </div>
+  <div class="pq"><span class="n">3</span>
+    <b>“Complex systems are counterintuitive and policy resistant.”</b>
+    Forrester’s central finding: systems with many feedback loops and long delays respond to
+    intervention in ways that are the opposite of what intuition predicts. <mark>The obvious
+    lever is usually the wrong one</mark> — and often the exactly-backwards one.
+  </div>
+
+  <div class="note">
+    <span class="lbl">The practical payoff</span>
+    You gain the ability to answer four questions <b>before</b> spending months on a path:
+    (a) What actually accumulates here? (b) Which feedback loop currently dominates? (c) How
+    long is the delay between my action and the visible result? (d) Am I treating a symptom
+    or the structure? Almost all wasted years fail one of these four.
+  </div>
+</section>
+
+<!-- ============================================================ 01 -->
+<section id="frameworks">
+  <h2><span class="num">01</span> The six frameworks — the whole toolkit</h2>
+  <p class="sub">Everything in this note is one of six tools. This is the map: what each one is for,
+  the single move it gives you, and where it is developed.</p>
+
+  <p>Concepts explain; <strong>frameworks act</strong>. The rest of this note is deep material on six
+  frameworks and three supporting tools — nothing else. Read them in the order below: each one answers
+  the question the previous one raises, and the sixth is where the answer becomes an intervention.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 190" role="img" aria-label="The six frameworks in order of use">
+      <g>
+        <rect x="30"  y="44" width="100" height="52" rx="10" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.6"/>
+        <text x="80"  y="34"  class="sxs" text-anchor="middle" fill="#2f7a9e">F1</text>
+        <text x="80"  y="70"  class="st"  text-anchor="middle" fill="#2f7a9e">SEE</text>
+        <text x="80"  y="87"  class="ss"  text-anchor="middle">Iceberg</text>
+        <text x="80"  y="124" class="ss"  text-anchor="middle">Where am I</text>
+        <text x="80"  y="139" class="ss"  text-anchor="middle">looking?</text>
+
+        <rect x="142" y="44" width="100" height="52" rx="10" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.6"/>
+        <text x="192" y="34"  class="sxs" text-anchor="middle" fill="#b45f35">F2</text>
+        <text x="192" y="70"  class="st"  text-anchor="middle" fill="#b45f35">MEASURE</text>
+        <text x="192" y="87"  class="ss"  text-anchor="middle">Stocks &amp; flows</text>
+        <text x="192" y="124" class="ss"  text-anchor="middle">What is</text>
+        <text x="192" y="139" class="ss"  text-anchor="middle">actually there?</text>
+
+        <rect x="254" y="44" width="100" height="52" rx="10" fill="#f8e2ef" stroke="#a6497c" stroke-width="1.6"/>
+        <text x="304" y="34"  class="sxs" text-anchor="middle" fill="#a6497c">F3</text>
+        <text x="304" y="70"  class="st"  text-anchor="middle" fill="#a6497c">EXPLAIN</text>
+        <text x="304" y="87"  class="ss"  text-anchor="middle">Feedback loops</text>
+        <text x="304" y="124" class="ss"  text-anchor="middle">Why does</text>
+        <text x="304" y="139" class="ss"  text-anchor="middle">it move?</text>
+
+        <rect x="366" y="44" width="100" height="52" rx="10" fill="#faedc9" stroke="#a87c12" stroke-width="1.6"/>
+        <text x="416" y="34"  class="sxs" text-anchor="middle" fill="#a87c12">F4</text>
+        <text x="416" y="70"  class="st"  text-anchor="middle" fill="#a87c12">TIME</text>
+        <text x="416" y="87"  class="ss"  text-anchor="middle">Delays</text>
+        <text x="416" y="124" class="ss"  text-anchor="middle">Why does it</text>
+        <text x="416" y="139" class="ss"  text-anchor="middle">feel wrong?</text>
+
+        <rect x="478" y="44" width="100" height="52" rx="10" fill="#f9e0d9" stroke="#c0503f" stroke-width="1.6"/>
+        <text x="528" y="34"  class="sxs" text-anchor="middle" fill="#c0503f">F5</text>
+        <text x="528" y="70"  class="st"  text-anchor="middle" fill="#c0503f">NAME</text>
+        <text x="528" y="87"  class="ss"  text-anchor="middle">Archetypes</text>
+        <text x="528" y="124" class="ss"  text-anchor="middle">Which known</text>
+        <text x="528" y="139" class="ss"  text-anchor="middle">trap is this?</text>
+
+        <rect x="590" y="44" width="100" height="52" rx="10" fill="#dcf0e9" stroke="#2b7d6d" stroke-width="1.6"/>
+        <text x="640" y="34"  class="sxs" text-anchor="middle" fill="#2b7d6d">F6</text>
+        <text x="640" y="70"  class="st"  text-anchor="middle" fill="#2b7d6d">PUSH</text>
+        <text x="640" y="87"  class="ss"  text-anchor="middle">Leverage points</text>
+        <text x="640" y="124" class="ss"  text-anchor="middle">Where do</text>
+        <text x="640" y="139" class="ss"  text-anchor="middle">I push?</text>
+
+        <g fill="#9c8d78">
+          <path d="M132,64 L140,70 L132,76 z"/><path d="M244,64 L252,70 L244,76 z"/>
+          <path d="M356,64 L364,70 L356,76 z"/><path d="M468,64 L476,70 L468,76 z"/>
+          <path d="M580,64 L588,70 L580,76 z"/>
+        </g>
+        <text x="360" y="176" class="sxs" text-anchor="middle">DIAGNOSIS &#8594;&#8594;&#8594; INTERVENTION &#8594; then §15 converts it into a breakthrough</text>
+      </g>
+    </svg>
+    <figcaption>Six tools, one order. Skipping F2 is the most common failure; stopping before F6
+    is the second.</figcaption>
+  </figure>
+
+  <div class="grid g2">
+
+    <div class="fw f1">
+      <div class="fh"><span class="fx">F1</span><span class="fn">The Iceberg</span></div>
+      <p class="fq">Four levels of seeing: events → patterns → structure → mental models. Where your
+      attention sits caps the quality of every decision you make.</p>
+      <dl>
+        <dt>Reach for it</dt><dd>“Why does this <b>keep</b> happening?”</dd>
+        <dt>The move</dt><dd>Push your explanation <b>down one level</b>. Stop at structure, never at a person.</dd>
+        <dt>You need it</dt><dd>When your explanation names a mood, a person, or bad luck.</dd>
+        <dt>Developed in</dt><dd><a href="#iceberg">§03 · The iceberg</a></dd>
+      </dl>
+    </div>
+
+    <div class="fw f2">
+      <div class="fh"><span class="fx">F2</span><span class="fn">Stocks &amp; Flows</span></div>
+      <p class="fq">The physics layer. A stock accumulates; flows are the only things that change it;
+      the level rises only while inflow exceeds outflow.</p>
+      <dl>
+        <dt>Reach for it</dt><dd>Every goal, every time. This is the default tool.</dd>
+        <dt>The move</dt><dd>Write four things: <b>stock · inflow · outflow · how long</b>, with units.</dd>
+        <dt>You need it</dt><dd>Whenever a goal is stated as a state (“be fit”, “be respected”) — states cannot be acted on.</dd>
+        <dt>Developed in</dt><dd><a href="#stocks">§07 · Stocks &amp; flows</a></dd>
+      </dl>
+    </div>
+
+    <div class="fw f3">
+      <div class="fh"><span class="fx">F3</span><span class="fn">Feedback Loops</span></div>
+      <p class="fq">Two atoms only. <span class="pill pR">R</span> amplifies and compounds;
+      <span class="pill pB">B</span> opposes and seeks a goal. Every dynamic ever observed is these two plus delays.</p>
+      <dl>
+        <dt>Reach for it</dt><dd>Something is <b>running away</b>, or something is <b>stuck flat</b>.</dd>
+        <dt>The move</dt><dd>Runaway → cut the R loop’s gain at source. Stuck → find the B loop’s <b>goal</b> and its constraint.</dd>
+        <dt>You need it</dt><dd>Whenever you are about to “push harder”. Plateaus are never laziness.</dd>
+        <dt>Developed in</dt><dd><a href="#feedback">§05 · Feedback loops</a></dd>
+      </dl>
+    </div>
+
+    <div class="fw f4">
+      <div class="fh"><span class="fx">F4</span><span class="fn">Delays</span></div>
+      <p class="fq">The lag between action and visible result — material (transit) and information
+      (belief updating). A balancing loop with a delay <b>always</b> overshoots.</p>
+      <dl>
+        <dt>Reach for it</dt><dd>“Why isn’t this working <b>yet</b>?” · “Why do I keep over-correcting?”</dd>
+        <dt>The move</dt><dd>Write the lag as a <b>number</b>; set the review date past it; count the supply line already in transit.</dd>
+        <dt>You need it</dt><dd>When you have changed the plan more than twice inside one quarter.</dd>
+        <dt>Developed in</dt><dd><a href="#delays">§08 · Delays</a></dd>
+      </dl>
+    </div>
+
+    <div class="fw f5">
+      <div class="fh"><span class="fx">F5</span><span class="fn">Archetypes</span></div>
+      <p class="fq">Generic structures that recur across unrelated domains. Eleven exist; four cover
+      most of personal life. Each has a <b>known</b> escape — you do not have to invent one.</p>
+      <dl>
+        <dt>Reach for it</dt><dd>The situation feels <b>familiar and bad</b> and you can’t name it.</dd>
+        <dt>The move</dt><dd>Match the symptom to the archetype, then apply its documented escape.</dd>
+        <dt>You need it</dt><dd>“I’ve been here before, with a different job / diet / project.”</dd>
+        <dt>Developed in</dt><dd><a href="#archetypes">§11 · System archetypes</a></dd>
+      </dl>
+    </div>
+
+    <div class="fw f6">
+      <div class="fh"><span class="fx">F6</span><span class="fn">Leverage Points</span></div>
+      <p class="fq">Meadows’ twelve places to intervene, ranked. Parameters are almost powerless;
+      rules, information flows and goals are where behaviour actually changes.</p>
+      <dl>
+        <dt>Reach for it</dt><dd>You have diagnosed it and are choosing <b>what to actually do</b>.</dd>
+        <dt>The move</dt><dd>Locate your intended action on the ladder. If it sits at 11–12, trade it up to 9, 6 or 5.</dd>
+        <dt>You need it</dt><dd>Whenever the plan begins “I’ll just be more disciplined about…”</dd>
+        <dt>Developed in</dt><dd><a href="#leverage">§12 · Leverage points</a></dd>
+      </dl>
+    </div>
+
+  </div>
+
+  <h3>Three supporting tools (not separate frameworks)</h3>
+  <div class="grid g3">
+    <div class="card">
+      <h4 style="margin-top:0">Causal loop diagrams</h4>
+      <p style="margin-bottom:0">The <b>notation</b> for F3. How you draw loops, count polarity and expose a
+      wrong assumption in ten minutes. <a href="#cld">§06</a></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">Modes of behaviour</h4>
+      <p style="margin-bottom:0">The <b>read-out</b>. Six shapes on a graph; each one names the structure
+      that produced it. Diagnosis by fingerprint. <a href="#modes">§09</a></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">Nonlinearity &amp; dominance</h4>
+      <p style="margin-bottom:0">The <b>caveat</b>. Which loop is in charge changes with the state of the
+      system — so every plan has a validity range. <a href="#nonlin">§10</a></p>
+    </div>
+  </div>
+
+  <div class="rule">
+    <span class="lbl">The six in one line</span>
+    <b>Look deeper (F1) at what actually accumulates (F2), find the loop in charge (F3), respect the
+    lag (F4), name the known trap (F5), then push where pushing works (F6).</b><br>
+    Everything else in this note is detail on one of those six.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">Where people stall — read this before continuing</span>
+    F1–F5 are <b>diagnostic</b>. They produce understanding, and understanding feels like progress
+    because it removes confusion. It changes nothing. The structure is still there, still producing the
+    same behaviour, and it will resist you. <mark>Only F6 — plus a constraint, a held decision and a
+    visible signal — converts insight into a changed outcome.</mark> That conversion is
+    <a href="#breakthrough">§15 · The breakthrough playbook</a>. If you find yourself saying
+    <i>“I understand the situation but I still don’t know how to get out”</i>, you have completed
+    F1–F5 and skipped F6.
+  </div>
+</section>
+
+<!-- ============================================================ 02 -->
+<section id="defs">
+  <h2><span class="num">02</span> What a system actually is</h2>
+  <p class="sub">Definitions that do work, not definitions that sound good.</p>
+
+  <p><strong>A system is a set of elements, interconnected in a way that produces its own
+  pattern of behaviour over time, organised around a purpose.</strong> (Donella Meadows.)
+  Three parts, in ascending order of importance:</p>
+
+  <table>
+    <thead><tr><th>Part</th><th>What it is</th><th>Leverage</th></tr></thead>
+    <tbody>
+      <tr><td>Elements</td><td>The visible parts — people, money, tools, hours, tasks.</td>
+        <td><b>Lowest.</b> Swapping parts rarely changes behaviour.</td></tr>
+      <tr><td>Interconnections</td><td>The relationships, information flows, and rules that
+        link the parts.</td><td><b>High.</b> Change the wiring, change the behaviour.</td></tr>
+      <tr><td>Purpose / goal</td><td>The outcome the system actually optimises for — inferred
+        from behaviour, not from stated intentions.</td><td><b>Highest.</b> Redefine the goal
+        and everything reorganises.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Diagnostic rule</span>
+    <b>The purpose of a system is <mark>what it does.</mark></b> Never what it says it does. If your
+    “system for reading” produces zero books, its real purpose is something else —
+    usually the feeling of intending to read. Read the behaviour, not the intention.
+  </div>
+
+  <h3>The boundary — the single most consequential modelling choice</h3>
+  <p>A system boundary separates what you treat as <em>endogenous</em> (generated inside,
+  by the feedback you are modelling) from <em>exogenous</em> (given from outside) and what
+  you <em>exclude</em> entirely. Sterman’s rule:</p>
+  <div class="rule">
+    <span class="lbl">Endogenous point of view</span>
+    Draw the boundary wide enough that the problem behaviour is generated <b>inside</b> it.
+    If the explanation of your problem lives outside your boundary, you have not explained
+    the problem — you have blamed the environment. “The market was bad,” “people are lazy,”
+    “I had no time” are boundary failures.
+  </div>
+  <p>But wider is not automatically better: a boundary too wide gives an unusable model.
+  The correct boundary is <em>problem-specific</em> — narrow enough to reason about, wide
+  enough to close the loops that matter.</p>
+</section>
+
+<!-- ============================================================ 03 -->
+<section id="iceberg">
+  <h2><span class="num">03</span> The iceberg — four levels of seeing</h2>
+  <p class="sub">Where your attention sits determines the quality of every decision you make.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 300" role="img" aria-label="Iceberg model of systems thinking">
+      <defs>
+        <linearGradient id="ice" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f0e3cb"/><stop offset="100%" stop-color="#dbc9a7"/>
+        </linearGradient>
+      </defs>
+      <line x1="30" y1="66" x2="690" y2="66" stroke="#2f7a9e" stroke-width="1.5" stroke-dasharray="5 5"/>
+      <text x="34" y="58" class="sxs">WATERLINE — WHAT MOST PEOPLE SEE</text>
+      <polygon points="360,14 470,66 250,66" fill="#fcf5e8" stroke="#cdbb9e"/>
+      <polygon points="250,66 470,66 640,286 80,286" fill="url(#ice)" stroke="#cdbb9e"/>
+      <text x="360" y="52" class="st" text-anchor="middle">EVENTS</text>
+      <text x="360" y="110" class="st" text-anchor="middle">PATTERNS OF BEHAVIOUR</text>
+      <text x="360" y="128" class="ss" text-anchor="middle">trends over time</text>
+      <text x="360" y="185" class="st" text-anchor="middle">SYSTEMIC STRUCTURE</text>
+      <text x="360" y="203" class="ss" text-anchor="middle">stocks · flows · feedback · delays · rules</text>
+      <text x="360" y="258" class="st" text-anchor="middle">MENTAL MODELS</text>
+      <text x="360" y="276" class="ss" text-anchor="middle">beliefs, assumptions, identity, paradigm</text>
+      <text x="694" y="52"  class="sxs" text-anchor="end" fill="#c0503f">REACT</text>
+      <text x="694" y="112" class="sxs" text-anchor="end" fill="#a87c12">ANTICIPATE</text>
+      <text x="694" y="187" class="sxs" text-anchor="end" fill="#2b7d6d">DESIGN</text>
+      <text x="694" y="260" class="sxs" text-anchor="end" fill="#a6497c">TRANSFORM</text>
+    </svg>
+    <figcaption>Leverage increases as you descend. Effort spent at the event level is
+    almost entirely wasted motion.</figcaption>
+  </figure>
+
+  <table>
+    <thead><tr><th>Level</th><th>Question it answers</th><th>Response mode</th><th>Cost of staying here</th></tr></thead>
+    <tbody>
+      <tr><td>Events</td><td>What just happened?</td><td>React / firefight</td><td>Permanent treadmill; problems recur forever</td></tr>
+      <tr><td>Patterns</td><td>What has been happening over time?</td><td>Anticipate / forecast</td><td>You predict the trend but can’t change it</td></tr>
+      <tr><td>Structure</td><td>What is causing the pattern?</td><td>Design / re-engineer</td><td>—</td></tr>
+      <tr><td>Mental models</td><td>What beliefs keep this structure in place?</td><td>Transform</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">Applied</span>
+    “I wasted this weekend” is an <b>event</b>. “I lose most weekends after a heavy work week”
+    is a <b>pattern</b>. “There is no recovery buffer in my week, so depletion accumulates and
+    discharges into the weekend” is <b>structure</b>. “Rest must be earned” is the
+    <b>mental model</b> holding the structure in place. Only the last two are fixable.
+  </div>
+</section>
+
+<!-- ============================================================ 04 -->
+<section id="complexity">
+  <h2><span class="num">04</span> Dynamic complexity — the thing our intuition cannot handle</h2>
+  <p class="sub">Sterman’s distinction, and why smart people confidently do the wrong thing.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">Detail complexity</h4>
+      <p style="margin-bottom:0">Many variables, many combinations. Hard for a human, trivial
+      for a computer. Chess, spreadsheets, logistics tables. <b>This is not the problem.</b></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">Dynamic complexity</h4>
+      <p style="margin-bottom:0">Few variables, but connected by feedback, delays and
+      nonlinearity. Cause and effect are <b>distant in time and space</b>. Hard for humans
+      <i>and</i> for intuition. <b>This is where every real failure lives.</b></p>
+    </div>
+  </div>
+
+  <h3>The ten properties of dynamically complex systems</h3>
+  <ol>
+    <li><b>Constantly changing</b> — at every timescale, simultaneously.</li>
+    <li><b>Tightly coupled</b> — actors interact strongly; nothing moves alone.</li>
+    <li><b>Governed by feedback</b> — your action alters the state that determines your next action.</li>
+    <li><b>Nonlinear</b> — effect is rarely proportional to cause; thresholds and saturation everywhere.</li>
+    <li><b>History-dependent</b> — path matters; many actions are irreversible (stocks can’t be un-filled).</li>
+    <li><b>Self-organising</b> — structure emerges without a designer.</li>
+    <li><b>Adaptive</b> — agents learn and change the rules; yesterday’s effective policy decays.</li>
+    <li><b>Counterintuitive</b> — cause and effect are not close together; the obvious lever misfires.</li>
+    <li><b>Policy resistant</b> — the system compensates for your intervention and returns to its old behaviour.</li>
+    <li><b>Trade-off ridden</b> — short-run response is usually the <i>opposite</i> of the long-run response.</li>
+  </ol>
+
+  <div class="trap">
+    <span class="lbl">The core human bug — misperception of feedback</span>
+    In controlled experiments (Sterman, MIT), highly educated subjects manage systems as if
+    they were <b>open loops</b>: they ignore feedback, ignore time delays, ignore accumulation,
+    and ignore nonlinearity. Result: chronic oscillation, overshoot and amplification. This is
+    not a knowledge deficit — the same people fail after being told the rules. It is a
+    <b>structural limitation of mental simulation</b>. That is exactly why the field insists
+    on explicit diagrams and simulation instead of “thinking hard about it.”
+  </div>
+
+  <div class="note">
+    <span class="lbl">Property #10 is the one that ruins lives</span>
+    <b>Better before worse vs. worse before better.</b> Nearly every high-leverage change
+    feels worse first (rebuilding, learning, restructuring, cutting commitments). Nearly every
+    low-leverage fix feels better first (the shortcut, the stimulant, the borrowing). If you
+    judge a path by the first two weeks of feedback, you will systematically select the
+    worse path. <b>Judge paths by their loop structure, not by their early feel.</b>
+  </div>
+</section>
+
+<!-- ============================================================ 05 -->
+<section id="feedback">
+  <h2><span class="num">05</span> Feedback loops — the two atoms of all dynamics</h2>
+  <p class="sub">Every dynamic behaviour ever observed is built from exactly two loop types plus delays.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 250" role="img" aria-label="Reinforcing and balancing feedback loops">
+      <defs>
+        <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 z" fill="#8d7f6b"/></marker>
+      </defs>
+      <!-- R loop -->
+      <g>
+        <text x="175" y="26" class="st" text-anchor="middle" fill="#a6497c">REINFORCING (R)</text>
+        <text x="175" y="44" class="ss" text-anchor="middle">amplifies · compounds · exponential</text>
+        <ellipse cx="175" cy="145" rx="105" ry="62" fill="#faedf5" stroke="#e0b4d0" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <text x="175" y="142" class="lp" fill="#a6497c" text-anchor="middle">R</text>
+        <text x="175" y="160" class="ss" text-anchor="middle" fill="#a6497c">same direction</text>
+        <text x="175" y="88"  class="st" text-anchor="middle">Skill</text>
+        <text x="60"  y="196" class="st" text-anchor="middle">Confidence</text>
+        <text x="292" y="196" class="st" text-anchor="middle">Practice</text>
+        <path d="M198,90 Q272,120 285,180" fill="none" stroke="#8d7f6b" stroke-width="1.6" marker-end="url(#ah)"/>
+        <path d="M258,203 Q175,232 92,203" fill="none" stroke="#8d7f6b" stroke-width="1.6" marker-end="url(#ah)"/>
+        <path d="M62,180 Q76,120 152,90" fill="none" stroke="#8d7f6b" stroke-width="1.6" marker-end="url(#ah)"/>
+        <text x="256" y="128" class="st" fill="#5d8a41">+</text>
+        <text x="172" y="228" class="st" fill="#5d8a41">+</text>
+        <text x="86"  y="128" class="st" fill="#5d8a41">+</text>
+      </g>
+      <!-- B loop -->
+      <g transform="translate(370,0)">
+        <text x="175" y="26" class="st" text-anchor="middle" fill="#2f7a9e">BALANCING (B)</text>
+        <text x="175" y="44" class="ss" text-anchor="middle">corrects · seeks a goal · stabilises</text>
+        <ellipse cx="175" cy="145" rx="105" ry="62" fill="#eaf4fa" stroke="#a9cee2" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <text x="175" y="142" class="lp" fill="#2f7a9e" text-anchor="middle">B</text>
+        <text x="175" y="160" class="ss" text-anchor="middle" fill="#2f7a9e">opposes change</text>
+        <text x="175" y="88"  class="st" text-anchor="middle">Actual state</text>
+        <text x="58"  y="196" class="st" text-anchor="middle">Gap vs goal</text>
+        <text x="296" y="196" class="st" text-anchor="middle">Corrective action</text>
+        <path d="M212,90 Q276,120 288,180" fill="none" stroke="#8d7f6b" stroke-width="1.6" marker-end="url(#ah)"/>
+        <path d="M262,203 Q175,232 96,203" fill="none" stroke="#8d7f6b" stroke-width="1.6" marker-end="url(#ah)"/>
+        <path d="M58,180 Q72,120 140,90" fill="none" stroke="#8d7f6b" stroke-width="1.6" marker-end="url(#ah)"/>
+        <text x="258" y="128" class="st" fill="#c0503f">−</text>
+        <text x="172" y="228" class="st" fill="#5d8a41">+</text>
+        <text x="84"  y="128" class="st" fill="#5d8a41">+</text>
+      </g>
+    </svg>
+    <figcaption>Left: one odd-count-free loop (0 negative links) → reinforcing.
+    Right: exactly one negative link → balancing.</figcaption>
+  </figure>
+
+  <div class="grid g2">
+    <div class="card">
+      <span class="pill pR">R · REINFORCING</span>
+      <p>Also: positive, self-reinforcing, virtuous/vicious circle, compounding.</p>
+      <ul style="margin-bottom:0">
+        <li>Output feeds back to <b>amplify</b> the original change.</li>
+        <li>Produces <b>exponential growth or exponential collapse</b>. Direction depends only on where you start.</li>
+        <li>Every R loop <b>runs both ways</b> — the same structure that compounds skill compounds decay.</li>
+        <li>Sources of all growth, all addiction, all wealth, all erosion.</li>
+        <li><b>No R loop runs forever.</b> Something eventually constrains it.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="pill pB">B · BALANCING</span>
+      <p>Also: negative, goal-seeking, self-correcting, homeostatic.</p>
+      <ul style="margin-bottom:0">
+        <li>Output feeds back to <b>oppose</b> the change; drives the system toward a <b>goal</b>.</li>
+        <li>Every B loop has a goal — often <b>implicit and unexamined</b>. Find it: it is the real target.</li>
+        <li>Produces <b>goal-seeking</b> behaviour; with a delay, produces <b>oscillation</b>.</li>
+        <li>Source of all stability, all limits, all resistance, all plateaus.</li>
+        <li><b>Policy resistance = a balancing loop you didn’t see</b> pushing back.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rule">
+    <span class="lbl">The two questions that resolve most confusion</span>
+    <b>Stuck / plateaued?</b> A balancing loop dominates. Find its goal and its constraint — don’t push harder on the R loop.<br>
+    <b>Runaway / spiralling?</b> A reinforcing loop dominates. Don’t fight the symptom — either flip its direction at the source or install the missing balancing loop.
+  </div>
+</section>
+
+<!-- ============================================================ 06 -->
+<section id="cld">
+  <h2><span class="num">06</span> Causal loop diagrams — the language</h2>
+  <p class="sub">Cheap, fast, and the fastest way to expose a wrong assumption. Draw before you decide.</p>
+
+  <h3>Notation (only four things)</h3>
+  <dl class="kv">
+    <dt>Variable</dt><dd>A quantity that can go up or down. Use <b>nouns or noun phrases</b>, never actions.
+      Choose the direction that is normally “more” (write <code>Energy</code>, not <code>Fatigue</code>) — mixed valences make loops unreadable.</dd>
+    <dt>Causal link →</dt><dd>An arrow from cause to effect. Only draw it if you believe there is a real causal mechanism.</dd>
+    <dt>Polarity + / −</dt><dd><b>+</b> : cause ↑ → effect ↑ <i>above what it would otherwise have been</i>. <b>−</b> : cause ↑ → effect ↓ below what it would otherwise have been.
+      The italicised phrase matters — polarity is about the <b>deviation</b>, not the absolute level.</dd>
+    <dt>Loop label</dt><dd><b>R</b> or <b>B</b> in the centre, plus a short name (“Compounding practice”, “Burnout brake”). Naming loops is not decoration — it forces you to state the mechanism.</dd>
+  </dl>
+
+  <div class="rule">
+    <span class="lbl">Loop polarity — the counting rule</span>
+    Count the <b>negative</b> links in the loop.<br>
+    <b>Even number (including zero) → REINFORCING (R).</b><br>
+    <b>Odd number → BALANCING (B).</b><br>
+    That is the entire arithmetic. Do it every time; intuition gets it wrong on loops of length ≥ 4.
+  </div>
+
+  <h3>Rules for a CLD that is actually useful</h3>
+  <ol class="steps">
+    <li><b>Start from the problem behaviour, not from the system.</b> Sketch the variable of
+      interest over time first (the reference mode). The diagram exists to explain that curve.</li>
+    <li><b>Close every loop.</b> A diagram with dangling arrows is a list of opinions, not a model.
+      If an arrow can’t be closed, that variable is exogenous — mark it and be honest about it.</li>
+    <li><b>Every link must be causal and independent of the loop.</b> Not correlation, not
+      definition, not accounting identity.</li>
+    <li><b>Make the goals of balancing loops explicit.</b> An unnamed goal is an ungoverned system.</li>
+    <li><b>Mark delays</b> with <code>‖</code> across the arrow. An unmarked long delay is the
+      most common cause of a wrong conclusion.</li>
+    <li><b>Include the loops you dislike.</b> The side effects, the cost, the resentment, the
+      opportunity cost. “There are no side effects — only effects.” The ones you omit are
+      exactly the ones that will defeat the plan.</li>
+    <li><b>Keep it small.</b> 5–12 variables. A CLD that needs a wall is a CLD nobody reasons with.</li>
+  </ol>
+
+  <div class="trap">
+    <span class="lbl">Known limitation — do not skip this</span>
+    CLDs <b>cannot show accumulation</b>. They omit the stock/flow distinction, so they cannot
+    tell you the <i>timing</i> or <i>magnitude</i> of behaviour, and they can mislead about
+    which loop dominates. Use a CLD to map causality and find loops; switch to a
+    <b>stock-and-flow</b> view the moment you need to reason about levels, timing, or “how long
+    until this pays off.”
+  </div>
+</section>
+
+<!-- ============================================================ 07 -->
+<section id="stocks">
+  <h2><span class="num">07</span> Stocks &amp; flows — the physics layer</h2>
+  <p class="sub">The single most useful idea in this entire note. Almost nobody applies it to their own life.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 210" role="img" aria-label="Stock and flow diagram">
+      <defs>
+        <marker id="ah2" markerWidth="10" markerHeight="10" refX="8" refY="3.2" orient="auto">
+          <path d="M0,0 L8,3.2 L0,6.4 z" fill="#9c8d78"/></marker>
+      </defs>
+      <!-- cloud left -->
+      <g fill="#f1e7d6" stroke="#cdbb9e">
+        <circle cx="42" cy="98" r="13"/><circle cx="60" cy="90" r="16"/><circle cx="76" cy="100" r="12"/>
+      </g>
+      <!-- pipe in -->
+      <line x1="88" y1="97" x2="255" y2="97" stroke="#c3b299" stroke-width="6" marker-end="url(#ah2)"/>
+      <!-- valve in -->
+      <g transform="translate(168,97)">
+        <path d="M-13,-11 L13,11 L13,-11 L-13,11 z" fill="#fdfaf4" stroke="#2b7d6d" stroke-width="2"/>
+        <circle cx="0" cy="-17" r="5" fill="#fdfaf4" stroke="#2b7d6d" stroke-width="2"/>
+      </g>
+      <text x="168" y="146" class="st" text-anchor="middle" fill="#2b7d6d">INFLOW (rate)</text>
+      <text x="168" y="163" class="ss" text-anchor="middle">units per unit time</text>
+      <!-- stock -->
+      <rect x="272" y="62" width="176" height="72" rx="8" fill="#f8e7d9" stroke="#b45f35" stroke-width="2"/>
+      <text x="360" y="94" class="st" text-anchor="middle" style="font-size:14px">STOCK</text>
+      <text x="360" y="114" class="ss" text-anchor="middle">accumulation · a level · has memory</text>
+      <text x="360" y="42" class="ss" text-anchor="middle">the only thing that carries the past forward</text>
+      <!-- pipe out -->
+      <line x1="452" y1="97" x2="632" y2="97" stroke="#c3b299" stroke-width="6" marker-end="url(#ah2)"/>
+      <g transform="translate(548,97)">
+        <path d="M-13,-11 L13,11 L13,-11 L-13,11 z" fill="#fdfaf4" stroke="#c0503f" stroke-width="2"/>
+        <circle cx="0" cy="-17" r="5" fill="#fdfaf4" stroke="#c0503f" stroke-width="2"/>
+      </g>
+      <text x="548" y="146" class="st" text-anchor="middle" fill="#c0503f">OUTFLOW (rate)</text>
+      <text x="548" y="163" class="ss" text-anchor="middle">decay · loss · forgetting · spend</text>
+      <g fill="#f1e7d6" stroke="#cdbb9e">
+        <circle cx="648" cy="98" r="13"/><circle cx="666" cy="90" r="16"/><circle cx="682" cy="100" r="12"/>
+      </g>
+      <text x="60" y="128" class="sxs" text-anchor="middle">SOURCE</text>
+      <text x="666" y="128" class="sxs" text-anchor="middle">SINK</text>
+    </svg>
+    <figcaption>Clouds = outside the boundary. Valves = the rates <b>you actually control</b>.
+    The rectangle = what you actually <b>have</b>.</figcaption>
+  </figure>
+
+  <dl class="kv">
+    <dt>Stock (level)</dt><dd>An accumulation. Measured at an <b>instant</b>; has units of quantity
+      (books read, ₹ saved, kg, trust, skill, energy, reputation, debt). <b>Stocks are the memory
+      of a system</b> — they are the only reason the past constrains the present.</dd>
+    <dt>Flow (rate)</dt><dd>A rate of change. Measured <b>over an interval</b>; units are
+      quantity <b>per time</b> (₹/month, pages/day, hours/week). Flows are <mark>where all
+      decisions act</mark>. You cannot touch a stock directly — only its valves.</dd>
+    <dt>Conservation</dt><dd>The stock changes <b>only</b> through its flows. Nothing else can
+      move it. This is a hard constraint, not a modelling convention.</dd>
+  </dl>
+
+  <div class="math">
+    Stock(t) = Stock(t₀) + ∫<sub>t₀</sub><sup>t</sup> [ Inflow(s) − Outflow(s) ] ds
+    &nbsp;&nbsp;·&nbsp;&nbsp; d(Stock)/dt = Inflow − Outflow
+  </div>
+
+  <h3>What follows from that equation (all of it is non-obvious in practice)</h3>
+  <ul>
+    <li><b>Stocks decouple inflow from outflow.</b> They are why a system can be in
+      disequilibrium — and why the system can look fine while quietly draining.</li>
+    <li><b>A stock rises only when inflow &gt; outflow.</b> Obvious on paper; violated constantly
+      in reasoning. Reducing an inflow does <b>not</b> reduce the stock — it only slows the rise.</li>
+    <li><b>Stocks create delay and inertia.</b> They are also your buffer against shocks.</li>
+    <li><b>Stocks are the leverage.</b> Big stocks change slowly, so they’re hard to move and
+      hard to lose — which is exactly what makes them worth building.</li>
+    <li><b>The stock is the integral; the flow is the derivative.</b> Peaks of a stock occur
+      where net flow crosses zero — not where the inflow peaks.</li>
+  </ul>
+
+  <div class="trap">
+    <span class="lbl">Stock–flow failure (Sterman’s bathtub experiments)</span>
+    Given a simple graph of inflow and outflow, MIT graduate students — including those with
+    strong calculus training — <b>systematically fail</b> to infer the behaviour of the stock.
+    The dominant error is <b>correlation heuristic</b>: assuming the stock moves like the flow
+    (“inflow is falling, so the level must be falling”). It is false whenever inflow still
+    exceeds outflow. <b>Assume you have this bug.</b> Write the flows down; do not eyeball it.
+  </div>
+
+  <div class="life">
+    <span class="lbl">The reframe that changes how you set goals</span>
+    Most goals are stated as stocks (<i>“be fluent,” “be fit,” “have ₹X,” “be respected”</i>)
+    but stocks cannot be acted on. <b>Every workable plan is a statement about flows and the
+    time you will hold them.</b> So the only real questions are:
+    <b>(1)</b> What is the stock? <b>(2)</b> What are its inflow and outflow, in units/time?
+    <b>(3)</b> Which valve do I actually control? <b>(4)</b> How long must inflow exceed outflow
+    to reach the level I want? If you can’t answer all four, you don’t have a plan — you have a wish.
+  </div>
+
+  <table>
+    <thead><tr><th>Stock</th><th>Inflow</th><th>Outflow (the ignored half)</th><th>Real lever</th></tr></thead>
+    <tbody>
+      <tr><td>Skill</td><td>Deliberate practice hrs/week</td><td>Forgetting / disuse decay</td><td>Consistency &gt; intensity, because outflow is continuous</td></tr>
+      <tr><td>Money</td><td>Income/month</td><td>Spend + lifestyle inflation/month</td><td>Outflow is faster to change than inflow</td></tr>
+      <tr><td>Energy</td><td>Sleep, food, recovery</td><td>Work, stress, context-switching</td><td>Cap the outflow; inflow has a hard ceiling</td></tr>
+      <tr><td>Trust</td><td>Kept commitments</td><td>Broken ones (10× the weight)</td><td>Never make a commitment you can’t hold</td></tr>
+      <tr><td>Attention</td><td>Fixed ~4 quality hrs/day</td><td>Interrupts, notifications, open loops</td><td>Structural blocking, not willpower</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 08 -->
+<section id="delays">
+  <h2><span class="num">08</span> Delays — where good intentions go to die</h2>
+  <p class="sub">Delays turn correct actions into destructive ones. This is the most under-modelled element.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">Material delay</h4>
+      <p style="margin-bottom:0">Physical transit: the thing is in the pipeline. Order → shipment.
+      Training → adaptation. Study → competence. <b>You cannot compress it by wanting it more.</b></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">Information delay</h4>
+      <p style="margin-bottom:0">Perception and belief updating: measurement lag, reporting lag,
+      the time it takes you to <b>believe</b> the new data. Usually longer than the material delay.</p>
+    </div>
+  </div>
+
+  <h3>What delays do</h3>
+  <ul>
+    <li><b>Cause oscillation.</b> A balancing loop with a delay <b>always</b> overshoots. You act,
+      see nothing, act harder, and the accumulated effect arrives all at once — then you over-correct
+      the other way. Shower-temperature dynamics; also the dynamics of most diets and most panics.</li>
+    <li><b>Break the learning signal.</b> Cause and effect become unlinked in your mind, so you learn
+      the wrong lesson: you credit the wrong action or abandon the right one.</li>
+    <li><b>Reward premature quitting.</b> Long delay + no visible feedback = the feeling of failure
+      exactly when the stock is quietly filling.</li>
+    <li><b>Amplify downstream.</b> The bullwhip effect: small demand changes → large swings upstream,
+      caused by delays plus failure to account for the supply line already in transit.</li>
+  </ul>
+
+  <div class="rule">
+    <span class="lbl">Operating rules for delays</span>
+    <b>1. Estimate the delay before you start.</b> Write a number and a unit. “Visible results in ~10 weeks.”<br>
+    <b>2. Count the supply line.</b> Give credit for effort already in the pipeline. Failing to do this is
+    the #1 cause of over-correction.<br>
+    <b>3. Act on the trend, not on the level.</b> Delay makes the current level obsolete information.<br>
+    <b>4. Don’t re-decide inside the delay window.</b> Pre-commit to a review date past the delay,
+    then evaluate — <mark>otherwise you are evaluating noise.</mark><br>
+    <b>5. If you must act fast, shorten the delay itself</b> (faster feedback, smaller batches,
+    tighter measurement). Reducing delay is usually higher leverage than increasing effort.
+  </div>
+</section>
+
+<!-- ============================================================ 09 -->
+<section id="modes">
+  <h2><span class="num">09</span> The fundamental modes of behaviour</h2>
+  <p class="sub">Six shapes. Learn to recognise them from a graph and you can name the structure that made them.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 330" role="img" aria-label="Six fundamental modes of dynamic behaviour">
+      <g stroke="#b9a98f" stroke-width="1" fill="none">
+        <g transform="translate(20,20)">
+          <path d="M0,120 L0,0 M0,120 L200,120" stroke="#b9a98f"/>
+          <path d="M4,118 C70,116 130,96 190,10" stroke="#a6497c" stroke-width="2.4"/>
+          <text x="0" y="146" class="st" fill="#a6497c">Exponential growth</text>
+          <text x="0" y="163" class="ss">single R loop dominant</text>
+        </g>
+        <g transform="translate(258,20)">
+          <path d="M0,120 L0,0 M0,120 L200,120" stroke="#b9a98f"/>
+          <path d="M0,30 L200,30" stroke="#cdbb9e" stroke-dasharray="4 4"/>
+          <path d="M4,116 C60,58 120,36 196,31" stroke="#2f7a9e" stroke-width="2.4"/>
+          <text x="0" y="146" class="st" fill="#2f7a9e">Goal seeking</text>
+          <text x="0" y="163" class="ss">single B loop, no delay</text>
+        </g>
+        <g transform="translate(496,20)">
+          <path d="M0,120 L0,0 M0,120 L200,120" stroke="#b9a98f"/>
+          <path d="M0,60 L200,60" stroke="#cdbb9e" stroke-dasharray="4 4"/>
+          <path d="M2,110 C30,10 60,110 90,25 C118,105 146,45 174,70 L198,62" stroke="#c9950f" stroke-width="2.4"/>
+          <text x="0" y="146" class="st" fill="#a87c12">Oscillation</text>
+          <text x="0" y="163" class="ss">B loop + time delay</text>
+        </g>
+        <g transform="translate(20,190)">
+          <path d="M0,120 L0,0 M0,120 L200,120" stroke="#b9a98f"/>
+          <path d="M0,22 L200,22" stroke="#cdbb9e" stroke-dasharray="4 4"/>
+          <path d="M2,116 C56,112 76,34 104,30 C136,24 160,23 198,23" stroke="#5d8a41" stroke-width="2.4"/>
+          <text x="0" y="146" class="st" fill="#5d8a41">S-shaped growth</text>
+          <text x="0" y="163" class="ss">R → B; dominance shifts</text>
+        </g>
+        <g transform="translate(258,190)">
+          <path d="M0,120 L0,0 M0,120 L200,120" stroke="#b9a98f"/>
+          <path d="M0,30 L200,30" stroke="#cdbb9e" stroke-dasharray="4 4"/>
+          <path d="M2,116 C56,112 74,20 100,12 C120,6 132,44 150,40 C170,36 180,29 198,31" stroke="#2f7a9e" stroke-width="2.4"/>
+          <text x="0" y="146" class="st" fill="#2f7a9e">S-shape + overshoot</text>
+          <text x="0" y="163" class="ss">R → B with delay</text>
+        </g>
+        <g transform="translate(496,190)">
+          <path d="M0,120 L0,0 M0,120 L200,120" stroke="#b9a98f"/>
+          <path d="M0,40 L200,40" stroke="#cdbb9e" stroke-dasharray="4 4"/>
+          <path d="M2,116 C50,112 70,22 96,14 C126,6 150,70 170,100 L198,116" stroke="#c0503f" stroke-width="2.4"/>
+          <text x="0" y="146" class="st" fill="#c0503f">Overshoot &amp; collapse</text>
+          <text x="0" y="163" class="ss">R → B, delay + eroding capacity</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>Dashed line = the carrying capacity or goal. Behaviour is a fingerprint: the shape
+    tells you the structure.</figcaption>
+  </figure>
+
+  <table>
+    <thead><tr><th>Mode</th><th>Structure that produces it</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td>Exponential growth</td><td>R loop dominant, constraint not yet binding</td><td>Enjoy it, but find the limit <b>now</b> — it is coming</td></tr>
+      <tr><td>Goal seeking</td><td>B loop, short delay; approach slows near the goal</td><td>Raise the goal, or you will plateau at it</td></tr>
+      <tr><td>Oscillation</td><td>B loop + significant delay</td><td>Reduce the delay or reduce the gain — never both crank harder</td></tr>
+      <tr><td>S-shaped growth</td><td>R loop that hands over to a B loop as capacity binds</td><td>Invest in capacity <b>before</b> the inflection, not after</td></tr>
+      <tr><td>Overshoot</td><td>S-shape where the limit signal arrives late</td><td>Instrument early warning; build slack</td></tr>
+      <tr><td>Overshoot &amp; collapse</td><td>The resource/capacity is <b>erodible</b> and was consumed during overshoot</td><td>The dangerous one: hard limits, non-negotiable floors</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">Applied — burnout is overshoot &amp; collapse</span>
+    Effort (R: output → reward → more effort) runs against a limit (recovery capacity). The limit
+    signal is delayed and the capacity itself is <b>erodible</b> — pushing past it doesn’t just stop
+    growth, it destroys the stock that produced the growth. That is why the recovery takes far longer
+    than the overshoot did. Erodible-capacity systems require a hard floor set <b>in advance</b>,
+    because by the time the signal arrives it is already too late.
+  </div>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="nonlin">
+  <h2><span class="num">10</span> Nonlinearity &amp; shifting loop dominance</h2>
+  <p class="sub">Why systems change character suddenly, and why “what worked before” stops working.</p>
+
+  <p>In any real system, several loops operate at once. The observed behaviour is produced by
+  whichever loop is <em>dominant</em> at that moment. Because relationships are nonlinear, loop
+  strengths change with the state of the system — so <strong>dominance shifts</strong>, and the
+  behaviour mode changes abruptly even though nothing external changed.</p>
+
+  <ul>
+    <li><b>S-shaped growth</b> is literally the R loop losing dominance to a B loop as a constraint binds.</li>
+    <li><b>Tipping points</b> are dominance shifts. Nothing “happened” — a loop got stronger than another.</li>
+    <li><b>Regime change</b> is why a strategy that produced results for two years stops working.
+      The system is in a different state; a different loop is in charge now.</li>
+  </ul>
+
+  <div class="rule">
+    <span class="lbl">Practical consequence</span>
+    Every strategy has a <b>validity range</b>. Ask: <i>“In what state of the system is this true,
+    and how will I know when I’ve left that state?”</i> Then define the exit signal in advance.
+    Plans fail less often because they were wrong than because they were kept past their range.
+  </div>
+</section>
+
+<!-- ============================================================ 11 -->
+<section id="archetypes">
+  <h2><span class="num">11</span> System archetypes — the recurring traps</h2>
+  <p class="sub">Generic structures that show up everywhere. Learn to recognise them; each has a known escape.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 240" role="img" aria-label="Limits to growth and shifting the burden archetypes">
+      <defs>
+        <marker id="ah3" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 z" fill="#8d7f6b"/></marker>
+        <marker id="ah3r" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L7,3 L0,6 z" fill="#c0503f"/></marker>
+      </defs>
+      <!-- limits to growth -->
+      <g>
+        <text x="180" y="22" class="st" text-anchor="middle">LIMITS TO GROWTH</text>
+        <text x="72"  y="80" class="st" text-anchor="middle">Effort</text>
+        <text x="180" y="150" class="st" text-anchor="middle">Result</text>
+        <text x="300" y="80" class="st" text-anchor="middle">Constraint</text>
+        <path d="M78,92 Q108,126 150,146" fill="none" stroke="#8d7f6b" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <path d="M152,140 Q92,116 74,94"  fill="none" stroke="#8d7f6b" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <path d="M212,146 Q272,124 296,94" fill="none" stroke="#8d7f6b" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <path d="M292,92 Q256,128 212,150" fill="none" stroke="#8d7f6b" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <text x="120" y="122" class="lp" fill="#a6497c">R</text>
+        <text x="248" y="122" class="lp" fill="#2f7a9e">B</text>
+        <text x="258" y="98" class="st" fill="#5d8a41">+</text>
+        <text x="252" y="152" class="st" fill="#c0503f">−</text>
+        <text x="180" y="192" class="ss" text-anchor="middle">Pushing the R loop harder</text>
+        <text x="180" y="209" class="ss" text-anchor="middle" fill="#a87c12">is exactly the wrong move.</text>
+        <text x="180" y="226" class="ss" text-anchor="middle">Remove the constraint.</text>
+      </g>
+      <!-- shifting the burden -->
+      <g transform="translate(370,0)">
+        <text x="180" y="22" class="st" text-anchor="middle">SHIFTING THE BURDEN</text>
+        <text x="180" y="62" class="st" text-anchor="middle">Symptom</text>
+        <text x="58"  y="128" class="st" text-anchor="middle">Quick fix</text>
+        <text x="306" y="128" class="st" text-anchor="middle">Real fix</text>
+        <text x="180" y="196" class="st" text-anchor="middle" fill="#c0503f">Capability ↓ (side effect)</text>
+        <path d="M140,58 Q78,74 62,112"  fill="none" stroke="#8d7f6b" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <path d="M74,116 Q124,80 148,66"  fill="none" stroke="#8d7f6b" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <path d="M222,58 Q288,74 304,112" fill="none" stroke="#8d7f6b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ah3)"/>
+        <path d="M292,116 Q240,80 218,66" fill="none" stroke="#8d7f6b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ah3)"/>
+        <path d="M62,142 Q112,180 150,186" fill="none" stroke="#c0503f" stroke-width="1.5" marker-end="url(#ah3r)"/>
+        <path d="M216,184 Q276,168 302,142" fill="none" stroke="#c0503f" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ah3r)"/>
+        <text x="110" y="104" class="lp" fill="#2f7a9e">B1</text>
+        <text x="248" y="104" class="lp" fill="#2f7a9e">B2</text>
+        <text x="180" y="146" class="lp" fill="#a6497c">R</text>
+        <text x="180" y="226" class="ss" text-anchor="middle">The quick fix works — and quietly destroys the ability to apply the real fix.</text>
+      </g>
+    </svg>
+    <figcaption>Two of the most common structures. Dashed = the slow path you keep skipping.</figcaption>
+  </figure>
+
+  <table>
+    <thead><tr><th>Archetype</th><th>Structure &amp; symptom</th><th>Escape</th></tr></thead>
+    <tbody>
+      <tr><td>Limits to Growth</td>
+        <td>R loop grows until a B loop (a constraint) binds. Growth slows despite more effort.</td>
+        <td><b>Stop pushing the engine.</b> Identify and relieve the binding constraint. Look for the <i>next</i> limit before it binds.</td></tr>
+      <tr><td>Shifting the Burden</td>
+        <td>Symptomatic fix relieves the symptom fast; the fundamental fix is slow. Reliance on the quick fix <b>atrophies</b> the capability for the real fix.</td>
+        <td>Cap or ration the symptomatic fix; simultaneously invest in the fundamental one. Accept the “worse before better.”</td></tr>
+      <tr><td>Addiction / Dependency</td>
+        <td>Extreme Shifting the Burden: the quick fix becomes the only functioning path; capability ≈ 0.</td>
+        <td>Withdrawal is unavoidable and must be planned for. Rebuild capability <i>before</i> removing the crutch if possible.</td></tr>
+      <tr><td>Fixes That Fail</td>
+        <td>A fix works immediately, but produces a delayed side effect that worsens the original symptom.</td>
+        <td>Trace the unintended consequence before acting. Ask: “and then what happens?” three times.</td></tr>
+      <tr><td>Eroding Goals</td>
+        <td>Gap between goal and reality is closed by <b>lowering the goal</b>. Slow drift to low performance.</td>
+        <td>Anchor standards to an <b>absolute external reference</b>, never to your own recent performance.</td></tr>
+      <tr><td>Escalation</td>
+        <td>Two parties respond to each other’s moves; each defensive step provokes the next. R loop of threat.</td>
+        <td>Unilateral, visible de-escalation, or change the measure of success entirely.</td></tr>
+      <tr><td>Success to the Successful</td>
+        <td>Two claimants on a shared resource; early winner gets more resource, so wins more. Winner-take-all.</td>
+        <td>Decouple: independent resource pools, or deliberately re-allocate to the neglected side.</td></tr>
+      <tr><td>Tragedy of the Commons</td>
+        <td>Individually rational use of a shared resource destroys it for everyone. Feedback to the individual is weak and delayed.</td>
+        <td>Make the commons visible; regulate/price/allocate it; shorten the feedback to the user.</td></tr>
+      <tr><td>Growth &amp; Underinvestment</td>
+        <td>Growth strains capacity → performance drops → demand falls → “we didn’t need capacity after all.” Self-fulfilling.</td>
+        <td>Invest in capacity <b>ahead of demand</b>, using the original standard — not the degraded one.</td></tr>
+      <tr><td>Accidental Adversaries</td>
+        <td>Partners each act locally to help themselves; the actions undermine the other; cooperation collapses.</td>
+        <td>Surface the full loop to both sides; agree on the shared goal before the local ones.</td></tr>
+      <tr><td>Attractiveness Principle</td>
+        <td>You cannot be best on every dimension; limits are multiple.</td>
+        <td>Choose explicitly which dimensions you compete on and which you accept as “good enough.”</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">Applied — the three that dominate personal life</span>
+    <b>Shifting the Burden</b> — outsourcing thinking, stimulants for fatigue, borrowing for cash flow:
+    each works, each erodes the capability you’ll eventually need. <b>Eroding Goals</b> — the silent one;
+    the standard drops a little each time reality falls short, and there is never a moment where you
+    notice. <b>Limits to Growth</b> — you keep doing more of what worked, long after the binding
+    constraint moved somewhere else.
+  </div>
+</section>
+
+<!-- ============================================================ 12 -->
+<section id="leverage">
+  <h2><span class="num">12</span> Leverage points — where to push</h2>
+  <p class="sub">Meadows’ ranking, from least to most effective. Counterintuitively, everyone crowds at the bottom.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Leverage point</th><th>Meaning / personal reading</th></tr></thead>
+    <tbody>
+      <tr><td>12</td><td>Constants &amp; parameters</td><td>Numbers, budgets, targets, settings. <b>Almost no leverage</b> — yet this is where ~90% of effort goes (“I’ll wake up 30 min earlier”).</td></tr>
+      <tr><td>11</td><td>Size of buffers</td><td>Slack, savings, reserve capacity. Bigger buffer = more stable, less agile.</td></tr>
+      <tr><td>10</td><td>Stock-and-flow structure</td><td>The physical plumbing. High leverage but usually slow/expensive to change.</td></tr>
+      <tr><td>9</td><td>Length of delays</td><td>Faster feedback beats more effort. Often the cheapest real win available.</td></tr>
+      <tr><td>8</td><td>Strength of balancing loops</td><td>Make the correction mechanism actually work — real review, real accountability, real measurement.</td></tr>
+      <tr><td>7</td><td>Gain of reinforcing loops</td><td><b>Slow down the runaway loop</b> — usually more effective than strengthening the brake.</td></tr>
+      <tr><td>6</td><td>Structure of information flows</td><td>Who sees what, when. Adding a missing feedback link to the person who can act on it is famously cheap and powerful.</td></tr>
+      <tr><td>5</td><td>Rules</td><td>Incentives, constraints, defaults. Rules govern behaviour far more than intentions do.</td></tr>
+      <tr><td>4</td><td>Power to self-organise</td><td>The ability to change your own structure — to add, evolve, and discard rules. Meta-capability.</td></tr>
+      <tr><td>3</td><td>Goals of the system</td><td>Change the goal and structure reorganises around it. Be certain the stated goal is the real one.</td></tr>
+      <tr><td>2</td><td>Paradigm</td><td>The unexamined assumptions from which goals, rules, and structure arise.</td></tr>
+      <tr><td>1</td><td>Power to transcend paradigms</td><td>Holding no model as absolute; staying flexible about which lens to use.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">How to use this in practice</span>
+    Before committing to an intervention, <b>locate it on this list</b>. If it sits at 12 or 11,
+    ask what the equivalent move at 9, 6, or 5 would be.<br>
+    <i>“Try harder” (12) → “make the correct action the default and remove the alternative” (5) →
+    “instrument a weekly signal I can’t ignore” (6/9).</i><br>
+    Same goal; an order of magnitude difference in outcome.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">Meadows’ warning</span>
+    People intuitively find leverage points — and then <b>push them in the wrong direction</b>.
+    High leverage cuts both ways, and the higher you go, the more the system resists. Expect
+    resistance proportional to leverage; its absence usually means you pushed something trivial.
+  </div>
+</section>
+
+<!-- ============================================================ 13 -->
+<section id="process">
+  <h2><span class="num">13</span> The modelling process (Sterman, 5 steps)</h2>
+  <p class="sub">The MIT Sloan method. It is iterative — you will loop back constantly; that is the design.</p>
+
+  <ol class="steps">
+    <li><b>Problem articulation — boundary selection</b>
+      State the <em>problem</em>, not the system. Name the key variables. Set the
+      <b>time horizon</b> (long enough to include the delays and the long-run response —
+      typically 2–3× longer than feels natural). Draw the <b>reference mode</b>: a graph of the
+      key variables over time, past and projected future. <i>No reference mode → no problem
+      definition → nothing to model.</i></li>
+    <li><b>Dynamic hypothesis</b>
+      A <em>causal, endogenous</em> theory of why the reference mode looks the way it does.
+      “The behaviour is generated by loop R1 dominating until constraint B2 binds at ~month 6.”
+      Tools: model boundary chart (endogenous / exogenous / excluded), subsystem diagram,
+      CLD, stock-and-flow map. It is a <b>hypothesis</b> — it must be falsifiable.</li>
+    <li><b>Formulation</b>
+      Convert the map into explicit equations: stocks, flows, decision rules, parameters,
+      initial conditions. Every quantity gets <b>units</b>, and the units must balance. This step
+      is brutally honest: vague thinking cannot survive being written as an equation.</li>
+    <li><b>Testing</b>
+      Does it reproduce the reference mode <i>for the right reasons</i>? Extreme-condition tests
+      (does it behave sanely when an input goes to zero or infinity?). Dimensional consistency.
+      Sensitivity analysis. <b>Model confidence is built by failing to break it</b>, not by fitting data.</li>
+    <li><b>Policy design &amp; evaluation</b>
+      Design interventions — new decision rules, new structure, new goals. Test under multiple
+      scenarios. Check <b>robustness</b> and <b>interactions</b> (policies interact; combined effects
+      are not additive). Ask which policy is least bad if your assumptions are wrong.</li>
+  </ol>
+
+  <div class="note">
+    <span class="lbl">Even without simulation software</span>
+    Steps 1 and 2 alone — <b>reference mode + explicit boundary + a named dynamic hypothesis</b> —
+    catch most bad decisions. They take twenty minutes on paper and they force you to state
+    what you actually believe. That is the whole “think before committing” apparatus.
+  </div>
+</section>
+
+<!-- ============================================================ 14 -->
+<section id="learning">
+  <h2><span class="num">14</span> Mental models &amp; why learning fails</h2>
+  <p class="sub">The system you are hardest to see is the one doing the seeing.</p>
+
+  <p>A <strong>mental model</strong> is your internal representation of how something works —
+  necessarily simplified, largely tacit, and rarely tested. Sterman’s point: real-world learning
+  loops are broken in several places at once, so experience alone does <b>not</b> produce accurate
+  mental models.</p>
+
+  <h4>Where the learning loop breaks</h4>
+  <ul>
+    <li><b>Dynamic complexity</b> — cause and effect are separated in time and space.</li>
+    <li><b>Imperfect information</b> — you don’t measure what matters; you measure what’s easy.</li>
+    <li><b>Ambiguity &amp; confounding</b> — many things changed; attribution is guesswork.</li>
+    <li><b>Defensive routines</b> — the ego protects the model from disconfirmation.</li>
+    <li><b>Misperceptions of feedback</b> — the mental simulation itself is faulty (§04).</li>
+    <li><b>No experimental control</b> — you cannot re-run the year with one variable changed.</li>
+  </ul>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">Single-loop learning</h4>
+      <p style="margin-bottom:0">Decision → result → adjust the <b>decision</b>. The mental model,
+      goals and rules stay untouched. Fast, and permanently capped by the quality of the model.</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">Double-loop learning</h4>
+      <p style="margin-bottom:0">Decision → result → question the <b>model, goals and rules
+      themselves</b>. Slow, uncomfortable, and the only route to a real change in outcomes.
+      This is what “going deeper before committing” actually means.</p>
+    </div>
+  </div>
+
+  <div class="rule">
+    <span class="lbl">The habit to install</span>
+    Before you act, write the <b>prediction</b>: what will happen, by when, and by how much.
+    Afterwards, compare. The gap is the only clean data you will ever get about the quality of
+    your mental model. Without a written prediction, hindsight rewrites the memory and you learn
+    nothing. <b>Surprise is the signal — chase it instead of explaining it away.</b>
+  </div>
+</section>
+
+<!-- ============================================================ 15 -->
+<section id="breakthrough">
+  <h2><span class="num">15</span> The breakthrough playbook</h2>
+  <p class="sub">Diagnosis moves nothing by itself. This is the conversion step — from
+  “I understand the structure” to “the behaviour actually changed.”</p>
+
+  <div class="trap">
+    <span class="lbl">Why insight alone changes nothing</span>
+    Understanding a loop does not weaken the loop. The stock is still the same size, the delay is still
+    the same length, the constraint is still binding, and every rule that produced the behaviour is
+    still in force. Worse: clarity <b>feels</b> like progress, so it functions as a symptomatic fix —
+    it relieves the discomfort that would otherwise have forced a structural change (§11, Shifting the
+    Burden). <mark>If the only thing that changed is how well you can describe the problem, nothing
+    has changed.</mark>
+  </div>
+
+  <h3>The breakthrough condition</h3>
+  <p>A pattern breaks when four things are true <em>at the same time</em>. They multiply — so any one
+  of them at zero gives zero, no matter how large the others are. This is precisely why intelligent,
+  disciplined, sustained effort so often produces nothing at all.</p>
+
+  <div class="math">
+    Breakthrough = Constraint × Leverage × Time&#8209;held × Signal
+  </div>
+
+  <table>
+    <thead><tr><th>Term</th><th>What it requires</th><th>What a zero looks like</th></tr></thead>
+    <tbody>
+      <tr><td>Constraint</td>
+        <td>You are acting on what actually limits the rate <b>today</b> — not on what is easiest or most familiar.</td>
+        <td>Everything improves except the outcome. You get better at the part that was never the bottleneck.</td></tr>
+      <tr><td>Leverage</td>
+        <td>The action sits at level <b>9 or higher</b> on the ladder (§12) — a delay cut, an information flow, a rule, a goal.</td>
+        <td>“I’ll try harder / wake earlier / be more consistent.” Level 12. Feels responsible, does almost nothing.</td></tr>
+      <tr><td>Time&#8209;held</td>
+        <td>The change is held <b>past the full delay</b> without being re-decided, re-scoped, or rescued.</td>
+        <td>Three plans in ten weeks, each abandoned inside its own lag. You never once saw a result.</td></tr>
+      <tr><td>Signal</td>
+        <td>One short-cycle <b>flow</b> metric you cannot avoid seeing, so you survive the delay.</td>
+        <td>Tracking only the stock. It moves too slowly to sustain anyone — so you quit while it was filling.</td></tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <svg viewBox="0 0 720 200" role="img" aria-label="Grind versus breakthrough compared over time">
+      <!-- grind -->
+      <g>
+        <text x="180" y="18" class="st" text-anchor="middle" fill="#c0503f">GRIND — more effort, same structure</text>
+        <path d="M30,150 L30,36 M30,150 L330,150" stroke="#b9a98f" fill="none"/>
+        <path d="M32,142 C110,124 200,92 326,48" stroke="#c0503f" stroke-width="2.4" fill="none"/>
+        <path d="M32,128 C120,127 220,126 326,125" stroke="#9c8d78" stroke-width="2.4" fill="none" stroke-dasharray="5 4"/>
+        <text x="322" y="40"  class="ss" text-anchor="end" fill="#c0503f">Effort</text>
+        <text x="322" y="118" class="ss" text-anchor="end">Result</text>
+        <text x="180" y="176" class="ss" text-anchor="middle">Result flat — yet confidence in the plan keeps rising.</text>
+      </g>
+      <!-- breakthrough -->
+      <g transform="translate(370,0)">
+        <text x="180" y="18" class="st" text-anchor="middle" fill="#5d8a41">BREAKTHROUGH — one structural change</text>
+        <path d="M30,150 L30,36 M30,150 L330,150" stroke="#b9a98f" fill="none"/>
+        <path d="M100,36 L100,150" stroke="#2f7a9e" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="100" y="30" class="sxs" text-anchor="middle" fill="#2f7a9e">STRUCTURE CHANGED</text>
+        <path d="M32,120 C80,119 200,117 326,116" stroke="#9c8d78" stroke-width="2.4" fill="none" stroke-dasharray="5 4"/>
+        <path d="M32,132 L98,131 C108,141 116,144 128,142 C185,133 250,80 326,44" stroke="#5d8a41" stroke-width="2.6" fill="none"/>
+        <text x="322" y="110" class="ss" text-anchor="end">Effort (unchanged)</text>
+        <text x="322" y="38"  class="ss" text-anchor="end" fill="#5d8a41">Result</text>
+        <text x="140" y="164" class="ss" text-anchor="middle" fill="#a87c12">worse before better</text>
+        <text x="180" y="186" class="ss" text-anchor="middle">Effort flat or lower — the result changes character after the delay.</text>
+      </g>
+    </svg>
+    <figcaption>Effort is not the variable. The dip on the right is the normal signature of a
+    high-leverage change — and the exact moment most people revert.</figcaption>
+  </figure>
+
+  <h3>Step one — find the binding constraint</h3>
+  <p>This is the highest-return half hour available in any plan, and almost nobody does it.
+  The constraint is the single thing that sets the rate <em>right now</em>. Improving anything else is
+  motion, not progress — and often makes things worse by piling up work in front of the real bottleneck.</p>
+
+  <div class="rule">
+    <span class="lbl">The test that identifies it</span>
+    For each candidate ask: <b>“If this became unlimited tomorrow, would my actual rate go up?”</b><br>
+    If the answer is no, it is <b>not</b> the constraint — however annoying, expensive or visible it is.
+    Run the test on five candidates in writing. Exactly one usually survives.
+  </div>
+
+  <ol class="steps">
+    <li><b>Identify</b> — Name the one thing setting the rate. Time, uninterrupted attention, recovery,
+      money, a missing skill, information, one person’s decision.</li>
+    <li><b>Exploit</b> — Get everything out of it <em>before</em> spending anything on it. Most constraints
+      are being wasted 30–50% of the time by scheduling, interruptions or bad sequencing. This step is free
+      and is the one people skip on the way to buying something.</li>
+    <li><b>Subordinate</b> — Run everything else at the constraint’s pace. Optimising a non-constraint
+      produces more work-in-progress, more open loops and more delay. <b>Local optimisation degrades the whole.</b></li>
+    <li><b>Elevate</b> — Only now add capacity to the constraint itself.</li>
+    <li><b>Repeat — and expect it to move</b> — Once relieved, the constraint relocates. The strategy built
+      for the old constraint is now the thing holding you back (§10). Re-run this test on a schedule, not
+      when you feel stuck.</li>
+  </ol>
+
+  <div class="trap">
+    <span class="lbl">The most common personal misidentification</span>
+    People almost always name <b>time</b>, then elevate it (wake earlier, cut leisure) — and the rate
+    doesn’t move. The real constraint is usually <b>uninterrupted attention</b> or <b>recovery capacity</b>,
+    both of which the “solution” just made worse. Apply the test literally: if you were handed two extra
+    hours tomorrow, in your current state, would the output actually increase?
+  </div>
+
+  <h3>Step two — the six breakthrough moves</h3>
+  <p>This is the entire repertoire. Every real intervention is one of these six, or a combination.
+  If your plan is not on this list, it is almost certainly a parameter tweak.</p>
+
+  <div class="mv">
+    <div class="mn">M1</div>
+    <div>
+      <div class="mt">Relieve the binding constraint <span class="mw">Lever 9–10</span></div>
+      <div class="mb">Stop feeding the engine; remove the brake. <b>Use when:</b> more effort is producing
+      less and less — the Limits to Growth signature. <b>Example:</b> the bottleneck is recovery, so cap
+      the session count and protect sleep instead of adding sessions.
+      <b>Cost:</b> it usually means doing <i>less</i> of the thing you are proud of.</div>
+    </div>
+  </div>
+
+  <div class="mv">
+    <div class="mn">M2</div>
+    <div>
+      <div class="mt">Shorten the delay <span class="mw">Lever 9</span></div>
+      <div class="mb">Faster feedback beats more effort, nearly always, and it is usually cheap.
+      <b>Use when:</b> you oscillate, over-correct, or quit before payoff. <b>Example:</b> weekly rep
+      count instead of monthly outcome; smaller batches; measure the input, not the result.
+      <b>Cost:</b> you have to look at a number that will sometimes be embarrassing.</div>
+    </div>
+  </div>
+
+  <div class="mv">
+    <div class="mn">M3</div>
+    <div>
+      <div class="mt">Change the rule or the default <span class="mw">Lever 5</span></div>
+      <div class="mb">Make the correct action the path of least resistance and <b>remove the alternative</b>.
+      Rules govern behaviour far more reliably than intentions. <b>Use when:</b> “I know what to do and
+      don’t do it.” <b>Example:</b> automate the saving transfer before the spend; a fixed calendar slot
+      that cannot be booked over; a hard floor written down in advance.
+      <b>Cost:</b> you give up flexibility on purpose — that is the mechanism, not a side effect.</div>
+    </div>
+  </div>
+
+  <div class="mv">
+    <div class="mn">M4</div>
+    <div>
+      <div class="mt">Add the missing information flow <span class="mw">Lever 6</span></div>
+      <div class="mb">Put the signal in front of the person who can act on it, at the moment they can act.
+      Famously cheap, famously powerful. <b>Use when:</b> everyone is behaving reasonably and the outcome
+      still degrades — shared resources, drifting standards, invisible drains.
+      <b>Example:</b> make the drain visible weekly — spend, hours lost, promises broken.
+      <b>Cost:</b> almost none, which is why its absence is the most wasteful thing on this page.</div>
+    </div>
+  </div>
+
+  <div class="mv">
+    <div class="mn">M5</div>
+    <div>
+      <div class="mt">Re-anchor or raise the goal <span class="mw">Lever 3</span></div>
+      <div class="mb">Every balancing loop holds you at <i>its</i> set point. Change the set point and the
+      structure reorganises around it. <b>Use when:</b> you have plateaued at exactly “good enough”, or
+      standards have quietly tracked your recent performance downward. <b>Example:</b> anchor the standard
+      to an external absolute reference — never to how you have been doing lately.
+      <b>Cost:</b> a permanent, visible gap between goal and reality. That gap <i>is</i> the engine.</div>
+    </div>
+  </div>
+
+  <div class="mv">
+    <div class="mn">M6</div>
+    <div>
+      <div class="mt">Cut the fuel of the runaway loop <span class="mw">Lever 7</span></div>
+      <div class="mb">Slowing a reinforcing loop at its source beats strengthening the brake against it.
+      <b>Use when:</b> something is spiralling — debt, escalation, dependency, scope, anxiety.
+      <b>Example:</b> remove the trigger and the supply, rather than adding willpower against the urge.
+      <b>Cost:</b> R loops run both ways, so this can also switch off growth you wanted. Aim precisely.</div>
+    </div>
+  </div>
+
+  <h3>Step three — match the symptom to the move</h3>
+  <p>The lookup table. Find what you can actually observe on the left; the right-hand column is what to
+  do this week.</p>
+
+  <table>
+    <thead><tr><th>What you observe</th><th>What it actually is</th><th>Move</th><th>First action this week</th></tr></thead>
+    <tbody>
+      <tr><td>More effort, less and less result</td>
+        <td>Limits to Growth — a constraint binds elsewhere</td><td><b>M1</b></td>
+        <td>Write five candidate constraints; apply the “if unlimited” test to each.</td></tr>
+      <tr><td>Up, down, up, down</td>
+        <td>Balancing loop plus a delay; you are over-correcting</td><td><b>M2</b></td>
+        <td>Write the lag as a number. Freeze the plan until the review date. Measure weekly, not daily.</td></tr>
+      <tr><td>Good run, then collapse</td>
+        <td>Overshoot &amp; collapse on erodible capacity</td><td><b>M3</b></td>
+        <td>Set one non-negotiable floor (sleep, cash, recovery) in writing — before the next push.</td></tr>
+      <tr><td>The problem returns in a new costume</td>
+        <td>Fixes That Fail — a delayed side effect</td><td><b>M1</b></td>
+        <td>Write the “and then what happens?” chain three levels deep before the next fix.</td></tr>
+      <tr><td>“It works, but I need it every time now”</td>
+        <td>Shifting the Burden → dependency; capability atrophying</td><td><b>M3</b></td>
+        <td>Ration the crutch on a schedule and book the slow fix now. Expect worse before better.</td></tr>
+      <tr><td>Standards dropped and you never decided to drop them</td>
+        <td>Eroding Goals</td><td><b>M5</b></td>
+        <td>Write the absolute standard down and anchor it to something outside yourself.</td></tr>
+      <tr><td>Constantly busy; nothing accumulates</td>
+        <td>No stock at all, or outflow ≥ inflow</td><td><b>M1 + M4</b></td>
+        <td>Measure the <b>outflow</b> for one week before changing anything. Do not touch the inflow yet.</td></tr>
+      <tr><td>“I know exactly what to do and I don’t do it”</td>
+        <td>Structure makes the right action high-friction</td><td><b>M3 + M4</b></td>
+        <td>Remove one step from the right action, add one step to its competitor, surface one number.</td></tr>
+      <tr><td>It worked for two years, then stopped</td>
+        <td>Loop dominance shifted; the system is in a new state (§10)</td><td><b>M1</b></td>
+        <td>Re-run the constraint test from scratch. The old plan is now the problem, not the solution.</td></tr>
+      <tr><td>Everyone is being reasonable; the outcome still worsens</td>
+        <td>Tragedy of the Commons / Accidental Adversaries</td><td><b>M4</b></td>
+        <td>Make the shared pool visible to everyone drawing on it, with a number and an owner.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Step four — the one-week execution sequence</h3>
+  <ol class="steps">
+    <li><b>Draw the reference mode</b> — the real curve over time, with numbers and a time axis. Twenty minutes. Without it you are guessing.</li>
+    <li><b>Write the stock and both flows</b>, with units. Then actually <b>measure the outflow</b> for a few days. Nearly everyone is wrong about it.</li>
+    <li><b>Run the constraint test</b> on five candidates. Keep the one that survives.</li>
+    <li><b>Locate your current plan on the leverage ladder</b> (§12). If it sits at 11–12, convert it into an M2–M5 move. Write the <b>one</b> structural change — one, not five.</li>
+    <li><b>Install the change and the signal on the same day.</b> One weekly flow metric you cannot avoid seeing; remove friction from the right action and add friction to its competitor.</li>
+    <li><b>Write the prediction, the review date and the exit condition.</b> What will happen, by when, by how much — and the specific signal that would mean this path is wrong. Decide it now, while quitting is still cheap.</li>
+    <li><b>Then stop deciding.</b> Hold past the delay. Review once, at the date, and update the <b>model</b> — not the effort.</li>
+  </ol>
+
+  <div class="rule">
+    <span class="lbl">Expect resistance — it is the confirmation, not the refutation</span>
+    Real systems push back through compensating feedback, and the pushback is proportional to the leverage
+    you found. Expect <b>worse before better</b>: write the expected dip and its duration down in advance,
+    so you don’t read the normal signature of a good change as evidence of a bad one.<br>
+    <b>The diagnostic:</b> if your change produced no friction, no discomfort and no complaints from
+    anyone including yourself, you almost certainly changed a parameter.
+  </div>
+
+  <div class="life">
+    <span class="lbl">Breakthrough or grind? — the honest test</span>
+    <b>1.</b> Did I change the structure, or only my intentions? &nbsp;
+    <b>2.</b> Could a stranger observe the change without asking me? &nbsp;
+    <b>3.</b> Would it still work on a low-motivation day? &nbsp;
+    <b>4.</b> Did I <i>remove</i> something, or only add something — real breakthroughs usually remove. &nbsp;
+    <b>5.</b> Is the right action now easier than the wrong one? &nbsp;
+    <b>6.</b> Is there one number I will see this week whether I want to or not?<br>
+    Fewer than five yeses and you are grinding, not breaking through — and grinding is how a wrong path
+    survives long enough to cost years.
+  </div>
+</section>
+
+<!-- ============================================================ 16 -->
+<section id="protocol">
+  <h2><span class="num">16</span> Personal system design protocol</h2>
+  <p class="sub">The operational translation. Run this on any goal before you commit time to it.</p>
+
+  <div class="note">
+    <span class="lbl">Premise</span>
+    <b>You do not rise to the level of your goals; <mark>you fall to the level of your systems.</mark></b>
+    A goal is a target state of a stock. A system is the structure of flows, loops and delays that
+    fills it. Goals are set in an afternoon; structure is what actually determines the outcome.
+  </div>
+
+  <ol class="steps">
+    <li><b>Convert the goal into a behaviour over time</b>
+      Draw two curves on one axis: the <em>reference mode</em> (what happens if nothing changes)
+      and the <em>desired mode</em>. Put real numbers and a real time axis on it. If you can’t draw
+      it, the goal is too vague to pursue.</li>
+    <li><b>Name the stock</b>
+      What accumulates? Skill, savings, health, relationships, reputation, options, energy.
+      One primary stock. Units. If the goal names no stock, it is an activity, not an outcome.</li>
+    <li><b>Name the two flows</b>
+      Inflow and outflow, in units per time. <b>Most people never write the outflow</b> — and the
+      outflow is usually where the leverage is, because it is faster to change than the inflow.</li>
+    <li><b>Set the boundary</b>
+      List what is endogenous (you control or influence), exogenous (given), excluded. If your
+      explanation of the problem lives outside the boundary, widen it until it doesn’t.</li>
+    <li><b>Map the loops</b>
+      Find at least one <span class="pill pR">R</span> that could compound the stock, and at least
+      one <span class="pill pB">B</span> that will eventually stop it. Name both. <i>Every plan has
+      a brake you haven’t named yet — find it now, not in month four.</i></li>
+    <li><b>Estimate the delays</b>
+      Action → visible result: how long? Write the number. Then set your review date <b>past</b> it,
+      and refuse to re-decide before that date.</li>
+    <li><b>Find the binding constraint</b>
+      Ask what actually limits the rate today: time, energy, attention, money, information,
+      a skill, a relationship. Improving anything else is motion without progress.</li>
+    <li><b>Choose leverage deliberately</b>
+      Locate your intended intervention on the leverage ladder (§12). If it is a parameter
+      (“try harder”, “wake earlier”), redesign it as a rule, a default, an information flow, or a
+      delay reduction.</li>
+    <li><b>Design the structure, not the effort</b>
+      Make the desired inflow the <b>path of least resistance</b>: remove friction from it, add
+      friction to its competitor, pre-commit, put it on a calendar with a fixed slot, and instrument
+      one metric you cannot avoid seeing.</li>
+    <li><b>Instrument &amp; run small experiments</b>
+      Track the <b>flow</b> weekly (the stock moves too slowly to motivate) and the <b>stock</b>
+      monthly. Prefer the smallest experiment that would falsify your dynamic hypothesis.</li>
+    <li><b>Review with double-loop discipline</b>
+      At the review date: did the stock move as predicted? If not — was the hypothesis wrong, the
+      delay underestimated, or the constraint misidentified? Update the <b>model</b>, not just the effort.</li>
+  </ol>
+
+  <div class="rule">
+    <span class="lbl">Compressed version — five questions, five minutes</span>
+    <b>1.</b> What accumulates? &nbsp; <b>2.</b> What fills it and what drains it? &nbsp;
+    <b>3.</b> Which loop is in charge right now? &nbsp; <b>4.</b> How long is the delay? &nbsp;
+    <b>5.</b> What is the binding constraint?<br>
+    If you cannot answer all five, you are not ready to commit.
+  </div>
+</section>
+
+<!-- ============================================================ 17 -->
+<section id="worked">
+  <h2><span class="num">17</span> Worked examples</h2>
+  <p class="sub">Same protocol, three different domains. Note how the analysis changes the plan.</p>
+
+  <div class="card">
+    <h4 style="margin-top:0">A · “I want to get fit”</h4>
+    <dl class="kv">
+      <dt>Stock</dt><dd>Conditioning / lean mass (kg, or performance measure)</dd>
+      <dt>Inflow</dt><dd>Effective training sessions per week</dd>
+      <dt>Outflow</dt><dd>Detraining (continuous, ~weeks), injury (discontinuous, ~months)</dd>
+      <dt>R loop</dt><dd>Results → visible progress → motivation → consistency → results</dd>
+      <dt>B loop</dt><dd>Training load → fatigue → recovery need → available sessions (goal: homeostasis)</dd>
+      <dt>Delay</dt><dd>6–12 weeks to a visible change in the stock. Motivation loop demands feedback in ~2 weeks.</dd>
+      <dt>Constraint</dt><dd>Recovery capacity — <b>not</b> willpower or programme quality</dd>
+      <dt>Diagnosis</dt><dd>Delay (10 wks) exceeds the motivation loop’s feedback need (2 wks) → people quit inside the delay window. Also erodible capacity: pushing through the B loop causes injury → overshoot &amp; collapse.</dd>
+      <dt>Design</dt><dd>(a) <b>Shorten the feedback delay</b> — track the flow (sessions completed, load lifted) weekly, not the stock; (b) hard floor on sleep to protect the constraint; (c) cap intensity so the B loop never becomes an injury; (d) review at week 12, never at week 3.</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0">B · “I want to build savings”</h4>
+    <dl class="kv">
+      <dt>Stock</dt><dd>Net savings (₹)</dd>
+      <dt>Inflow</dt><dd>Income per month — slow to change, largely exogenous in the short run</dd>
+      <dt>Outflow</dt><dd>Spending per month — fast to change, fully endogenous</dd>
+      <dt>R loop</dt><dd>Savings → returns → savings (compounding; delay measured in <b>years</b>)</dd>
+      <dt>B loop</dt><dd>Income → lifestyle expectations → spending (lifestyle inflation quietly re-balances the stock to ~zero)</dd>
+      <dt>Diagnosis</dt><dd>Classic <b>Eroding Goals</b> on the outflow side: the spending baseline ratchets up with income, so the net flow stays near zero regardless of raises. Working on the inflow feels productive and changes nothing.</dd>
+      <dt>Design</dt><dd>Leverage point <b>#5, rules</b>: pay-yourself-first — automate the transfer <i>before</i> the spend, so the outflow can only draw on what remains. This converts a willpower problem (level 12) into a structural one (level 5). Anchor the spending standard to an absolute number, not to income.</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0">C · “Should I commit to this new path?” (the directional-correctness test)</h4>
+    <p>The most valuable use of this note. Before a multi-month commitment, run:</p>
+    <ul>
+      <li><b>Which stock does this build?</b> If the honest answer is “none — it’s activity”, stop.</li>
+      <li><b>Is that stock <em>durable</em>?</b> Slow-decaying stocks (skill, relationships, ownership,
+        health) beat fast-decaying ones (novelty, streaks, status of the moment) at equal effort.</li>
+      <li><b>Is it <em>transferable</em>?</b> A stock that survives a change of employer, city, market
+        or technology is worth several times one that doesn’t.</li>
+      <li><b>Does it open an R loop?</b> Does having more of it make acquiring more of it easier?
+        If no compounding exists, you are trading time linearly — the returns end when you stop.</li>
+      <li><b>What is the delay, and can I survive it?</b> Long delays are fine <i>if</i> you install a
+        shorter proxy feedback signal. Without one, you will quit before the payoff regardless of merit.</li>
+      <li><b>What B loop will stop this?</b> Name it now. If you cannot name what will limit you,
+        you have not understood the path — you have only seen the brochure.</li>
+      <li><b>Is this a symptomatic or fundamental fix?</b> Symptomatic fixes feel better immediately
+        and reduce your future capability. Check whether the relief you expect is the point, or the trap.</li>
+      <li><b>What must be true for this to work?</b> List the assumptions and test the cheapest,
+        most load-bearing one <b>first</b>. This is the highest-return hour available in any decision.</li>
+    </ul>
+    <div class="trap" style="margin-bottom:0">
+      <span class="lbl">The asymmetry that justifies the whole exercise</span>
+      A wrong path is not detected by effort — <mark><b>effort makes a wrong path look more valid</b></mark>
+      (sunk cost is itself a reinforcing loop: invested time → commitment → more invested time).
+      The only cheap moment to detect it is <b>before the stock of sunk cost exists</b>. That moment
+      is now, and it lasts about an hour.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 18 -->
+<section id="commit">
+  <h2><span class="num">18</span> Pre-commitment checklist</h2>
+  <p class="sub">Run before any commitment costing more than a few weeks. Ticks are saved locally in this browser.</p>
+
+  <div id="checklist">
+    <label class="chk"><input type="checkbox" data-k="c1"><span class="q"><b>Problem as behaviour.</b> I have drawn the reference mode — the actual curve over time, with numbers and a time axis — not a description of a state.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c2"><span class="q"><b>Endogenous explanation.</b> My explanation of the problem lives <i>inside</i> my boundary. I am not blaming circumstances, other people, or “no time”.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c3"><span class="q"><b>Stock named.</b> I can state what accumulates, in units, and why that stock is durable and transferable.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c4"><span class="q"><b>Both flows named.</b> Inflow <i>and</i> outflow, in units per time. I know which valve I actually control.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c5"><span class="q"><b>Loops mapped.</b> At least one R loop that compounds and one B loop that will eventually stop me — both named, polarity counted.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c6"><span class="q"><b>Delay quantified.</b> I have written the expected lag between action and visible result, and set a review date past it.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c7"><span class="q"><b>Proxy signal installed.</b> I have a short-cycle metric (a flow) to track weekly so the long delay doesn’t kill the effort.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c8"><span class="q"><b>Constraint identified.</b> I know what actually limits the rate today, and my plan acts on <i>that</i>, not on something easier.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c9"><span class="q"><b>Leverage checked.</b> My intervention is not a parameter tweak. It is a rule, default, information flow, delay reduction, or goal change.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c10"><span class="q"><b>Archetype screened.</b> I checked this against Shifting the Burden, Fixes That Fail, Limits to Growth and Eroding Goals — and it isn’t one of them.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c11"><span class="q"><b>Side effects listed.</b> I wrote down what this costs — time, energy, relationships, optionality — and asked “and then what happens?” three times.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c12"><span class="q"><b>Load-bearing assumption tested.</b> I identified the cheapest assumption that would invalidate everything, and I tested it first.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c13"><span class="q"><b>Prediction written.</b> What will happen, by when, by how much — recorded now so the review is honest.</span></label>
+    <label class="chk"><input type="checkbox" data-k="c14"><span class="q"><b>Exit condition defined.</b> I know the specific signal that means “this path is no longer directionally correct”, decided <i>before</i> sunk cost exists.</span></label>
+  </div>
+  <p style="color:var(--tx3);font-size:13px" id="chkCount"></p>
+</section>
+
+<!-- ============================================================ 19 -->
+<section id="traps">
+  <h2><span class="num">19</span> Failure modes to watch in yourself</h2>
+  <p class="sub">Compressed list of the errors this discipline exists to prevent.</p>
+
+  <table>
+    <thead><tr><th>Error</th><th>What it looks like</th><th>Correction</th></tr></thead>
+    <tbody>
+      <tr><td>Event orientation</td><td>Reacting to the latest thing; a life of firefighting</td><td>Plot it over time. Ask: is this an event or a pattern?</td></tr>
+      <tr><td>Linear thinking</td><td>“2× effort → 2× result”</td><td>Assume nonlinearity, saturation and thresholds by default</td></tr>
+      <tr><td>Open-loop thinking</td><td>Ignoring how the system responds to <i>you</i></td><td>Close the loop: “after I act, what changes about my situation?”</td></tr>
+      <tr><td>Stock–flow confusion</td><td>Assuming the level follows the rate</td><td>Write both flows; the level rises whenever in &gt; out</td></tr>
+      <tr><td>Delay blindness</td><td>Quitting or over-correcting inside the lag</td><td>Quantify the delay; count the supply line; pre-set the review date</td></tr>
+      <tr><td>Symptom treatment</td><td>The problem keeps returning in a new costume</td><td>Ask “why” to structure level, not to person level</td></tr>
+      <tr><td>Blaming people</td><td>“If only they/I were more disciplined”</td><td>Put a different person in the same structure — the behaviour repeats</td></tr>
+      <tr><td>Local optimisation</td><td>Each part improves; the whole degrades</td><td>Optimise the interconnections and the global goal</td></tr>
+      <tr><td>Boundary too narrow</td><td>Externalities keep “surprising” you</td><td>Widen until the problem is generated inside the boundary</td></tr>
+      <tr><td>Goal erosion</td><td>Standards quietly track recent performance downward</td><td>Anchor to an absolute external reference</td></tr>
+      <tr><td>Measuring the easy thing</td><td>Effort and activity tracked; the stock never checked</td><td>Track the flow weekly <i>and</i> the stock monthly</td></tr>
+      <tr><td>Model as truth</td><td>Defending the map instead of updating it</td><td>All models are wrong; some are useful. Chase the surprise.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 20 -->
+<section id="glossary">
+  <h2><span class="num">20</span> Glossary</h2>
+  <p class="sub">Vocabulary you should be able to use precisely.</p>
+  <table>
+    <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+    <tbody>
+      <tr><td>Reference mode</td><td>Graph of key variables over time (past + projected) that defines the dynamic problem to be explained</td></tr>
+      <tr><td>Dynamic hypothesis</td><td>A falsifiable, endogenous, feedback-based theory of why the reference mode occurs</td></tr>
+      <tr><td>Endogenous / exogenous</td><td>Generated inside the model boundary / imposed from outside it</td></tr>
+      <tr><td>Stock (level)</td><td>An accumulation; system memory; measured at a point in time</td></tr>
+      <tr><td>Flow (rate)</td><td>Rate of change of a stock; measured per unit time; where decisions act</td></tr>
+      <tr><td>Net flow</td><td>Inflow − outflow; the derivative of the stock</td></tr>
+      <tr><td>Feedback loop</td><td>Closed chain of causality where an effect returns to influence its own cause</td></tr>
+      <tr><td>Reinforcing (R)</td><td>Loop that amplifies change; produces exponential growth or decay</td></tr>
+      <tr><td>Balancing (B)</td><td>Loop that opposes change; seeks a goal; produces stability or (with delay) oscillation</td></tr>
+      <tr><td>Link polarity</td><td>+ : cause and effect move together; − : they move oppositely — relative to what would otherwise have been</td></tr>
+      <tr><td>Loop dominance</td><td>Which loop is currently generating the observed behaviour; shifts as the system state changes</td></tr>
+      <tr><td>Delay</td><td>Lag between cause and effect; material (physical transit) or information (perception)</td></tr>
+      <tr><td>Policy resistance</td><td>The system’s tendency to defeat an intervention via compensating feedback</td></tr>
+      <tr><td>Dynamic complexity</td><td>Difficulty arising from feedback, delays and nonlinearity, not from number of variables</td></tr>
+      <tr><td>Bullwhip effect</td><td>Amplification of variability upstream in a supply chain, caused by delays plus ignoring the supply line</td></tr>
+      <tr><td>Leverage point</td><td>A place in a system where a small shift produces a large change in behaviour</td></tr>
+      <tr><td>Archetype</td><td>A generic feedback structure that recurs across unrelated domains</td></tr>
+      <tr><td>Double-loop learning</td><td>Revising goals, rules and mental models — not just decisions</td></tr>
+      <tr><td>Bounded rationality</td><td>Decisions are made on local, imperfect information with limited cognition — rational locally, dysfunctional globally</td></tr>
+      <tr><td>Emergence</td><td>System-level behaviour not present in, or predictable from, any single component</td></tr>
+      <tr><td>Resilience</td><td>Ability to recover from shock — a property of feedback structure, distinct from efficiency</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 21 -->
+<section id="sources">
+  <h2><span class="num">21</span> Sources, courses &amp; tools</h2>
+  <p class="sub">The MIT Sloan lineage and where to go deeper, in the order worth reading.</p>
+
+  <h3>Lineage</h3>
+  <p><strong>Jay W. Forrester</strong> (MIT Sloan) founded system dynamics in the late 1950s,
+  applying servomechanism/control theory to social and managerial systems —
+  <i>Industrial Dynamics</i> (1961), <i>Urban Dynamics</i> (1969), <i>World Dynamics</i> (1971).
+  <strong>Donella Meadows</strong> extended it to sustainability and wrote its most accessible
+  statement. <strong>John Sterman</strong> (Jay W. Forrester Professor of Management, MIT Sloan;
+  director of the MIT System Dynamics Group) is its modern authority and author of the standard text.
+  <strong>Peter Senge</strong> popularised the systems-thinking half for organisational learning.</p>
+
+  <h3>Read in this order</h3>
+  <ol>
+    <li><b>Donella Meadows — <i>Thinking in Systems: A Primer</i></b>. Short, non-technical, the best
+      possible entry point. Read the whole thing; it is where stocks, flows and leverage points click.</li>
+    <li><b>Donella Meadows — <i>Leverage Points: Places to Intervene in a System</i></b> (essay).
+      A single sitting; permanently changes how you choose interventions.</li>
+    <li><b>Peter Senge — <i>The Fifth Discipline</i></b>. Systems thinking + mental models + shared
+      vision in an organisational context; the archetypes chapter is the useful core.</li>
+    <li><b>John Sterman — <i>Business Dynamics: Systems Thinking and Modeling for a Complex World</i></b>.
+      The MIT Sloan textbook. Rigorous and large; treat it as a reference. Highest-value chapters:
+      1 (learning in complex systems), 3 (the modelling process), 5 (causal loop diagrams),
+      6–7 (stocks and flows), 8 (fundamental modes), 11 (delays), 17 (supply chains and the beer game).</li>
+    <li><b>Jay Forrester — <i>Counterintuitive Behavior of Social Systems</i></b> (1971 essay). Short and
+      still the sharpest statement of why intuition fails on complex systems.</li>
+  </ol>
+
+  <h3>Courses</h3>
+  <ul>
+    <li><b>MIT Sloan 15.871 System Dynamics I</b> and <b>15.872 System Dynamics II</b> — the graduate
+      sequence taught around <i>Business Dynamics</i>; includes the Beer Distribution Game.</li>
+    <li><b>MIT OpenCourseWare</b> — several system dynamics courses are published free with full
+      readings, assignments and lecture notes: <a href="https://ocw.mit.edu/search/?q=system%20dynamics">ocw.mit.edu → “system dynamics”</a>.
+      Look for the self-study road maps originating from the MIT System Dynamics Group.</li>
+    <li><b>MIT System Dynamics Group</b> — <a href="https://mitsloan.mit.edu/teaching-resources-library/system-dynamics">mitsloan.mit.edu</a>;
+      also the <a href="https://systemdynamics.org/">System Dynamics Society</a> for papers and the Road Maps series.</li>
+  </ul>
+
+  <h3>Tools (only after the paper work)</h3>
+  <ul>
+    <li><b>Vensim PLE</b> — free for personal/educational use; the de-facto MIT-course tool.</li>
+    <li><b>Stella / iThink</b> — strongest visual stock-and-flow modelling.</li>
+    <li><b>InsightMaker</b> — free, browser-based; good for a first simulation with zero setup.</li>
+    <li><b>Loopy</b> — trivially fast browser tool for sketching and animating causal loops.</li>
+    <li><b>Paper</b> — for 90% of personal decisions this is sufficient and strictly faster.</li>
+  </ul>
+
+  <div class="note">
+    <span class="lbl">Minimum viable practice</span>
+    Take one real decision you are facing this week. Draw its reference mode, name the stock and both
+    flows, find one R loop and one B loop, write the delay, and state the exit condition. One page,
+    thirty minutes. Do that ten times and the thinking becomes automatic — which is the entire point:
+    <mark><b>the goal is not to build models, it is to stop being surprised by your own systems.</b></mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<button id="toTop" title="Back to top" aria-label="Back to top">↑</button>
+
+<footer>
+  Working note on Systems Thinking &amp; System Dynamics · MIT Sloan lineage: Forrester → Meadows → Sterman.
+  Self-contained HTML; checklist state is stored in this browser only.
+</footer>
+
+<script>
+(function(){
+  // ---- scroll-spy ----
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('on'); });
+        var a = map[e.target.id];
+        if(a) a.classList.add('on');
+      }
+    });
+  }, {rootMargin:'-72px 0px -70% 0px', threshold:0});
+  document.querySelectorAll('section').forEach(function(s){ obs.observe(s); });
+
+  // ---- checklist persistence ----
+  var KEY = 'st-checklist-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('#checklist input'));
+  var counter = document.getElementById('chkCount');
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ state = {}; }
+
+  function paint(){
+    var n = 0;
+    boxes.forEach(function(b){
+      b.parentElement.classList.toggle('done', b.checked);
+      if(b.checked) n++;
+    });
+    counter.textContent = n + ' / ' + boxes.length + ' checks cleared' +
+      (n === boxes.length ? ' — ready to commit.' : '');
+  }
+  boxes.forEach(function(b){
+    b.checked = !!state[b.dataset.k];
+    b.addEventListener('change', function(){
+      state[b.dataset.k] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+      paint();
+    });
+  });
+  paint();
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    state = {};
+    try { localStorage.removeItem(KEY); } catch(e){}
+    boxes.forEach(function(b){ b.checked = false; });
+    paint();
+  });
+
+  // ---- reading progress + back to top ----
+  var bar = document.getElementById('bar');
+  var top = document.getElementById('toTop');
+  function onScroll(){
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+    top.classList.toggle('show', window.scrollY > 600);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  top.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+})();
+</script>
+</body>
+</html>

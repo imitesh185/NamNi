@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Python Data Model — Drill 2.1 · Special Methods as Protocol Hooks</title>
+<link rel="stylesheet" href="../../../assets/base.css" />
+<script src="../../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Python Data Model <span>·</span> Drill 2.1</div>
+    <div class="tagline">Special methods · one exit checkpoint</div>
+    <button class="btn" onclick="window.print()">Print / PDF</button>
+    <button class="btn" id="resetBtn">Reset checkpoint</button>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#frame">00 · Where this sits</a>
+  <a href="#claim">01 · Syntax is a method call</a>
+  <a href="#type">02 · Lookup happens on the type</a>
+  <h4>The Protocols</h4>
+  <a href="#strings">03 · The two string protocols</a>
+  <a href="#getitem">04 · One method, several powers</a>
+  <a href="#truth">05 · Truthiness and its fallbacks</a>
+  <a href="#ops">06 · Operators and NotImplemented</a>
+  <h4>Hands On</h4>
+  <a href="#drills">07 · Six drills</a>
+  <a href="#exit">08 · Exit checkpoint</a>
+  <h4>Reference</h4>
+  <a href="#ledger">09 · Language vs CPython</a>
+  <a href="#next">10 · What this unlocks</a>
+</nav>
+
+<main>
+
+<div class="hero">
+  <div class="kicker">Stage 2 · Data Model · Drill 2.1</div>
+  <h1>Special methods as protocol hooks</h1>
+  <p class="dropcap">Stage 1 answered <em>what an object is</em> — identity, a type, a value, reached
+  through references living in namespaces. Stage 2 answers the other half: <em>how the language
+  talks to it</em>. The answer is smaller than it looks. There is no privileged set of built-in
+  behaviours that Python knows how to perform on your object. There is only a naming convention:
+  the interpreter reaches for a method with a specific name, on the object's <b>type</b>, and calls it.</p>
+  <div class="why">
+    <b>The whole drill in one sentence.</b> <mark>Syntax and builtins are sugar for calling a
+    named method on the type.</mark> <code>len(x)</code> is <code>type(x).__len__(x)</code>.
+    Everything below is that sentence, applied until it stops being surprising.
+  </div>
+  <div class="tags">
+    <span class="tag">#special-methods</span>
+    <span class="tag t2">#protocols</span>
+    <span class="tag t3">#duck-typing</span>
+    <span class="tag">#repr-vs-str</span>
+    <span class="tag t2">#eq-and-hash</span>
+  </div>
+</div>
+
+<!-- ============================================================ 00 -->
+<section id="frame">
+  <h2><span class="num">00</span> Where this sits</h2>
+  <p class="sub">You have already used one special method. This drill turns it into a system.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>Settled in Stage 1</h4>
+      <p>An object is identity + type + value. Names, list slots, dict values and attributes are
+      four spellings of one idea: a slot holding a reference. Mutation changes an object; rebinding
+      changes a slot.</p>
+    </div>
+    <div class="card">
+      <h4>The claim of 2.1</h4>
+      <p>1.3 §05 found that <code>list</code> has <code>__iadd__</code> and <code>tuple</code> does
+      not, and that this asymmetry <em>is</em> the behaviour of <code>+=</code>.
+      <mark>Generalise it: every operator, builtin and syntax form resolves this way.</mark></p>
+    </div>
+  </div>
+
+  <p>This is the payoff of Stage 1 being boring. Because you already accept that behaviour lives on
+  the type and not on the instance, the data model needs no new machinery — it is an <b>index of
+  method names</b> plus the rule for when each one is consulted.</p>
+
+  <div class="rule">
+    <span class="lbl">Protocol</span>
+    One checkpoint, §08, fixed list. No follow-up round. Say <b>"banked"</b> to skip anything in the
+    drill body and it will not be re-raised.
+  </div>
+</section>
+
+<!-- ============================================================ 01 -->
+<section id="claim">
+  <h2><span class="num">01</span> Syntax is a method call</h2>
+  <p class="sub">Not "similar to". Not "implemented using". It <em>is</em> one.</p>
+
+  <p>Read the left column as what you type and the right column as what the interpreter actually
+  performs. There is nothing in between.</p>
+
+  <table class="nw">
+    <thead><tr><th>You write</th><th>The interpreter calls</th><th>Protocol</th></tr></thead>
+    <tbody>
+      <tr><td><code>len(x)</code></td><td><code>type(x).__len__(x)</code></td><td>sized</td></tr>
+      <tr><td><code>x[k]</code></td><td><code>type(x).__getitem__(x, k)</code></td><td>subscriptable</td></tr>
+      <tr><td><code>x + y</code></td><td><code>type(x).__add__(x, y)</code></td><td>numeric</td></tr>
+      <tr><td><code>x()</code></td><td><code>type(x).__call__(x)</code></td><td>callable</td></tr>
+      <tr><td><code>for v in x</code></td><td><code>type(x).__iter__(x)</code></td><td>iterable</td></tr>
+      <tr><td><code>k in x</code></td><td><code>type(x).__contains__(x, k)</code></td><td>container</td></tr>
+      <tr><td><code>with x:</code></td><td><code>__enter__</code> / <code>__exit__</code></td><td>context manager</td></tr>
+      <tr><td><code>repr(x)</code></td><td><code>type(x).__repr__(x)</code></td><td>representable</td></tr>
+      <tr><td><code>x.attr</code></td><td><code>type(x).__getattribute__(x, "attr")</code></td><td>attribute access</td></tr>
+    </tbody>
+  </table>
+
+  <p>The last row is worth pausing on. Even <b>the dot</b> is a special method. There is no layer
+  underneath this one — attribute access itself is implemented by a method that Python looks up as
+  an attribute of the type, and the recursion bottoms out in C.</p>
+
+  <div class="note">
+    <span class="lbl">Why this design</span>
+    Because it makes the language <em>open</em>. If <code>len()</code> contained a hardcoded list of
+    types it understood, only the core developers could write a sized object. Because it dispatches
+    to a method name instead, <mark>your class is a first-class citizen of the syntax</mark> — the
+    same status as <code>list</code>, with no registration step and no inheritance requirement.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">You do not call these yourself</span>
+    Write <code>len(x)</code>, not <code>x.__len__()</code>. The builtin is faster (it takes a
+    direct slot on the C type object), it applies the fallback rules described in §05, and it
+    reads as the operation rather than the mechanism. The <em>only</em> normal reason to write a
+    dunder explicitly is when you are implementing one and delegating to another.
+  </div>
+</section>
+
+<!-- ============================================================ 02 -->
+<section id="type">
+  <h2><span class="num">02</span> Lookup happens on the type, not the instance</h2>
+  <p class="sub">The one rule that makes special methods behave unlike every other attribute.</p>
+
+  <p>Ordinary attribute access checks the instance first, then the type. Implicit special-method
+  invocation <b>skips the instance entirely</b>. This is not an optimisation detail you can ignore —
+  it produces visibly different results:</p>
+
+<pre><code>s = <span class="f">Sneaky</span>()             <span class="c"># its class defines __len__ returning 1</span>
+s.__len__ = <span class="k">lambda</span>: <span class="n">99</span>
+
+<span class="f">len</span>(s)                    <span class="c"># 1  — implicit: type lookup, instance ignored</span>
+s.<span class="f">__len__</span>()              <span class="c"># 99 — explicit: ordinary attribute lookup</span>
+</code></pre>
+
+  <figure>
+    <svg viewBox="0 0 720 250" role="img" aria-label="Implicit special method lookup bypasses the instance dictionary">
+      <text x="24" y="26" class="sxs">IMPLICIT — len(x)</text>
+      <rect x="24" y="38" width="118" height="44" rx="10" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.8"/>
+      <text x="83" y="65" class="st" text-anchor="middle" fill="#b45f35">len(x)</text>
+
+      <rect x="196" y="38" width="150" height="44" rx="10" fill="#f9e0d9" stroke="#c0503f" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="271" y="59" class="sm" text-anchor="middle">x.__dict__</text>
+      <text x="271" y="75" class="ss" text-anchor="middle" fill="#c0503f">skipped</text>
+
+      <rect x="400" y="38" width="180" height="44" rx="10" fill="#dcf0e9" stroke="#2b7d6d" stroke-width="1.8"/>
+      <text x="490" y="65" class="sm" text-anchor="middle">type(x).__len__</text>
+
+      <rect x="616" y="38" width="80" height="44" rx="10" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.6"/>
+      <text x="656" y="65" class="st" text-anchor="middle" fill="#4e7736">call</text>
+
+      <path d="M142 60 L392 60" stroke="#b45f35" stroke-width="2" fill="none" marker-end="url(#a1)"/>
+      <path d="M580 60 L608 60" stroke="#2b7d6d" stroke-width="2" fill="none" marker-end="url(#a2)"/>
+
+      <text x="24" y="140" class="sxs">EXPLICIT — x.__len__()</text>
+      <rect x="24" y="152" width="118" height="44" rx="10" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.8"/>
+      <text x="83" y="179" class="st" text-anchor="middle" fill="#b45f35">x.__len__</text>
+
+      <rect x="196" y="152" width="150" height="44" rx="10" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.8"/>
+      <text x="271" y="173" class="sm" text-anchor="middle">x.__dict__</text>
+      <text x="271" y="189" class="ss" text-anchor="middle" fill="#4e7736">checked first</text>
+
+      <rect x="400" y="152" width="180" height="44" rx="10" fill="#f1e7d6" stroke="#cdbb9e" stroke-width="1.5"/>
+      <text x="490" y="179" class="sm" text-anchor="middle">type(x).__len__</text>
+
+      <path d="M142 174 L188 174" stroke="#b45f35" stroke-width="2" fill="none" marker-end="url(#a1)"/>
+      <path d="M346 174 L392 174" stroke="#9c8d78" stroke-width="1.6" stroke-dasharray="5 4" fill="none" marker-end="url(#a3)"/>
+      <text x="369" y="166" class="ss" text-anchor="middle">only if missed</text>
+
+      <text x="360" y="230" class="ss" text-anchor="middle">two lookups, two answers — the object did not change between them</text>
+      <defs>
+        <marker id="a1" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#b45f35"/></marker>
+        <marker id="a2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#2b7d6d"/></marker>
+        <marker id="a3" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#9c8d78"/></marker>
+      </defs>
+    </svg>
+    <figcaption>Implicit invocation starts at the type. This is why you cannot patch a protocol onto a single instance.</figcaption>
+  </figure>
+
+  <div class="rule">
+    <span class="lbl">Consequence you will hit</span>
+    You cannot give <em>one object</em> a protocol. Monkey-patching <code>obj.__iter__</code>,
+    <code>obj.__enter__</code> or <code>obj.__eq__</code> does nothing to <code>for</code>,
+    <code>with</code> or <code>==</code>. <mark>Patch the class, or build a subclass.</mark>
+    Mocking libraries know this — it is why they patch types.
+  </div>
+
+  <div class="cpy">
+    <span class="lbl">Why it works this way</span>
+    Every type is a C struct with fixed slots — <code>tp_as_sequence-&gt;sq_length</code> and friends —
+    filled in once when the class is created. <code>len()</code> reads the slot; it never performs a
+    dictionary lookup at all. Skipping the instance is not a rule bolted on top, it is a description
+    of what the fast path physically does.
+  </div>
+</section>
+
+<!-- ============================================================ 03 -->
+<section id="strings">
+  <h2><span class="num">03</span> The two string protocols</h2>
+  <p class="sub">One is for you at 3am. The other is for the user. Only one has a fallback.</p>
+
+  <p>Two methods, two audiences, and an asymmetric fallback that decides which one you should
+  always write first.</p>
+
+  <table>
+    <thead><tr><th style="width:110px">Method</th><th>Audience</th><th>Goal</th><th>If missing</th></tr></thead>
+    <tbody>
+      <tr><td><code>__repr__</code></td><td>the developer</td><td>unambiguous — ideally valid Python that recreates the object</td><td><code>&lt;Class object at 0x…&gt;</code></td></tr>
+      <tr><td><code>__str__</code></td><td>the end user</td><td>readable — may drop detail</td><td><b>falls back to <code>__repr__</code></b></td></tr>
+    </tbody>
+  </table>
+
+  <p>The fallback runs one way only. Define <code>__repr__</code> and you get sensible output from
+  both. Define only <code>__str__</code> and your debugging output, your log lines and every
+  collection containing your object stay useless:</p>
+
+<pre><code>[<span class="f">OnlyStr</span>()]     <span class="c"># [&lt;OnlyStr object at 0x7f...&gt;]  — containers use repr</span>
+[<span class="f">OnlyRepr</span>()]    <span class="c"># [OnlyRepr(unambiguous)]</span>
+</code></pre>
+
+  <div class="life">
+    <span class="lbl">Rule that pays for itself</span>
+    <mark>Write <code>__repr__</code> on every class you define. Write <code>__str__</code> only when
+    a non-developer will read it.</mark> Containers, the REPL, <code>logging</code>, pdb and pytest
+    failure output all use <code>repr</code>. A dataclass gives you a good one for free; that is
+    most of why people reach for dataclasses.
+  </div>
+
+  <h3>Where each one is actually used</h3>
+  <table class="nw">
+    <thead><tr><th>Expression</th><th>Uses</th></tr></thead>
+    <tbody>
+      <tr><td><code>print(x)</code>, <code>str(x)</code>, <code>f"{x}"</code></td><td><code>__str__</code> → falls back to <code>__repr__</code></td></tr>
+      <tr><td><code>repr(x)</code>, <code>f"{x!r}"</code>, REPL echo</td><td><code>__repr__</code></td></tr>
+      <tr><td><code>[x]</code>, <code>{"k": x}</code>, any container</td><td><code>__repr__</code> of the elements</td></tr>
+      <tr><td><code>f"{x:&gt;10.2f}"</code></td><td><code>__format__</code> → default delegates to <code>__str__</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The container detail people miss</span>
+    <code>str(some_list)</code> does <b>not</b> call <code>str</code> on the elements. A container's
+    <code>__str__</code> is its <code>__repr__</code>, and that builds itself from the
+    <code>repr</code> of each element. So a class with only <code>__str__</code> prints beautifully
+    alone and unreadably inside a list — which is exactly where you need it during debugging.
+  </div>
+</section>
+
+<!-- ============================================================ 04 -->
+<section id="getitem">
+  <h2><span class="num">04</span> One method, several powers</h2>
+  <p class="sub">Why protocols beat inheritance: you implement a piece, and the rest arrives.</p>
+
+  <p>Define <code>__getitem__</code> — nothing else, no base class — and count what already works:</p>
+
+<pre><code><span class="k">class</span> <span class="f">Countdown</span>:
+    <span class="k">def</span> <span class="f">__init__</span>(self, start): self.start = start
+    <span class="k">def</span> <span class="f">__getitem__</span>(self, i):
+        <span class="k">if</span> i &gt;= self.start: <span class="k">raise</span> <span class="f">IndexError</span>(i)
+        <span class="k">return</span> self.start - i
+
+c = <span class="f">Countdown</span>(<span class="n">4</span>)
+<span class="f">list</span>(c)              <span class="c"># [4, 3, 2, 1]</span>
+<span class="k">for</span> v <span class="k">in</span> c: ...      <span class="c"># works</span>
+<span class="n">2</span> <span class="k">in</span> c              <span class="c"># True</span>
+a, b, *rest = c     <span class="c"># works</span>
+<span class="f">hasattr</span>(<span class="f">type</span>(c), <span class="s">"__iter__"</span>)   <span class="c"># False (!)</span>
+</code></pre>
+
+  <p>It iterates without an <code>__iter__</code>. When <code>iter()</code> finds no
+  <code>__iter__</code>, it falls back to the <b>legacy sequence protocol</b>: call
+  <code>__getitem__</code> with <code>0, 1, 2, …</code> until <code>IndexError</code> is raised.
+  Everything built on iteration then works, because it is all built on <code>iter()</code>.</p>
+
+  <div class="note">
+    <span class="lbl">This is what duck typing means, precisely</span>
+    Not "Python doesn't check types". It means <mark>membership in a protocol is decided by which
+    methods your type defines, evaluated at the moment of use</mark> — not by what you inherited
+    from. <code>Countdown</code> is a sequence to <code>for</code>, to <code>in</code>, and to
+    unpacking, while being a subclass of nothing.
+  </div>
+
+  <h3>The fallback chains worth memorising</h3>
+  <table class="nw">
+    <thead><tr><th>Operation</th><th>Tries, in order</th></tr></thead>
+    <tbody>
+      <tr><td><code>iter(x)</code></td><td><code>__iter__</code> → <code>__getitem__</code> from 0 → <code>TypeError</code></td></tr>
+      <tr><td><code>k in x</code></td><td><code>__contains__</code> → <code>__iter__</code> and scan → <code>__getitem__</code> and scan</td></tr>
+      <tr><td><code>bool(x)</code></td><td><code>__bool__</code> → <code>__len__</code> → <code>True</code></td></tr>
+      <tr><td><code>str(x)</code></td><td><code>__str__</code> → <code>__repr__</code> → default repr</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The cost of the free lunch</span>
+    <code>in</code> falling back to a full scan is <em>correct</em> and <em>O(n)</em>. A class that
+    looks like a set but only defines <code>__getitem__</code> will pass every test and quietly
+    turn a membership check into a linear scan inside a loop. Protocol satisfaction says nothing
+    about complexity.
+  </div>
+</section>
+
+<!-- ============================================================ 05 -->
+<section id="truth">
+  <h2><span class="num">05</span> Truthiness and its fallbacks</h2>
+  <p class="sub">Three-step chain. Every object in Python has a truth value; almost none define one.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 210" role="img" aria-label="The truthiness fallback chain">
+      <rect x="20" y="80" width="112" height="46" rx="11" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.8"/>
+      <text x="76" y="108" class="st" text-anchor="middle" fill="#b45f35">bool(x)</text>
+
+      <rect x="176" y="80" width="150" height="46" rx="11" fill="#dcf0e9" stroke="#2b7d6d" stroke-width="1.8"/>
+      <text x="251" y="101" class="sm" text-anchor="middle">__bool__?</text>
+      <text x="251" y="117" class="ss" text-anchor="middle">must return a bool</text>
+
+      <rect x="370" y="80" width="150" height="46" rx="11" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.8"/>
+      <text x="445" y="101" class="sm" text-anchor="middle">__len__?</text>
+      <text x="445" y="117" class="ss" text-anchor="middle">truthy if != 0</text>
+
+      <rect x="564" y="80" width="136" height="46" rx="11" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.8"/>
+      <text x="632" y="101" class="st" text-anchor="middle" fill="#4e7736">True</text>
+      <text x="632" y="117" class="ss" text-anchor="middle">the default</text>
+
+      <path d="M132 103 L168 103" stroke="#b45f35" stroke-width="2" fill="none" marker-end="url(#t1)"/>
+      <path d="M326 103 L362 103" stroke="#9c8d78" stroke-width="2" fill="none" marker-end="url(#t2)"/>
+      <path d="M520 103 L556 103" stroke="#9c8d78" stroke-width="2" fill="none" marker-end="url(#t2)"/>
+      <text x="344" y="94" class="sxs" text-anchor="middle">MISS</text>
+      <text x="538" y="94" class="sxs" text-anchor="middle">MISS</text>
+
+      <text x="251" y="152" class="ss" text-anchor="middle">hit → use it</text>
+      <text x="445" y="152" class="ss" text-anchor="middle">hit → use it</text>
+
+      <text x="360" y="184" class="ss" text-anchor="middle">a plain object with neither hook is always truthy — including instances you expect to be "empty"</text>
+      <defs>
+        <marker id="t1" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#b45f35"/></marker>
+        <marker id="t2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#9c8d78"/></marker>
+      </defs>
+    </svg>
+    <figcaption>Two hooks, one default. <code>__len__</code> doing double duty is why empty containers are falsy for free.</figcaption>
+  </figure>
+
+  <p>The last box is the one that bites. <code>if result:</code> on a custom object with neither hook
+  is <b>always true</b> — including when the object represents nothing at all:</p>
+
+<pre><code><span class="k">class</span> <span class="f">Response</span>:
+    <span class="k">def</span> <span class="f">__init__</span>(self, rows): self.rows = rows
+
+r = <span class="f">Response</span>([])
+<span class="k">if</span> r: ...           <span class="c"># True — there is no hook, so the default wins</span>
+<span class="k">if</span> r.rows: ...      <span class="c"># False — you meant this</span>
+</code></pre>
+
+  <div class="rule">
+    <span class="lbl">Design rule</span>
+    If "empty" is a meaningful state for your class, <mark>give it <code>__len__</code></mark> and
+    truthiness follows for free. Reach for <code>__bool__</code> only when emptiness and falsiness
+    are different questions — a <code>Flag</code> that is present but off, for example.
+  </div>
+</section>
+
+<!-- ============================================================ 06 -->
+<section id="ops">
+  <h2><span class="num">06</span> Operators, <code>NotImplemented</code>, and the <code>__eq__</code> trap</h2>
+  <p class="sub">A two-round negotiation, and the one place defining a method silently deletes another.</p>
+
+  <p>Binary operators are not a single dispatch. <code>a + b</code> asks the left operand first; if
+  it declines, it asks the right operand's <em>reflected</em> method:</p>
+
+  <ol>
+    <li><code>type(a).__add__(a, b)</code> — if this returns anything other than <code>NotImplemented</code>, done.</li>
+    <li><code>type(b).__radd__(b, a)</code> — the right operand's turn.</li>
+    <li>Both declined → <code>TypeError: unsupported operand type(s)</code>.</li>
+  </ol>
+
+  <div class="trap">
+    <span class="lbl">Return it, do not raise it</span>
+    <code>NotImplemented</code> is a <b>value you return</b> to say "not my problem, try the other
+    operand". <code>NotImplementedError</code> is an <b>exception you raise</b> for an unfinished
+    abstract method. Returning the wrong one, or raising <code>TypeError</code> yourself, kills the
+    negotiation and breaks interoperability with types that would have handled it. Note also that
+    <code>NotImplemented</code> is <em>truthy</em> — <code>if x == y:</code> on a broken
+    <code>__eq__</code> can silently take the wrong branch.
+  </div>
+
+  <h3>Defining <code>__eq__</code> removes <code>__hash__</code></h3>
+
+  <p>This is the sharpest edge in the data model, and it follows directly from Stage 1. By default
+  <code>__eq__</code> is identity and <code>__hash__</code> is derived from identity, so the hash
+  invariant holds trivially. The moment you redefine equality, Python cannot assume the invariant
+  still holds — so it sets <code>__hash__ = None</code> and your class becomes unhashable:</p>
+
+<pre><code><span class="k">class</span> <span class="f">Money</span>:
+    <span class="k">def</span> <span class="f">__eq__</span>(self, other): ...
+
+<span class="f">Money</span>(<span class="n">5</span>) == <span class="f">Money</span>(<span class="n">5</span>)     <span class="c"># True</span>
+<span class="f">hash</span>(<span class="f">Money</span>(<span class="n">5</span>))            <span class="c"># TypeError: unhashable type: 'Money'</span>
+{<span class="f">Money</span>(<span class="n">5</span>)}                <span class="c"># TypeError — no sets, no dict keys, no lru_cache</span>
+Money.__hash__            <span class="c"># None — not missing. Explicitly None.</span>
+</code></pre>
+
+  <div class="note">
+    <span class="lbl">The invariant being protected</span>
+    <mark>If <code>a == b</code> then <code>hash(a)</code> must equal <code>hash(b)</code>.</mark>
+    Break it and a dict will store two "equal" keys in different buckets and fail to find one you
+    just inserted. Python refuses to let you break it by accident — silently keeping the
+    identity-based hash would produce a corrupt dict, so it removes hashing instead.
+  </div>
+
+  <p>Restore it deliberately, and only if the fields you hash cannot change while the object is in a
+  set or dict:</p>
+
+<pre><code><span class="k">def</span> <span class="f">__hash__</span>(self): <span class="k">return</span> <span class="f">hash</span>(self.rupees)
+</code></pre>
+
+  <p>This is why immutability and hashability travel together, and why
+  <code>@dataclass(frozen=True)</code> gives you <code>__hash__</code> while a plain
+  <code>@dataclass</code> with <code>eq=True</code> does not.</p>
+</section>
+
+<!-- ============================================================ 07 -->
+<section id="drills">
+  <h2><span class="num">07</span> Six drills</h2>
+  <p class="sub">Companion code: <code>python-model/d21_data_model.py</code>.</p>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D1</span><span class="dt">Make the dispatch audible</span><span class="dw">Syntax → method</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> Loud, protocol_map, show_bytecode
+x = <span class="f">Loud</span>()
+
+<span class="f">len</span>(x)
+x[<span class="n">1</span>]
+x + <span class="n">1</span>
+<span class="f">x</span>()
+<span class="k">for</span> v <span class="k">in</span> x: <span class="k">pass</span>       <span class="c"># which hook fires, and how many times?</span>
+
+<span class="f">protocol_map</span>(x)
+<span class="f">show_bytecode</span>()
+</code></pre>
+      <p>In the <code>for</code> loop, count the calls and say where the loop stopped and why.</p>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D2</span><span class="dt">Instance vs type lookup</span><span class="dw">Predict before running</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> instance_dunder_is_ignored
+<span class="f">instance_dunder_is_ignored</span>()
+</code></pre>
+      <p>Write down all four values first. Then explain to yourself why two of them disagree when
+      only one object is involved.</p>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D3</span><span class="dt">repr vs str</span><span class="dw">The one-way fallback</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> OnlyRepr, OnlyStr, BothStrings, string_matrix
+<span class="f">string_matrix</span>(<span class="f">OnlyRepr</span>())
+<span class="f">string_matrix</span>(<span class="f">OnlyStr</span>())
+<span class="f">string_matrix</span>(<span class="f">BothStrings</span>())
+
+<span class="f">print</span>(<span class="f">OnlyStr</span>())        <span class="c"># fine</span>
+<span class="f">print</span>([<span class="f">OnlyStr</span>()])      <span class="c"># and now?</span>
+</code></pre>
+      <p>Six cells differ across the three classes. Name the rule each difference demonstrates.</p>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D4</span><span class="dt">Free powers</span><span class="dw">Protocol &gt; inheritance</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> Countdown, free_powers
+<span class="f">free_powers</span>()
+
+c = <span class="f">Countdown</span>(<span class="n">4</span>)
+<span class="f">iter</span>(c)                  <span class="c"># what type is this? where did it come from?</span>
+<span class="n">99</span> <span class="k">in</span> c                  <span class="c"># explain the cost of this answer</span>
+</code></pre>
+      <p>Then break it: change <code>IndexError</code> to <code>KeyError</code> in the class and
+      re-run <code>list(c)</code>. Explain the result.</p>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D5</span><span class="dt">Truthiness chain</span><span class="dw">Three steps</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> truth_table, NoHooks, HasLen, HasBool
+<span class="f">truth_table</span>()
+</code></pre>
+      <p>One row is the bug that ships to production. Identify it, then write the two-line fix.</p>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D6</span><span class="dt">eq, hash and NotImplemented</span><span class="dw">The sharpest edge</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> equality_and_hash, Money, Reflected
+<span class="f">equality_and_hash</span>()
+
+<span class="n">1</span> + <span class="f">Reflected</span>()          <span class="c"># int.__add__ declined — then what?</span>
+<span class="f">Money</span>(<span class="n">5</span>) == <span class="s">"five"</span>      <span class="c"># __eq__ returned NotImplemented — who answered?</span>
+</code></pre>
+      <p>For the last line: the expression returns <code>False</code>, but <em>no</em>
+      <code>__eq__</code> produced it. Say what did.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 08 -->
+<section id="exit">
+  <h2><span class="num">08</span> Exit checkpoint</h2>
+  <p class="sub">Five items. Fixed list. No second round.</p>
+
+  <div id="checklist">
+    <label class="chk"><input type="checkbox" data-k="e1"><span class="q"><b>1</b> — D2: why does <code>len(s)</code> disagree with <code>s.__len__()</code> for the same object? Answer in terms of <em>which mapping is searched</em>, not "because dunders are special".</span></label>
+    <label class="chk"><input type="checkbox" data-k="e2"><span class="q"><b>2</b> — D3: you have one method's worth of effort. Which of <code>__repr__</code> / <code>__str__</code> do you write, and give the two places your choice pays off.</span></label>
+    <label class="chk"><input type="checkbox" data-k="e3"><span class="q"><b>3</b> — D4: <code>Countdown</code> has no <code>__iter__</code>, yet <code>for</code> works. Describe the fallback in three steps, including the termination condition.</span></label>
+    <label class="chk"><input type="checkbox" data-k="e4"><span class="q"><b>4</b> — D6: explain why defining <code>__eq__</code> sets <code>__hash__ = None</code>, in terms of the invariant being protected — and what would break in a <code>dict</code> if Python did not do it.</span></label>
+    <label class="chk"><input type="checkbox" data-k="e5"><span class="q"><b>5</b> — One paragraph: a colleague says "protocols are just interfaces without the boilerplate". Give one way that is right and one way it is misleading.</span></label>
+  </div>
+  <span id="chkCount"></span>
+
+  <div class="life">
+    <span class="lbl">Item 4 is the real test</span>
+    It is the first question in this series whose answer <mark>requires both stages at once</mark> —
+    identity and mutability from Stage 1, dispatch and invariants from Stage 2. If you can answer it
+    cleanly you have the data model's central idea: special methods are not decoration, they are
+    <em>contracts the runtime relies on</em>.
+  </div>
+</section>
+
+<!-- ============================================================ 09 -->
+<section id="ledger">
+  <h2><span class="num">09</span> Ledger — language vs CPython</h2>
+  <p class="sub">Almost all language. The C column is only about how fast, never about what.</p>
+
+  <table>
+    <thead><tr><th style="width:118px">Badge</th><th>Claim</th><th>Consequence</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Syntax and builtins dispatch to named methods.</td><td>Your types are first-class in the syntax.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Implicit lookup uses the type, skipping the instance.</td><td>Patch classes, never instances.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td><code>str</code> falls back to <code>repr</code>; not the reverse.</td><td>Always write <code>__repr__</code>.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td><code>iter</code> falls back to <code>__getitem__</code> from index 0 until <code>IndexError</code>.</td><td>One method buys iteration, <code>in</code> and unpacking.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td><code>bool</code> tries <code>__bool__</code>, then <code>__len__</code>, then <code>True</code>.</td><td>Custom objects are truthy by default.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Binary ops try the reflected method on the right operand.</td><td>Return <code>NotImplemented</code>, never raise.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Defining <code>__eq__</code> sets <code>__hash__</code> to <code>None</code>.</td><td>Restore it only when the hashed fields cannot change.</td></tr>
+      <tr><td><span class="pill pC">CPYTHON</span></td><td>Hooks are C struct slots (<code>tp_as_sequence</code> etc.), not dict lookups.</td><td>Explains the type-only rule; performance detail otherwise.</td></tr>
+      <tr><td><span class="pill pC">CPYTHON</span></td><td><code>dis</code> shows a generic opcode; the type supplies the behaviour.</td><td>Observation tool. Bytecode is not part of the language spec.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="next">
+  <h2><span class="num">10</span> What this unlocks</h2>
+  <p class="sub">Everything in Stage 2 from here is the same rule with a different method name.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>Next — 2.2 containers &amp; sequences</h4>
+      <p>D4 satisfied the sequence protocol by accident. 2.2 makes it deliberate: slicing,
+      <code>__len__</code> plus <code>__getitem__</code> together, negative indices, and why
+      <code>collections.abc</code> exists when duck typing already works.</p>
+    </div>
+    <div class="card">
+      <h4>Then — iteration properly</h4>
+      <p>The <code>__getitem__</code> fallback is the legacy path. The real protocol is
+      <code>__iter__</code> returning an iterator with <code>__next__</code>, which is what makes
+      generators, lazy pipelines and <code>itertools</code> possible.</p>
+    </div>
+    <div class="card">
+      <h4>Then — context managers</h4>
+      <p><code>with</code> was one row in the §01 table. Two methods and an exception-safety
+      guarantee is the entire feature, and it is how every connection, file handle and Spark session
+      should be managed.</p>
+    </div>
+    <div class="card">
+      <h4>Later — attribute access</h4>
+      <p>1.3 D6 exposed <code>h.__dict__</code>; §01 showed the dot is itself a special method.
+      Together they open <code>__getattr__</code>, <code>__slots__</code>, descriptors and
+      <code>property</code> — the machinery behind every ORM and settings object you have used.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Where this shows up in real work</span>
+    Every library you rely on is an exercise in this drill. <code>pandas</code> overloads
+    <code>__getitem__</code> so <code>df[...]</code> means four different things. PySpark's
+    <code>Column</code> overloads <code>__eq__</code> to build an <em>expression tree</em> rather
+    than compare — which is exactly why <code>if col == 5:</code> silently misbehaves and
+    <code>df.filter(col == 5)</code> is correct. <mark>You cannot read that library's behaviour
+    without this drill.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<button id="toTop" title="Back to top" aria-label="Back to top">↑</button>
+
+<footer>
+  Python Data Model · Stage 2, Drill 2.1 — special methods as protocol hooks.
+  Companion code: <code>python-model/d21_data_model.py</code>.
+  Self-contained HTML; checkpoint state is stored in this browser only.
+</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('on'); });
+        var a = map[e.target.id];
+        if(a) a.classList.add('on');
+      }
+    });
+  }, {rootMargin:'-72px 0px -70% 0px', threshold:0});
+  document.querySelectorAll('section').forEach(function(s){ obs.observe(s); });
+
+  var KEY = 'pydata-21-checkpoint-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('#checklist input'));
+  var counter = document.getElementById('chkCount');
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ state = {}; }
+
+  function paint(){
+    var n = 0;
+    boxes.forEach(function(b){
+      b.parentElement.classList.toggle('done', b.checked);
+      if(b.checked) n++;
+    });
+    counter.textContent = n + ' / ' + boxes.length + ' checkpoint items' +
+      (n === boxes.length ? ' — 2.2 opens.' : '');
+  }
+  boxes.forEach(function(b){
+    b.checked = !!state[b.dataset.k];
+    b.addEventListener('change', function(){
+      state[b.dataset.k] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+      paint();
+    });
+  });
+  paint();
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    state = {};
+    try { localStorage.removeItem(KEY); } catch(e){}
+    boxes.forEach(function(b){ b.checked = false; });
+    paint();
+  });
+
+  var bar = document.getElementById('bar');
+  var top = document.getElementById('toTop');
+  function onScroll(){
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+    top.classList.toggle('show', window.scrollY > 600);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  top.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+})();
+</script>
+</body>
+</html>

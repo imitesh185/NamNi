@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Python Object Model — Drill 1.3 · References &amp; Aliasing</title>
+<link rel="stylesheet" href="../../../assets/base.css" />
+<script src="../../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Python Object Model <span>·</span> Drill 1.3</div>
+    <div class="tagline">References &amp; aliasing · one exit checkpoint</div>
+    <button class="btn" onclick="window.print()">Print / PDF</button>
+    <button class="btn" id="resetBtn">Reset checkpoint</button>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#frame">00 · Where this sits</a>
+  <a href="#container">01 · Containers hold references</a>
+  <h4>Consequences</h4>
+  <a href="#alias">02 · Aliasing, generalised</a>
+  <a href="#copy">03 · The three depths of copying</a>
+  <a href="#args">04 · Arguments need no new rule</a>
+  <a href="#iadd">05 · The += paradox</a>
+  <h4>Hands On</h4>
+  <a href="#drills">06 · Six drills</a>
+  <a href="#exit">07 · Exit checkpoint</a>
+  <h4>Reference</h4>
+  <a href="#ledger">08 · Language vs CPython</a>
+  <a href="#next">09 · What this unlocks</a>
+</nav>
+
+<main>
+
+<div class="hero">
+  <div class="kicker">Stage 1 · Object Model · Drill 1.3</div>
+  <h1>References &amp; aliasing</h1>
+  <p class="dropcap">Drill 1.2 gave you one mechanism: a namespace maps names to object references.
+  This drill does something cheap and enormously powerful with it — it points out that
+  <em>containers work exactly the same way</em>. A list is a mapping from integers to references.
+  A dict is a mapping from hashable keys to references. Once you see that, aliasing, shallow copy,
+  nested mutation, argument passing and the <code>+=</code> paradox all stop being separate rules.</p>
+  <div class="why">
+    <b>The whole drill in one sentence.</b> <mark>A list does not contain objects. It contains
+    references to objects.</mark> Everything below is that sentence, applied until it hurts.
+  </div>
+  <div class="tags">
+    <span class="tag">#references</span>
+    <span class="tag t2">#aliasing</span>
+    <span class="tag t3">#shallow-vs-deep</span>
+    <span class="tag">#argument-passing</span>
+    <span class="tag t2">#iadd</span>
+  </div>
+</div>
+
+<!-- ============================================================ 00 -->
+<section id="frame">
+  <h2><span class="num">00</span> Where this sits</h2>
+  <p class="sub">One generalisation, four consequences, zero new machinery.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>Settled in 1.2</h4>
+      <p>A namespace maps <b>names</b> to object references. Binding inserts a key. Rebinding replaces
+      a key's value. Mutation changes an object and is visible through every key that reaches it.</p>
+    </div>
+    <div class="card">
+      <h4>The claim of 1.3</h4>
+      <p>Containers are the same structure with different keys. <code>list</code> keys by
+      <b>integer</b>, <code>dict</code> keys by <b>hashable object</b>. <mark>Nothing new is
+      introduced — only the key type changes.</mark></p>
+    </div>
+  </div>
+
+  <div class="rule">
+    <span class="lbl">Protocol</span>
+    One checkpoint, §07, fixed list. No follow-up round. Say <b>"banked"</b> to skip anything in the
+    drill body and it will not be re-raised.
+  </div>
+</section>
+
+<!-- ============================================================ 01 -->
+<section id="container">
+  <h2><span class="num">01</span> A container holds references, not objects</h2>
+  <p class="sub">The sentence people nod at and then reason as if it were false.</p>
+
+  <p>Everyone agrees with the claim in the abstract. The test of whether you actually believe it is
+  this expression:</p>
+
+<pre><code>rows = [[]] * <span class="n">3</span>
+rows[<span class="n">0</span>].<span class="f">append</span>(<span class="s">"x"</span>)
+rows                    <span class="c"># [['x'], ['x'], ['x']]</span>
+</code></pre>
+
+  <p>If that looks like a bug in Python, you are still reasoning as though the list held three
+  objects. It held <b>three copies of one reference</b>. <code>*</code> repeats the <em>contents</em>
+  of the list — and the contents are references. It never had any reason to create a second list.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 240" role="img" aria-label="Repeated reference versus independent objects">
+      <text x="24" y="30" class="sxs">[[]] * 3 — ONE object, three references</text>
+      <rect x="24" y="42" width="300" height="66" rx="11" fill="#f9e0d9" stroke="#c0503f" stroke-width="1.6"/>
+      <rect x="42"  y="58" width="76" height="34" rx="6" fill="#fdfaf4" stroke="#eec2b6"/>
+      <text x="80" y="80" class="sm" text-anchor="middle">[0]</text>
+      <rect x="132" y="58" width="76" height="34" rx="6" fill="#fdfaf4" stroke="#eec2b6"/>
+      <text x="170" y="80" class="sm" text-anchor="middle">[1]</text>
+      <rect x="222" y="58" width="76" height="34" rx="6" fill="#fdfaf4" stroke="#eec2b6"/>
+      <text x="260" y="80" class="sm" text-anchor="middle">[2]</text>
+
+      <path d="M80 96 C 110 150 400 130 452 118"  stroke="#c0503f" stroke-width="1.8" fill="none" marker-end="url(#r1)"/>
+      <path d="M170 96 C 200 150 400 132 452 122" stroke="#c0503f" stroke-width="1.8" fill="none" marker-end="url(#r1)"/>
+      <path d="M260 96 C 290 150 400 134 452 126" stroke="#c0503f" stroke-width="1.8" fill="none" marker-end="url(#r1)"/>
+
+      <rect x="460" y="96" width="230" height="54" rx="11" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.8"/>
+      <text x="575" y="120" class="st" text-anchor="middle" fill="#b45f35">ONE list object</text>
+      <text x="575" y="140" class="sm" text-anchor="middle">append here → all three change</text>
+
+      <text x="24" y="188" class="sxs">[[] for _ in range(3)] — three objects</text>
+      <rect x="24" y="198" width="300" height="34" rx="9" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.5"/>
+      <text x="174" y="220" class="ss" text-anchor="middle">the comprehension body runs three times</text>
+      <text x="510" y="220" class="ss" text-anchor="middle">→ three distinct objects</text>
+      <defs><marker id="r1" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#c0503f"/></marker></defs>
+    </svg>
+    <figcaption><code>*</code> copies references. A comprehension <em>evaluates its body</em> each time, so it produces new objects.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Generalisation</span>
+    Same for every container. A <code>dict</code>'s values are references. A tuple's slots are
+    references. An instance's <code>__dict__</code> is a namespace, so attributes are references too.
+    <mark>Python has exactly one storage concept: a slot holding a reference.</mark>
+    Names, list indices, dict keys and attributes are four spellings of the same idea.
+  </div>
+</section>
+
+<!-- ============================================================ 02 -->
+<section id="alias">
+  <h2><span class="num">02</span> Aliasing, generalised</h2>
+  <p class="sub">Two references to one object, regardless of where the references live.</p>
+
+  <p>1.2 showed two <em>names</em> reaching one object. The general statement drops the word "name":</p>
+
+  <table class="nw">
+    <thead><tr><th>Both references live in…</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td>two names</td><td><code>b = a</code></td></tr>
+      <tr><td>a name and a list slot</td><td><code>box = [a]</code></td></tr>
+      <tr><td>two list slots</td><td><code>[a, a]</code>, or <code>[x] * 3</code></td></tr>
+      <tr><td>a list slot and a dict value</td><td><code>d['k'] = lst[0]</code></td></tr>
+      <tr><td>a name and an attribute</td><td><code>obj.data = a</code></td></tr>
+      <tr><td>a container and itself</td><td><code>a.append(a)</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>All six are the same situation and mutation propagates identically through all of them. There is
+  no "aliasing feature" to learn — <b>aliasing is the absence of copying</b>, and Python never copies
+  unless you ask.</p>
+
+  <div class="trap">
+    <span class="lbl">The self-reference case is not a curiosity</span>
+    <code>a = [1,2]; a.append(a)</code> is legal and prints <code>[1, 2, [...]]</code>. The
+    <code>[...]</code> is <code>repr</code> detecting a cycle it would otherwise recurse into forever.
+    This object <b>cannot be freed by reference counting alone</b> — it references itself, so its count
+    never reaches zero. <mark>You have just constructed the exact problem that drill 1.4's garbage
+    collector exists to solve.</mark>
+  </div>
+</section>
+
+<!-- ============================================================ 03 -->
+<section id="copy">
+  <h2><span class="num">03</span> The three depths of copying</h2>
+  <p class="sub">Most "copy" bugs are someone using depth 2 while believing they used depth 3.</p>
+
+  <table class="nw">
+    <thead><tr><th>Depth</th><th>How</th><th>What is duplicated</th></tr></thead>
+    <tbody>
+      <tr><td><b>0 — alias</b></td><td><code>b = a</code></td><td>Nothing. One object, one more reference.</td></tr>
+      <tr><td><b>1 — shallow</b></td><td><code>a[:]</code> · <code>list(a)</code> · <code>copy.copy(a)</code></td><td>The outer container only. <b>The references inside are copied, so the inner objects are shared.</b></td></tr>
+      <tr><td><b>2 — deep</b></td><td><code>copy.deepcopy(a)</code></td><td>The container and, recursively, everything reachable from it.</td></tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <svg viewBox="0 0 720 210" role="img" aria-label="Shallow copy duplicates the outer container only">
+      <text x="24" y="28" class="sxs">ORIGINAL</text>
+      <rect x="24" y="40" width="150" height="44" rx="9" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.5"/>
+      <text x="99" y="68" class="st" text-anchor="middle" fill="#2f7a9e">outer list</text>
+
+      <text x="24" y="128" class="sxs">SHALLOW COPY</text>
+      <rect x="24" y="140" width="150" height="44" rx="9" fill="#dcf0e9" stroke="#2b7d6d" stroke-width="1.5"/>
+      <text x="99" y="168" class="st" text-anchor="middle" fill="#2b7d6d">new outer list</text>
+
+      <path d="M178 62  L 372 92"  stroke="#2f7a9e" stroke-width="1.8" fill="none" marker-end="url(#c1)"/>
+      <path d="M178 78  L 372 108" stroke="#2f7a9e" stroke-width="1.8" fill="none" marker-end="url(#c1)"/>
+      <path d="M178 156 L 372 100" stroke="#2b7d6d" stroke-width="1.8" fill="none" marker-end="url(#c2)"/>
+      <path d="M178 172 L 372 116" stroke="#2b7d6d" stroke-width="1.8" fill="none" marker-end="url(#c2)"/>
+
+      <rect x="380" y="72" width="180" height="34" rx="8" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.6"/>
+      <text x="470" y="94" class="st" text-anchor="middle" fill="#b45f35">inner [1, 2]</text>
+      <rect x="380" y="112" width="180" height="34" rx="8" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.6"/>
+      <text x="470" y="134" class="st" text-anchor="middle" fill="#b45f35">inner [3, 4]</text>
+
+      <text x="586" y="94"  class="ss">shared</text>
+      <text x="586" y="134" class="ss">shared</text>
+      <text x="360" y="200" class="ss" text-anchor="middle">two outer lists · <tspan style="font-weight:700">the same two inner lists</tspan> · mutating an inner one shows in both</text>
+      <defs>
+        <marker id="c1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#2f7a9e"/></marker>
+        <marker id="c2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#2b7d6d"/></marker>
+      </defs>
+    </svg>
+    <figcaption>Shallow copy is not a half-measure — it is the <em>correct</em> default, because copying is expensive and usually unwanted.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">Why shallow is the default</span>
+    Deep copying is <b>expensive</b>, <b>often wrong</b> (would you deep-copy a database connection?),
+    and <b>not always possible</b> (cycles, sockets, file handles). Python's design position is that
+    the programmer knows the object graph and should say when to go deep.
+    <code>deepcopy</code> does handle cycles via a memo of already-copied objects — but it cannot know
+    that copying your connection pool is a mistake.
+  </div>
+</section>
+
+<!-- ============================================================ 04 -->
+<section id="args">
+  <h2><span class="num">04</span> Argument passing needs no new rule</h2>
+  <p class="sub">The most argued-about topic in Python has no dedicated mechanism at all.</p>
+
+  <p>A call creates a new namespace (the frame) and binds parameter names in it to the argument
+  objects. That is the whole story. <code>f(data)</code> is <code>seq = data</code> executed inside a
+  fresh namespace.</p>
+
+<pre><code><span class="k">def</span> <span class="f">rebind_vs_mutate</span>(seq):
+    seq.<span class="f">append</span>(<span class="s">"mutated"</span>)     <span class="c"># mutates the shared object   → caller sees it</span>
+    seq = [<span class="s">"rebound"</span>]         <span class="c"># rebinds the local key       → caller sees nothing</span>
+    seq.<span class="f">append</span>(<span class="s">"invisible"</span>)   <span class="c"># mutates the NEW object      → caller sees nothing</span>
+    <span class="k">return</span> seq
+</code></pre>
+
+  <div class="life">
+    <span class="lbl">The correct formulation</span>
+    Not "pass by value", not "pass by reference". <mark>Python passes <b>references to objects, by
+    value</b></mark> — the reference is copied into a new binding; the object never is. Both observed
+    behaviours fall out of that single sentence, with no special case for mutable types.
+  </div>
+
+  <h3>Why the mutable default argument bug exists</h3>
+<pre><code><span class="k">def</span> <span class="f">leaky</span>(item, bucket=[]):
+    bucket.<span class="f">append</span>(item)
+    <span class="k">return</span> bucket
+</code></pre>
+  <p>Default values are evaluated <b>once</b>, when the <code>def</code> statement executes — not per
+  call. So one list object is created at definition time and stored on the function object. Every
+  call that omits <code>bucket</code> binds to that same object.</p>
+
+<pre><code><span class="f">leaky</span>.__defaults__          <span class="c"># the object is right there, inspectable</span>
+</code></pre>
+
+  <p>This is not a wart bolted on. It follows from <code>def</code> being a binding operation (§05 of
+  drill 1.2) whose default expressions are evaluated at binding time. The fix — <code>bucket=None</code>
+  and build inside — works because it moves object creation into the call.</p>
+</section>
+
+<!-- ============================================================ 05 -->
+<section id="iadd">
+  <h2><span class="num">05</span> The <code>+=</code> paradox</h2>
+  <p class="sub">One statement that both raises an exception and succeeds. The best test of this drill.</p>
+
+<pre><code>t = ([<span class="n">1</span>, <span class="n">2</span>], <span class="n">3</span>)
+t[<span class="n">0</span>] += [<span class="n">9</span>]
+
+<span class="c"># TypeError: 'tuple' object does not support item assignment</span>
+
+t
+<span class="c"># ([1, 2, 9], 3)      ← the mutation happened anyway</span>
+</code></pre>
+
+  <p>Both are true. The exception is real and the mutation is real. The reason is that
+  <code>x[i] += v</code> is not one operation — it is three:</p>
+
+  <ol class="steps">
+    <li><b>Load</b> <code>t[0]</code> — you now have the inner list object.</li>
+    <li><b>In-place add</b> — <code>list.__iadd__</code> mutates that object and returns it. <mark>The mutation is now permanent and irreversible.</mark></li>
+    <li><b>Store back</b> — <code>t[0] = &lt;result&gt;</code>. Tuples reject item assignment. <b>TypeError.</b></li>
+  </ol>
+
+  <p>Step 2 already committed. Step 3 fails afterwards. Nothing rolls back, because Python has no
+  transaction concept for expressions.</p>
+
+  <div class="note">
+    <span class="lbl">Why <code>+=</code> is not just sugar for <code>+</code></span>
+    <code>a = a + b</code> always builds a <b>new</b> object and rebinds. <code>a += b</code> tries
+    <code>__iadd__</code> first, which for mutable types mutates in place and returns <code>self</code>
+    — so the rebinding is a no-op onto the same object. That is why <code>+=</code> on a list is
+    visible to every alias, while <code>+</code> is visible to none of them. Immutable types have no
+    <code>__iadd__</code>, so for them <code>+=</code> genuinely does fall back to <code>+</code>.
+  </div>
+</section>
+
+<!-- ============================================================ 06 -->
+<section id="drills">
+  <h2><span class="num">06</span> Six drills</h2>
+  <p class="sub">Companion code: <code>python-model/d13_references.py</code>.</p>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D1</span><span class="dt">Repeated reference</span><span class="dw">The * operator</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d13_references <span class="k">import</span> repeated_reference, built_properly, reference_map
+<span class="f">repeated_reference</span>()
+<span class="f">built_properly</span>()
+
+rows = [[]] * <span class="n">3</span>
+<span class="f">reference_map</span>(rows)        <span class="c"># how many distinct ids?</span>
+<span class="f">reference_map</span>([[] <span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">3</span>)])
+</code></pre>
+      <p>Then the sharper version — predict this one before running:</p>
+<pre><code>nums = [<span class="n">0</span>] * <span class="n">3</span>
+nums[<span class="n">0</span>] = <span class="n">9</span>
+nums                        <span class="c"># does 9 appear three times?</span>
+</code></pre>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D2</span><span class="dt">Copy depths</span><span class="dw">Find the shared objects</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d13_references <span class="k">import</span> copy_depths
+d = <span class="f">copy_depths</span>()
+orig = d[<span class="s">"_original"</span>]
+
+<span class="k">for</span> name, c <span class="k">in</span> d.<span class="f">items</span>():
+    <span class="f">print</span>(name, c <span class="k">is</span> orig, c[<span class="n">0</span>] <span class="k">is</span> orig[<span class="n">0</span>])
+
+orig[<span class="n">0</span>].<span class="f">append</span>(<span class="s">"BOOM"</span>)
+d                           <span class="c"># which copies were affected?</span>
+</code></pre>
+      <p>Two booleans per row: same outer object, same inner object. Those two columns fully define
+      the copy depth.</p>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D3</span><span class="dt">Argument passing</span><span class="dw">No new rule</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d13_references <span class="k">import</span> rebind_vs_mutate, leaky_default, safe_default
+data = [<span class="s">"start"</span>]
+returned = <span class="f">rebind_vs_mutate</span>(data)
+data, returned, data <span class="k">is</span> returned
+
+<span class="f">leaky_default</span>(<span class="n">1</span>); <span class="f">leaky_default</span>(<span class="n">2</span>); <span class="f">leaky_default</span>(<span class="n">3</span>)
+leaky_default.__defaults__
+<span class="f">safe_default</span>(<span class="n">1</span>); <span class="f">safe_default</span>(<span class="n">2</span>)
+</code></pre>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D4</span><span class="dt">The += paradox</span><span class="dw">Exception AND mutation</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d13_references <span class="k">import</span> tuple_iadd_paradox, list_iadd_vs_plus
+<span class="f">tuple_iadd_paradox</span>()
+<span class="f">list_iadd_vs_plus</span>()
+</code></pre>
+      <p>Then confirm the mechanism directly:</p>
+<pre><code>a = [<span class="n">1</span>,<span class="n">2</span>]
+a.<span class="f">__iadd__</span>([<span class="n">3</span>]) <span class="k">is</span> a     <span class="c"># in-place ops return self</span>
+(<span class="n">1</span>,<span class="n">2</span>).<span class="f">__iadd__</span>              <span class="c"># AttributeError — tuples have none</span>
+</code></pre>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D5</span><span class="dt">Self-reference</span><span class="dw">Bridge to 1.4</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d13_references <span class="k">import</span> self_referential
+a, is_self = <span class="f">self_referential</span>()
+a, is_self
+a[<span class="n">2</span>][<span class="n">2</span>][<span class="n">2</span>][<span class="n">2</span>] <span class="k">is</span> a          <span class="c"># still the same object</span>
+
+<span class="k">import</span> sys
+sys.<span class="f">getrefcount</span>(a)              <span class="c"># note it is higher than you'd expect</span>
+</code></pre>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D6</span><span class="dt">Aliasing outside lists</span><span class="dw">Generalise it</span></div>
+    <div class="db">
+<pre><code>shared = [<span class="n">1</span>, <span class="n">2</span>]
+registry = {<span class="s">"a"</span>: shared, <span class="s">"b"</span>: shared}
+
+<span class="k">class</span> Holder: <span class="k">pass</span>
+h = <span class="f">Holder</span>()
+h.data = shared
+
+shared.<span class="f">append</span>(<span class="n">3</span>)
+registry, h.data, h.__dict__
+
+registry[<span class="s">"a"</span>] <span class="k">is</span> h.data <span class="k">is</span> shared
+</code></pre>
+      <p>Look at <code>h.__dict__</code>. Name it: what kind of structure is it?</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 07 -->
+<section id="exit">
+  <h2><span class="num">07</span> Exit checkpoint</h2>
+  <p class="sub">Five items. Fixed list. No second round.</p>
+
+  <div id="checklist">
+    <label class="chk"><input type="checkbox" data-k="e1"><span class="q"><b>1</b> — D1 second half: why does <code>[0]*3</code> behave "correctly" while <code>[[]]*3</code> does not? Answer without using the word <em>immutable</em>.</span></label>
+    <label class="chk"><input type="checkbox" data-k="e2"><span class="q"><b>2</b> — D2: which copy methods share inner objects, and which single boolean test tells you the depth?</span></label>
+    <label class="chk"><input type="checkbox" data-k="e3"><span class="q"><b>3</b> — D4: explain the paradox in three numbered steps, naming which step commits and which step fails</span></label>
+    <label class="chk"><input type="checkbox" data-k="e4"><span class="q"><b>4</b> — D6: what is <code>h.__dict__</code>, and what does that make attribute access?</span></label>
+    <label class="chk"><input type="checkbox" data-k="e5"><span class="q"><b>5</b> — One paragraph: someone hands you <code>config = {"hosts": ["a","b"]}</code> and asks for a safe copy to hand to untrusted code. Which copy depth, and why is the other one wrong?</span></label>
+  </div>
+  <span id="chkCount"></span>
+
+  <div class="life">
+    <span class="lbl">Item 1 is the real test</span>
+    Answering it without saying "immutable" forces you to explain it as <mark>a fact about references
+    and rebinding, not a fact about types</mark>. <code>nums[0] = 9</code> replaces a reference in a
+    slot; <code>rows[0].append("x")</code> mutates the object a reference points at. Nothing about
+    <code>int</code> being immutable is needed — the two statements were never doing the same thing.
+  </div>
+</section>
+
+<!-- ============================================================ 08 -->
+<section id="ledger">
+  <h2><span class="num">08</span> Ledger — language vs CPython</h2>
+  <p class="sub">Notice how short the CPython column is. This drill is almost entirely language semantics.</p>
+
+  <table>
+    <thead><tr><th style="width:118px">Badge</th><th>Claim</th><th>Consequence</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Containers hold references, not objects.</td><td>Universal. Names, indices, keys and attributes are one idea.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td><code>*</code> and slicing copy references, never objects.</td><td><code>[[]]*3</code> shares one list. Use a comprehension.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Copying is opt-in and shallow by default.</td><td><code>deepcopy</code> only when you own the whole graph.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Parameters are bindings in a new namespace.</td><td>Mutation visible, rebinding not. One rule.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Default arguments evaluate once, at <code>def</code> time.</td><td>Never use a mutable default.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td><code>x[i] += v</code> is load, in-place op, store back.</td><td>Can mutate <em>and</em> raise. Not atomic.</td></tr>
+      <tr><td><span class="pill pC">CPYTHON</span></td><td><code>sys.getrefcount</code> reveals the extra reference in a cycle.</td><td>Observation tool only. Drill 1.4.</td></tr>
+      <tr><td><span class="pill pC">CPYTHON</span></td><td><code>repr</code> prints <code>[...]</code> for cycles.</td><td>Cosmetic; other implementations may differ.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 09 -->
+<section id="next">
+  <h2><span class="num">09</span> What this unlocks</h2>
+  <p class="sub">Two wires laid, both load-bearing.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>Next — drill 1.4</h4>
+      <p>D5 built an object whose reference count can never reach zero. That single object is the
+      entire justification for CPython having a cycle-detecting garbage collector <em>in addition to</em>
+      reference counting. You built the problem before meeting the solution.</p>
+    </div>
+    <div class="card">
+      <h4>Then — drill 1.5</h4>
+      <p>§05 showed <code>__iadd__</code> exists on <code>list</code> and not on <code>tuple</code>.
+      That asymmetry is not a quirk — it is the mutability boundary, and it is what makes tuples
+      usable as dict keys. 1.5 turns that into the hashability contract.</p>
+    </div>
+    <div class="card">
+      <h4>Later — the data model</h4>
+      <p><code>__iadd__</code> was your first special method. Stage 2's claim is that
+      <mark>every operator, every builtin and every syntax form resolves to one of these</mark>.
+      You have already seen the mechanism work.</p>
+    </div>
+    <div class="card">
+      <h4>Later — attribute lookup</h4>
+      <p>D6 exposed <code>h.__dict__</code> as a plain namespace. Attribute access is a mapping
+      lookup, exactly like a name lookup — which is why <code>__slots__</code>, descriptors and
+      properties can intervene in it at all.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<button id="toTop" title="Back to top" aria-label="Back to top">↑</button>
+
+<footer>
+  Python Object Model · Stage 1, Drill 1.3 — references and aliasing.
+  Companion code: <code>python-model/d13_references.py</code>.
+  Self-contained HTML; checkpoint state is stored in this browser only.
+</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('on'); });
+        var a = map[e.target.id];
+        if(a) a.classList.add('on');
+      }
+    });
+  }, {rootMargin:'-72px 0px -70% 0px', threshold:0});
+  document.querySelectorAll('section').forEach(function(s){ obs.observe(s); });
+
+  var KEY = 'pyobj-13-checkpoint-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('#checklist input'));
+  var counter = document.getElementById('chkCount');
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ state = {}; }
+
+  function paint(){
+    var n = 0;
+    boxes.forEach(function(b){
+      b.parentElement.classList.toggle('done', b.checked);
+      if(b.checked) n++;
+    });
+    counter.textContent = n + ' / ' + boxes.length + ' checkpoint items' +
+      (n === boxes.length ? ' — 1.4 opens.' : '');
+  }
+  boxes.forEach(function(b){
+    b.checked = !!state[b.dataset.k];
+    b.addEventListener('change', function(){
+      state[b.dataset.k] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+      paint();
+    });
+  });
+  paint();
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    state = {};
+    try { localStorage.removeItem(KEY); } catch(e){}
+    boxes.forEach(function(b){ b.checked = false; });
+    paint();
+  });
+
+  var bar = document.getElementById('bar');
+  var top = document.getElementById('toTop');
+  function onScroll(){
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+    top.classList.toggle('show', window.scrollY > 600);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  top.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Python Object Model — Drill 1.1 · Identity, Type, Value</title>
+<link rel="stylesheet" href="../../../assets/base.css" />
+<link rel="stylesheet" href="../../../assets/1.1-identity-type-value.css" />
+<script src="../../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Python Object Model <span>·</span></div>
+    <div class="tagline">Stage 1 of 6 · identity, type, value · predict before you run</div>
+    <button class="btn" onclick="window.print()">Print / PDF</button>
+    <button class="btn" id="resetBtn">Reset drills</button>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#frame">00 · What Stage 1 is</a>
+  <a href="#claim">01 · The one claim</a>
+  <h4>The Three Properties</h4>
+  <a href="#identity">02 · Identity</a>
+  <a href="#type">03 · Type</a>
+  <a href="#value">04 · Value</a>
+  <h4>Underneath</h4>
+  <a href="#header">05 · The object header</a>
+  <a href="#immortal">06 · Immortal objects</a>
+  <h4>Hands On</h4>
+  <a href="#setup">07 · Setup</a>
+  <a href="#drills">08 · The eight drills</a>
+  <a href="#ledger">09 · Prediction ledger</a>
+  <a href="#report">10 · What to send back</a>
+  <h4>Reference</h4>
+  <a href="#boundary">11 · Language vs CPython</a>
+  <a href="#next">12 · What this unlocks</a>
+</nav>
+
+<main>
+
+<div class="hero">
+  <div class="kicker">Stage 1 · Python Model · Drill 1.1</div>
+  <h1>Objects: Identity, Type, Value</h1>
+  <p class="dropcap">Python does not manipulate variables. It manipulates <em>objects</em>, and it
+  reaches them through <em>names</em>. Almost every confusing behaviour you will ever meet in this
+  language — aliasing, mutability, hashability, the <code>is</code>/<code>==</code> split,
+  why <code>len(x)</code> is a function and not a method — resolves cleanly once you hold a
+  precise model of what an object <em>is</em>. This drill installs that model, and nothing else.</p>
+  <div class="why">
+    <b>Scope discipline.</b> This is one concept, drilled to the bottom. Not five.
+    You will finish it able to state, for any expression in any Python program, exactly what
+    objects exist and which of their three properties can change.
+    <mark>Everything after this stage is a consequence of this stage.</mark>
+  </div>
+  <div class="tags">
+    <span class="tag">#objects</span>
+    <span class="tag t2">#identity</span>
+    <span class="tag t3">#type</span>
+    <span class="tag">#value</span>
+    <span class="tag t2">#PyObject-header</span>
+    <span class="tag t3">#PEP-683</span>
+  </div>
+</div>
+
+<!-- ============================================================ 00 -->
+<section id="frame">
+  <h2><span class="num">00</span> What Stage 1 is, and its boundary</h2>
+  <p class="sub">Six drills. This document is the first. The order is a dependency order, not your list order.</p>
+
+  <table class="nw">
+    <thead><tr><th>Drill</th><th>Concept</th><th>Why it must come here</th></tr></thead>
+    <tbody>
+      <tr><td>1.1 <b>← you are here</b></td><td>Objects: identity, type, value</td><td>Nothing else is definable without it.</td></tr>
+      <tr><td>1.2</td><td>Namespaces: the name → object mapping</td><td>Needs "object" to exist first. Binding is not storage.</td></tr>
+      <tr><td>1.3</td><td>References &amp; aliasing</td><td>A reference is a name-or-container pointing at 1.1's object.</td></tr>
+      <tr><td>1.4</td><td>Reference counting</td><td>A refcount <em>counts</em> the references from 1.2 and 1.3. Meaningless before them.</td></tr>
+      <tr><td>1.5</td><td>Recycling: dealloc, cycles, <code>gc</code></td><td>Consumes 1.4. Also explains the identity-reuse trap you meet today.</td></tr>
+      <tr><td>1.6</td><td>Immutability architecture</td><td>Pays off only once sharing (1.3) and cost (1.4) are visible.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Labelling contract — hold me to this</span>
+    Two of the things you asked for (<em>object descriptor spec</em>, <em>reference counting</em>) are
+    <b>not Python</b>. They are <b>CPython</b>. A Python program that depends on them is portable to
+    exactly one interpreter. Every claim in this document therefore carries one of two badges:
+    <span class="pill pL" style="margin-left:6px">LANGUAGE</span>
+    <span class="pill pC">CPYTHON</span>
+    If you ever catch me stating an implementation detail as a language rule, stop the drill.
+  </div>
+</section>
+
+<!-- ============================================================ 01 -->
+<section id="claim">
+  <h2><span class="num">01</span> The one claim</h2>
+  <p class="sub">Six words from the language reference that the whole stage unpacks.</p>
+
+  <div class="pq"><span class="qn">“</span>
+    <b>“Every object has an identity, a type and a value.”</b>
+    <i>The Python Language Reference, §3.1 — Objects, values and types.</i> That sentence is not a
+    friendly summary. It is a <mark>closed enumeration</mark>: there are three properties, there is no
+    fourth, and each behaves differently under change.
+  </div>
+
+  <table>
+    <thead><tr><th>Property</th><th>How you observe it</th><th>Can it change?</th><th>What "no" buys you</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Identity</td>
+        <td><code>id(x)</code>, compared by <code>is</code></td>
+        <td><b>Never</b> — for the object's entire lifetime</td>
+        <td>You can hold a reference and know it still means the same thing later.</td>
+      </tr>
+      <tr>
+        <td>Type</td>
+        <td><code>type(x)</code></td>
+        <td>Effectively never; treat as fixed</td>
+        <td>Every operation on the object can be dispatched without re-checking anything.</td>
+      </tr>
+      <tr>
+        <td>Value</td>
+        <td><b>no universal accessor</b></td>
+        <td>Sometimes. That <em>is</em> the definition of mutable.</td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Read the third row again. There is <code>id()</code> for identity and <code>type()</code> for type,
+  and then there is <strong>nothing</strong> for value. That absence is not an oversight; it is the
+  single most important design fact in this document, and §04 is about it.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 250" role="img" aria-label="What the statement x = [1,2,3] actually produces">
+      <text x="30" y="24" class="sxs">NAMESPACE (a mapping)</text>
+      <rect x="30" y="36" width="196" height="118" rx="11" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.5"/>
+      <text x="128" y="62" class="st" text-anchor="middle" fill="#2f7a9e">module globals</text>
+      <rect x="52" y="78" width="152" height="52" rx="8" fill="#fdfaf4" stroke="#b8d8e9"/>
+      <text x="74" y="104" class="lp" style="font:700 15px var(--mono);fill:#2c251c">'x'</text>
+      <text x="120" y="104" class="sm">─────▶</text>
+      <text x="128" y="176" class="ss" text-anchor="middle">a name is a KEY</text>
+      <text x="128" y="192" class="ss" text-anchor="middle">not a box, not storage</text>
+
+      <path d="M215 104 L 388 104" stroke="#b45f35" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+      <text x="300" y="94" class="sxs" text-anchor="middle" fill="#b45f35">REFERENCE</text>
+
+      <text x="398" y="24" class="sxs">THE OBJECT</text>
+      <rect x="398" y="36" width="292" height="160" rx="11" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.6"/>
+      <text x="544" y="60" class="st" text-anchor="middle" fill="#b45f35">one list object</text>
+      <line x1="414" y1="72" x2="674" y2="72" stroke="#eccdb8"/>
+      <text x="416" y="96" class="ss">identity</text><text x="516" y="96" class="sm">0x7f3c9a04b8c0 — fixed</text>
+      <text x="416" y="126" class="ss">type</text>    <text x="516" y="126" class="sm">list — fixed</text>
+      <text x="416" y="156" class="ss">value</text>   <text x="516" y="156" class="sm">[1, 2, 3] — can change</text>
+      <text x="544" y="216" class="ss" text-anchor="middle">the object exists whether or not</text>
+      <text x="544" y="232" class="ss" text-anchor="middle">any name refers to it</text>
+      <defs>
+        <marker id="ah" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+          <path d="M0,0 L9,4.5 L0,9 z" fill="#b45f35"/>
+        </marker>
+      </defs>
+    </svg>
+    <figcaption>The two halves of drill 1.1 and 1.2. Today: only the right box. The arrow is next week's problem.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================ 02 -->
+<section id="identity">
+  <h2><span class="num">02</span> Identity — and the qualifier everyone skips</h2>
+  <p class="sub">Four words in the docs turn a "unique id" into a landmine.</p>
+
+  <p><span class="pill pL">LANGUAGE</span> <code>id(x)</code> returns an integer
+  <i>"guaranteed to be unique and constant for this object <b>during its lifetime</b>."</i></p>
+
+  <div class="trap">
+    <span class="lbl">Read the qualifier</span>
+    <b>During its lifetime.</b> The docs continue: <i>"Two objects with non-overlapping lifetimes may
+    have the same <code>id()</code> value."</i> Ids are not globally unique and never were.
+    An id is only meaningful <mark>while you are holding a reference to the object</mark> — which means
+    the act of asking for an id and then dropping the object destroys the answer's validity.
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 720 190" role="img" aria-label="Two objects with non-overlapping lifetimes share an id">
+      <line x1="40" y1="150" x2="690" y2="150" stroke="#cdbb9e" stroke-width="1.5"/>
+      <text x="690" y="170" class="sxs" text-anchor="end">time ▶</text>
+
+      <rect x="70" y="60" width="190" height="52" rx="9" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.6"/>
+      <text x="165" y="82" class="st" text-anchor="middle" fill="#b45f35">object A — list</text>
+      <text x="165" y="100" class="sm" text-anchor="middle">alive</text>
+      <line x1="70" y1="112" x2="70" y2="150" stroke="#b45f35" stroke-dasharray="3 3"/>
+      <line x1="260" y1="112" x2="260" y2="150" stroke="#b45f35" stroke-dasharray="3 3"/>
+
+      <text x="322" y="86" class="ss" text-anchor="middle">A freed</text>
+      <text x="322" y="102" class="ss" text-anchor="middle">slot released</text>
+      <text x="322" y="140" class="sxs" text-anchor="middle" fill="#c0503f">GAP</text>
+
+      <rect x="386" y="60" width="190" height="52" rx="9" fill="#dcf0e9" stroke="#2b7d6d" stroke-width="1.6"/>
+      <text x="481" y="82" class="st" text-anchor="middle" fill="#2b7d6d">object B — list</text>
+      <text x="481" y="100" class="sm" text-anchor="middle">alive</text>
+      <line x1="386" y1="112" x2="386" y2="150" stroke="#2b7d6d" stroke-dasharray="3 3"/>
+      <line x1="576" y1="112" x2="576" y2="150" stroke="#2b7d6d" stroke-dasharray="3 3"/>
+
+      <rect x="230" y="16" width="270" height="28" rx="8" fill="#faedc9" stroke="#ecd79a"/>
+      <text x="365" y="35" class="st" text-anchor="middle" fill="#8f6a0f">id(A) == id(B)  →  True, and legal</text>
+      <text x="365" y="176" class="ss" text-anchor="middle">non-overlapping lifetimes · the id was never a name for the object</text>
+    </svg>
+    <figcaption>Why <code>id(&#91;1,2,3&#93;) == id(&#91;4,5,6&#93;)</code> can be <code>True</code>. Drill D2.</figcaption>
+  </figure>
+
+  <div class="cpy">
+    <span class="lbl">CPython detail</span>
+    In CPython, <code>id(x)</code> <b>is the memory address</b> of the object. That is why freed
+    addresses get handed straight back to the next allocation, which is what produces the trap above.
+    <b>PyPy does not do this</b> — objects can move, so PyPy synthesises a stable fake id on demand.
+    Code that treats an id as an address is CPython-only code.
+  </div>
+
+  <h3>The practical rule this generates</h3>
+  <p><code>is</code> asks <em>"same object?"</em>. <code>==</code> asks <em>"same value?"</em>, and it asks
+  the object's type to decide. They answer different questions, so they are not interchangeable, and
+  the choice is a semantic one:</p>
+
+<pre><code><span class="k">if</span> x <span class="k">is</span> <span class="k">None</span>:      <span class="c"># correct — None is a singleton; identity IS the question</span>
+<span class="k">if</span> x == <span class="k">None</span>:      <span class="c"># works, but asks the wrong question and invokes __eq__</span>
+<span class="k">if</span> n <span class="k">is</span> <span class="n">257</span>:       <span class="c"># a bug. You meant ==. It may even pass in testing.</span>
+</code></pre>
+
+  <div class="note">
+    <span class="lbl">Why the third line is genuinely dangerous</span>
+    It is a bug that <b>passes its own test</b>. Depending on how the literals reach the interpreter, the
+    two <code>257</code> objects may or may not be the same object — so the code works in the REPL and
+    fails in production, or vice versa. You will reproduce this in D2. That divergence is your first
+    direct encounter with the language/implementation boundary, and it is not academic.
+  </div>
+</section>
+
+<!-- ============================================================ 03 -->
+<section id="type">
+  <h2><span class="num">03</span> Type — a slot, not an opinion</h2>
+  <p class="sub"><code>type(x)</code> and <code>x.__class__</code> are not the same mechanism. Knowing which one is authoritative is the drill.</p>
+
+  <dl class="kv">
+    <dt><code>type(x)</code></dt><dd>Reads a fixed slot on the object. Not overridable from Python.</dd>
+    <dt><code>x.__class__</code></dt><dd>An <b>attribute lookup</b>. Attribute lookup is user-controllable, therefore so is this.</dd>
+  </dl>
+
+  <p>They agree for every normal object, which is why most people never learn they are distinct. Then
+  you meet a mock, a proxy, or an ORM lazy-loader — all of which work precisely by making them
+  disagree — and the distinction becomes load-bearing.</p>
+
+  <div class="trap">
+    <span class="lbl">The consequence</span>
+    <code>isinstance()</code> consults <code>__class__</code> as well as the real type. So an object can
+    make <code>isinstance(obj, int)</code> return <code>True</code> while being incapable of a single
+    integer operation. <mark><code>isinstance</code> tells you what an object <b>claims</b>; the real type
+    slot decides what it <b>can do</b>.</mark> D3 makes you build one of these liars and then watch it fail.
+  </div>
+
+  <h3>Types are themselves objects</h3>
+  <p>Not a slogan — a checkable fact with consequences. <code>int</code> is an object: it has an id,
+  it has a type (<code>type</code>), and it has a value. <code>type(type) is type</code> — the chain
+  terminates by pointing at itself rather than continuing forever.</p>
+
+  <p>This matters because it is what makes the next two stages possible. If types were not objects,
+  they could not hold attributes; if they could not hold attributes, there would be nowhere to put
+  <code>__len__</code> and <code>__eq__</code>; and <mark>the entire data model would have no home.</mark>
+  You are looking at the foundation of protocol dispatch three stages early.</p>
+
+  <h3>The type object is not the instance object</h3>
+  <p>The single most common way to misread “<code>int</code> is an object” is to picture <b>one int
+  box that all integers live inside</b>. That is wrong, and the correction is the whole of this
+  subsection: there is <b>one type object</b>, and <b>one separate instance object per value</b>.
+  <code>x = 100</code> binds <code>x</code> to an <em>instance</em>. It never touches the type.</p>
+
+  <figure>
+    <svg viewBox="0 0 720 300" role="img" aria-label="One shared type object, many instance objects">
+      <text x="25" y="48" class="sxs">NAMESPACE</text>
+      <rect x="25" y="58" width="140" height="124" rx="11" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.5"/>
+      <rect x="43" y="76" width="104" height="38" rx="7" fill="#fdfaf4" stroke="#b8d8e9"/>
+      <text x="62" y="100" style="font:700 14px var(--mono);fill:#2c251c">'x'</text>
+      <rect x="43" y="126" width="104" height="38" rx="7" fill="#fdfaf4" stroke="#b8d8e9"/>
+      <text x="62" y="150" style="font:700 14px var(--mono);fill:#2c251c">'z'</text>
+
+      <path d="M150 95 L 246 82" stroke="#b45f35" stroke-width="2" fill="none" marker-end="url(#a1)"/>
+      <path d="M150 145 L 246 208" stroke="#b45f35" stroke-width="2" fill="none" marker-end="url(#a1)"/>
+
+      <text x="256" y="48" class="sxs">INSTANCE OBJECTS — hold DATA</text>
+      <rect x="256" y="58" width="176" height="62" rx="10" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.6"/>
+      <text x="272" y="80" class="sm">@ 0xB100</text>
+      <text x="272" y="104" class="st">value: 100</text>
+
+      <rect x="256" y="184" width="176" height="62" rx="10" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.6"/>
+      <text x="272" y="206" class="sm">@ 0xB200</text>
+      <text x="272" y="230" class="st">value: 1000</text>
+
+      <path d="M436 88 L 512 128" stroke="#2f7a9e" stroke-width="2" fill="none" marker-end="url(#a2)"/>
+      <path d="M436 214 L 512 176" stroke="#2f7a9e" stroke-width="2" fill="none" marker-end="url(#a2)"/>
+      <text x="474" y="104" class="sxs" text-anchor="middle" fill="#2f7a9e">ob_type</text>
+      <text x="474" y="212" class="sxs" text-anchor="middle" fill="#2f7a9e">ob_type</text>
+
+      <text x="518" y="48" class="sxs">TYPE OBJECT — holds BEHAVIOUR</text>
+      <rect x="518" y="96" width="178" height="112" rx="11" fill="#dcf0e9" stroke="#2b7d6d" stroke-width="1.8"/>
+      <text x="607" y="122" class="st" text-anchor="middle" fill="#2b7d6d">int</text>
+      <text x="607" y="140" class="sm" text-anchor="middle">@ 0xA000</text>
+      <line x1="534" y1="150" x2="680" y2="150" stroke="#b5ddd1"/>
+      <text x="607" y="170" class="ss" text-anchor="middle">__add__  __repr__</text>
+      <text x="607" y="188" class="ss" text-anchor="middle">__eq__   __hash__</text>
+
+      <text x="360" y="282" class="ss" text-anchor="middle">one type object · many instance objects · <tspan style="font-weight:700">x names an instance, never the type</tspan></text>
+      <defs>
+        <marker id="a1" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#b45f35"/></marker>
+        <marker id="a2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#2f7a9e"/></marker>
+      </defs>
+    </svg>
+    <figcaption>Run <code>show_layout(100, 1000)</code> to print this diagram with your process's real addresses.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="lbl">If you know Java, you already know this</span>
+    Java has <b>both</b> models side by side, and Python only kept one of them:
+    <ul style="margin:9px 0 0">
+      <li><code>int x = 100;</code> — a <b>primitive</b>. The name <em>is</em> a 32-bit slot. No object,
+        no header, no type tag at runtime.</li>
+      <li><code>Integer x = 100;</code> — a <b>reference to a heap object</b> with a header and a class
+        pointer. <mark>This is the only model Python has.</mark></li>
+    </ul>
+    And the famous Java gotcha is literally the same phenomenon as CPython's small-int cache:
+    <code>Integer a=127, b=127; a==b</code> → <code>true</code> (cached), but
+    <code>Integer a=128, b=128; a==b</code> → <code>false</code> (not cached). If that surprised you
+    in Java, <b>Python's <code>is</code> behaviour on integers will not surprise you at all</b> — it is
+    the same cache, the same reason.
+  </div>
+</section>
+
+<!-- ============================================================ 04 -->
+<section id="value">
+  <h2><span class="num">04</span> Value — the deliberate absence</h2>
+  <p class="sub">There is no <code>value()</code> builtin. This is the most instructive missing feature in Python.</p>
+
+  <p>Identity has an accessor. Type has an accessor. Value has none, and could not have one.
+  Ask yourself what <code>value(x)</code> would even return for a socket, a generator, a class, a
+  file handle, or a running thread.</p>
+
+  <div class="note">
+    <span class="lbl">The design decision</span>
+    Value is <b>not a slot you read</b>. It is <b>an interface the type exposes</b>. Python never asks
+    an object "what is your value" — it asks the object's <em>type</em> to perform an operation, and
+    the answer is whatever that operation returns:
+    <ul style="margin:9px 0 0">
+      <li>"are these two values equal?" → the type's <code>__eq__</code></li>
+      <li>"render this value" → the type's <code>__repr__</code></li>
+      <li>"how big is this value?" → the type's <code>__len__</code></li>
+      <li>"can this value index a dict?" → the type's <code>__hash__</code></li>
+    </ul>
+  </div>
+
+  <p><b>Precisely stated, so this is not misread:</b> every object <em>does</em> have a value, and
+  that value <em>is</em> real data stored inside the object. What does not exist is a
+  <b>generic, type-independent way to ask for it</b> — because the value is laid out in a
+  type-specific format that only the type knows how to interpret.</p>
+
+  <div class="trap">
+    <span class="lbl">Why a <code>value()</code> builtin is not merely missing — it is impossible</span>
+    Suppose <code>value()</code> existed. It would have to return a Python object. Now apply it to
+    <code>x = 100</code>. The only correct answer is the int object <code>100</code> — which is
+    <code>x</code> itself. <mark><code>value()</code> would be the identity function.</mark>
+    There is no inner primitive to unwrap, because <b>the object <em>is</em> the value</b>.
+    In C, <code>int x</code> is a box and the bits inside are the value. In Python there is no box:
+    <code>x</code> is a name, and the thing it names is already the value.
+  </div>
+
+  <p>So the three-property model resolves into something sharper: <strong>identity and type are
+  properties you can query directly; value is data you reach only through operations the type
+  provides.</strong> That is the seam between Stage 1 and Stage 3, and you have now seen it before
+  meeting a single dunder method.</p>
+
+  <div class="life">
+    <span class="lbl">Mutability, defined properly</span>
+    You can now define it without hand-waving. An object is <b>mutable</b> if operations exist that
+    change its value while its identity and type stay fixed. <mark>Mutability is a property of the
+    <b>type</b>, not of the variable, and never of the name.</mark> "Mutating a variable" is a sentence
+    with no meaning in Python — and D1 will make you say it correctly.
+  </div>
+</section>
+
+<!-- ============================================================ 05 -->
+<section id="header">
+  <h2><span class="num">05</span> The object header <span class="pill pC" style="font-size:9.5px">CPYTHON</span></h2>
+  <p class="sub">Where identity, type and the bookkeeping physically live. Everything in this section is implementation, not language.</p>
+
+  <p>Every CPython object begins with the same fixed header. Simplified from <code>Include/object.h</code>:</p>
+
+<pre><code><span class="k">struct</span> _object {
+    Py_ssize_t      ob_refcnt;   <span class="c">/* offset 0  — how many references point here */</span>
+    PyTypeObject   *ob_type;     <span class="c">/* offset 8  — pointer to the type object      */</span>
+};
+
+<span class="c">/* variable-sized objects (list, tuple, str, int, bytes) add: */</span>
+    Py_ssize_t      ob_size;     <span class="c">/* offset 16 — number of items                 */</span>
+</code></pre>
+
+  <figure>
+    <svg viewBox="0 0 720 250" role="img" aria-label="CPython object header layout in memory">
+      <text x="60" y="30" class="sxs">id(x) points HERE</text>
+      <path d="M60 38 L 60 74" stroke="#b45f35" stroke-width="2" marker-end="url(#ah2)"/>
+
+      <rect x="60"  y="80" width="140" height="50" rx="7" fill="#faedc9" stroke="#a87c12" stroke-width="1.5"/>
+      <text x="130" y="102" class="st" text-anchor="middle" fill="#8f6a0f">ob_refcnt</text>
+      <text x="130" y="119" class="ss" text-anchor="middle">8 bytes · offset 0</text>
+
+      <rect x="200" y="80" width="140" height="50" rx="7" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.5"/>
+      <text x="270" y="102" class="st" text-anchor="middle" fill="#2f7a9e">ob_type</text>
+      <text x="270" y="119" class="ss" text-anchor="middle">8 bytes · offset 8</text>
+
+      <rect x="340" y="80" width="130" height="50" rx="7" fill="#f8e2ef" stroke="#a6497c" stroke-width="1.5"/>
+      <text x="405" y="102" class="st" text-anchor="middle" fill="#a6497c">ob_size</text>
+      <text x="405" y="119" class="ss" text-anchor="middle">offset 16</text>
+
+      <rect x="470" y="80" width="190" height="50" rx="7" fill="#e7f1d7" stroke="#5d8a41" stroke-width="1.5"/>
+      <text x="565" y="102" class="st" text-anchor="middle" fill="#4e7736">the actual payload</text>
+      <text x="565" y="119" class="ss" text-anchor="middle">offset 24 →</text>
+
+      <path d="M270 132 L 270 176" stroke="#2f7a9e" stroke-width="2" marker-end="url(#ah3)"/>
+      <text x="284" y="158" class="ss" fill="#2f7a9e">dereference</text>
+      <rect x="176" y="180" width="188" height="46" rx="9" fill="#fdfaf4" stroke="#2f7a9e" stroke-width="1.6"/>
+      <text x="270" y="199" class="st" text-anchor="middle" fill="#2f7a9e">PyTypeObject: list</text>
+      <text x="270" y="217" class="sm" text-anchor="middle">== id(list)</text>
+      <text x="472" y="205" class="ss">one shared type object</text>
+      <text x="472" y="221" class="ss">for every list in the process</text>
+
+      <defs>
+        <marker id="ah2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#b45f35"/></marker>
+        <marker id="ah3" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#2f7a9e"/></marker>
+      </defs>
+    </svg>
+    <figcaption>D5 has you read these two fields out of a live object with <code>ctypes</code> and confirm <code>ob_type == id(list)</code>.</figcaption>
+  </figure>
+
+  <div class="rule">
+    <span class="lbl">Do not memorise this layout — verify it</span>
+    The layout above is true for standard CPython builds, but <b>free-threaded builds (3.13+) use a
+    completely different header struct</b>, and fields have shifted between minor versions. The drill
+    file therefore ships <code>layout_is_sane()</code>, which checks that offset 8 really does hold
+    <code>id(type(obj))</code> before you trust any reading. <mark>If it returns False, that is not a
+    failure — it is the lesson.</mark>
+  </div>
+
+  <h3>The trade this header represents</h3>
+  <table>
+    <thead><tr><th>Python buys</th><th>Python pays</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Total uniformity — every value, from <code>None</code> to a class to a coroutine, is the
+        same shape, so any of them can be put in any list, passed to any function, or made a dict key
+        with no special-casing anywhere.</td>
+        <td>No unboxed values. An <code>int</code> costs ~28 bytes instead of 8. A million-element
+        list of ints is a million separate heap objects plus a million pointers.</td>
+      </tr>
+      <tr>
+        <td>Type dispatch is one pointer dereference, so it is O(1) and every object knows what it is
+        without any external table.</td>
+        <td>Every object carries that pointer forever, even the billionth identical one.</td>
+      </tr>
+      <tr>
+        <td>Lifetime management is uniform — one refcount field, one rule, no per-type bookkeeping.</td>
+        <td>Every reference operation touches memory. This is a direct cause of the GIL's stubbornness
+        and of NumPy's existence.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>When someone says "Python is slow", <mark>this table is most of the actual answer</mark> — and
+  notice that every row is a deliberate purchase, not an accident.</p>
+</section>
+
+<!-- ============================================================ 06 -->
+<section id="immortal">
+  <h2><span class="num">06</span> Immortal objects <span class="pill pC" style="font-size:9.5px">CPYTHON 3.12+</span></h2>
+  <p class="sub">Read this before D6 or your refcount readings will look like corruption.</p>
+
+  <p>PEP 683 made a small set of objects <strong>immortal</strong>: <code>None</code>,
+  <code>True</code>, <code>False</code>, small integers, and some interned strings. Their refcount
+  field is set to a saturated sentinel value and then <em>never touched again</em>.</p>
+
+<pre><code><span class="o">&gt;&gt;&gt;</span> <span class="k">import</span> sys
+<span class="o">&gt;&gt;&gt;</span> sys.<span class="f">getrefcount</span>(<span class="k">None</span>)
+<span class="n">4294967295</span>        <span class="c"># not a leak, not a bug — saturated</span>
+</code></pre>
+
+  <div class="note">
+    <span class="lbl">What problem this solves</span>
+    Refcounts are <b>writes</b>. Every time a shared object like <code>None</code> was passed around,
+    CPython wrote to its header. Two costs follow: (1) in a <code>fork()</code>ed process, those writes
+    dirty copy-on-write pages, so child processes stop sharing memory with the parent — a real cost for
+    every pre-fork server; (2) under free-threading, every one of those writes is contended between
+    threads. Freezing the count for objects that can never die removes both.
+  </div>
+
+  <p>The exact sentinel constant has changed across 3.12 / 3.13 / 3.14, so do not memorise the number —
+  <strong>report whatever yours prints</strong>. And note the second-order fact you should extract from
+  D6: immortality is only worth engineering because <em>ordinary</em> objects pay that cost constantly.
+  That is your on-ramp to drill 1.4.</p>
+</section>
+
+<!-- ============================================================ 07 -->
+<section id="setup">
+  <h2><span class="num">07</span> Setup</h2>
+  <p class="sub">Two minutes. Do not skip the sanity check.</p>
+
+  <ol class="steps">
+    <li><b>Open a terminal in the drill folder</b>
+      <code>cd python-model</code></li>
+    <li><b>Run the environment report</b>
+      <code>python d11_object_identity.py</code> — this prints your version, pointer size,
+      free-threaded status, and whether the header layout is verified.</li>
+    <li><b>Then work in a bare REPL</b>
+      <code>python</code> — not a script, and not a notebook, unless a drill says otherwise.
+      Scripts merge equal constants at compile time, which silently changes several of these results.</li>
+    <li><b>Import the helpers when a drill needs them</b>
+      <code>from d11_object_identity import raw_refcount, raw_type_ptr, header, layout_is_sane, Liar, mutate_vs_rebind</code></li>
+  </ol>
+
+  <div class="trap">
+    <span class="lbl">Hard stop condition</span>
+    If step 2 prints <code>header layout verified: False</code>, <b>stop and tell me before doing D5 or
+    D6.</b> Every <code>ctypes</code> reading would be arbitrary memory interpreted as the wrong type.
+    Nothing dangerous happens, but every number would be fiction and you would build a false model.
+  </div>
+
+  <div class="rule">
+    <span class="lbl">The only rule that matters in this section</span>
+    <mark>Write the prediction down before you press Enter.</mark> A prediction you did not commit to
+    is a prediction you will retroactively believe you made. The entire diagnostic value of these
+    drills lives in the gap between what you wrote and what printed — if you do not write it, there is
+    no gap, and you have learned nothing while feeling like you did.
+  </div>
+</section>
+
+<!-- ============================================================ 08 -->
+<section id="drills">
+  <h2><span class="num">08</span> The eight drills</h2>
+  <p class="sub">Predict → run → diagnose. The italic question is the part I actually grade.</p>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D1</span><span class="dt">Establish the three properties</span><span class="dw">Foundational</span></div>
+    <div class="db">
+<pre><code>x = [<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>]
+<span class="f">id</span>(x), <span class="f">type</span>(x), x
+</code></pre>
+      <p>Now write <b>two lines</b>: one that changes <code>x</code>'s value while keeping the same
+      identity, and one that changes the identity. Print <code>id(x)</code> before and after each.</p>
+      <div class="ask"><b>Question</b>
+        One of those operations is what people call "mutation" and the other is what people call
+        "assignment". State the difference between them <strong>without using either word</strong>,
+        and without the word "variable".
+      </div>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D2</span><span class="dt">The identity trap</span><span class="dw">Predict all three separately</span></div>
+    <div class="db">
+<pre><code><span class="c"># (a)</span>
+<span class="f">id</span>([<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>]) == <span class="f">id</span>([<span class="n">4</span>,<span class="n">5</span>,<span class="n">6</span>])
+
+<span class="c"># (b)</span>
+a = [<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>]
+b = [<span class="n">4</span>,<span class="n">5</span>,<span class="n">6</span>]
+<span class="f">id</span>(a) == <span class="f">id</span>(b)
+
+<span class="c"># (c)</span>
+<span class="k">class</span> C: <span class="k">pass</span>
+<span class="f">id</span>(C()) == <span class="f">id</span>(C())
+</code></pre>
+      <p>They do not all agree. Commit to three separate predictions before running any of them.</p>
+      <div class="ask"><b>Question</b>
+        What is structurally different about (b)? Answer in terms of <em>when each object's lifetime
+        ends</em> — not in terms of variables. Then: is the result of (a) something you would be willing
+        to write a test against?
+      </div>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D3</span><span class="dt">Build an object that lies about its type</span><span class="dw">One line will surprise you</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d11_object_identity <span class="k">import</span> Liar
+l = <span class="f">Liar</span>()
+
+<span class="f">type</span>(l)
+l.__class__
+<span class="f">isinstance</span>(l, <span class="f">int</span>)
+l + <span class="n">1</span>
+</code></pre>
+      <p>Predict all four lines. The fourth is the one that settles the argument.</p>
+      <div class="ask"><b>Question</b>
+        <code>isinstance()</code> and <code>type()</code> disagree. Before running, which did you assume
+        was "the real answer"? Now use line 4 to argue which one is authoritative about what the object
+        <em>can do</em>. Then explain in one sentence why mocking libraries need this to be possible.
+      </div>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D4</span><span class="dt">Types are objects</span><span class="dw">The recursion terminates</span></div>
+    <div class="db">
+<pre><code><span class="f">type</span>(<span class="n">3</span>), <span class="f">type</span>(<span class="f">int</span>), <span class="f">type</span>(<span class="f">type</span>)
+<span class="f">type</span>(<span class="f">type</span>) <span class="k">is</span> <span class="f">type</span>
+<span class="f">isinstance</span>(<span class="f">int</span>, <span class="f">object</span>), <span class="f">isinstance</span>(<span class="f">object</span>, <span class="f">type</span>)
+</code></pre>
+      <div class="ask"><b>Question</b>
+        <code>int</code> is an object, so it has all three properties. State its identity, its type, and
+        its <em>value</em> — concretely. The third is the hard one, and §04 tells you how to think about
+        it. Then: why must <code>type(type)</code> be <code>type</code> rather than some
+        <code>metatype</code>?
+      </div>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D5</span><span class="dt">Read the header out of live memory</span><span class="dw">CPython · run the sanity check first</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d11_object_identity <span class="k">import</span> raw_refcount, raw_type_ptr, header, layout_is_sane
+<span class="f">layout_is_sane</span>()          <span class="c"># must be True before you continue</span>
+
+x = [<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>]
+<span class="f">header</span>(x, <span class="s">"x"</span>)
+<span class="f">hex</span>(<span class="f">id</span>(<span class="f">list</span>))              <span class="c"># compare against the ob_type you just printed</span>
+</code></pre>
+      <p>Then do it for three objects of different types and confirm each <code>ob_type</code> matches
+      <code>id()</code> of its own type:</p>
+<pre><code><span class="k">for</span> obj <span class="k">in</span> ([], (), <span class="s">"s"</span>, <span class="n">3.5</span>):
+    <span class="f">print</span>(<span class="f">type</span>(obj).__name__, <span class="f">hex</span>(<span class="f">raw_type_ptr</span>(obj)) == <span class="f">hex</span>(<span class="f">id</span>(<span class="f">type</span>(obj))))
+</code></pre>
+      <div class="ask"><b>Question</b>
+        You just dereferenced a pointer stored inside your object and landed on the shared
+        <code>list</code> type object. What does that tell you about (a) the per-object cost of
+        "knowing your own type", and (b) why <code>type(x)</code> is O(1) no matter how deep the
+        inheritance hierarchy is?
+      </div>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D6</span><span class="dt">Immortal objects</span><span class="dw">Find the boundary</span></div>
+    <div class="db">
+<pre><code><span class="k">import</span> sys
+sys.<span class="f">getrefcount</span>(<span class="k">None</span>), sys.<span class="f">getrefcount</span>(<span class="k">True</span>)
+sys.<span class="f">getrefcount</span>(<span class="n">1</span>), sys.<span class="f">getrefcount</span>(<span class="n">1000</span>)
+
+<span class="k">from</span> d11_object_identity <span class="k">import</span> raw_refcount
+<span class="f">raw_refcount</span>(<span class="k">None</span>), <span class="f">raw_refcount</span>(<span class="n">256</span>), <span class="f">raw_refcount</span>(<span class="n">257</span>)
+</code></pre>
+      <p>Predict which produce ordinary small numbers and which produce absurd ones — and
+      <em>where the boundary sits</em>.</p>
+      <div class="ask"><b>Question</b>
+        Immortality is an optimisation, so it removes a cost. Name the cost. Then draw the inference
+        that matters: what does the existence of this optimisation tell you about what
+        <em>ordinary</em> objects are doing constantly? Reason from first principles about what a
+        refcount is — you have not been taught refcount mechanics yet, and you do not need them.
+      </div>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D7</span><span class="dt">Identity across mutation vs rebinding</span><span class="dw">Which pair matches?</span></div>
+    <div class="db">
+<pre><code><span class="k">from</span> d11_object_identity <span class="k">import</span> mutate_vs_rebind
+<span class="f">mutate_vs_rebind</span>()
+</code></pre>
+      <p>Predict the three returned ids — specifically <b>which two are equal</b>. Then open the
+      function and read it.</p>
+      <div class="ask"><b>Question</b>
+        Explain the result entirely in terms of objects: how many list objects were created, which
+        operations produced new ones, and which did not. Then answer the trap: after the last line,
+        <em>is the object from line 1 still alive?</em> How would you find out?
+      </div>
+    </div>
+  </div>
+
+  <div class="drill">
+    <div class="dh"><span class="did">D8</span><span class="dt">The cost of being an object</span><span class="dw">Prove your answer</span></div>
+    <div class="db">
+<pre><code><span class="k">import</span> sys
+sys.<span class="f">getsizeof</span>(<span class="n">0</span>), sys.<span class="f">getsizeof</span>(<span class="n">1</span>), sys.<span class="f">getsizeof</span>(<span class="n">10</span>**<span class="n">100</span>)
+sys.<span class="f">getsizeof</span>(<span class="f">object</span>()), sys.<span class="f">getsizeof</span>([]), sys.<span class="f">getsizeof</span>([<span class="n">1</span>]), sys.<span class="f">getsizeof</span>([<span class="n">1</span>,<span class="n">2</span>])
+sys.<span class="f">getsizeof</span>(<span class="s">""</span>), sys.<span class="f">getsizeof</span>(<span class="s">"a"</span>), sys.<span class="f">getsizeof</span>(<span class="s">"ab"</span>)
+</code></pre>
+      <div class="ask"><b>Question</b>
+        <code>getsizeof([1,2]) - getsizeof([1])</code> gives you a number. What is that number the size
+        of? It is <strong>not</strong> the size of the integer <code>2</code> — prove your claim with
+        one additional line of code. Then explain why <code>getsizeof</code> of a list of a million
+        ints wildly understates the memory actually consumed.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 09 -->
+<section id="ledger">
+  <h2><span class="num">09</span> Prediction ledger</h2>
+  <p class="sub">Tick as you go — state is saved in this browser. The third column is the only one that teaches.</p>
+
+  <div id="checklist">
+    <label class="chk"><input type="checkbox" data-k="d0"><span class="q"><b>Setup</b> — environment report captured, <code>layout_is_sane()</code> is True</span></label>
+    <label class="chk"><input type="checkbox" data-k="d1"><span class="q"><b>D1</b> — three properties; mutation vs rebinding stated without either word</span></label>
+    <label class="chk"><input type="checkbox" data-k="d2"><span class="q"><b>D2</b> — three predictions committed before running; lifetime explanation written</span></label>
+    <label class="chk"><input type="checkbox" data-k="d3"><span class="q"><b>D3</b> — <code>Liar</code> built; line 4 explained; authority question answered</span></label>
+    <label class="chk"><input type="checkbox" data-k="d4"><span class="q"><b>D4</b> — identity/type/value of <code>int</code> stated concretely</span></label>
+    <label class="chk"><input type="checkbox" data-k="d5"><span class="q"><b>D5</b> — <code>ob_type</code> matched <code>id(type(obj))</code> for four objects</span></label>
+    <label class="chk"><input type="checkbox" data-k="d6"><span class="q"><b>D6</b> — immortality boundary located; the inference about ordinary objects drawn</span></label>
+    <label class="chk"><input type="checkbox" data-k="d7"><span class="q"><b>D7</b> — object count reasoned; liveness trap answered</span></label>
+    <label class="chk"><input type="checkbox" data-k="d8"><span class="q"><b>D8</b> — size delta identified and <em>proved</em> with code</span></label>
+  </div>
+  <span id="chkCount"></span>
+
+  <h3>Copy this table into your notes and fill it in</h3>
+  <table>
+    <thead><tr><th style="width:70px">Drill</th><th>I predicted</th><th>It printed</th><th>The belief that was wrong</th></tr></thead>
+    <tbody>
+      <tr><td>D2 (a)</td><td></td><td></td><td></td></tr>
+      <tr><td>D2 (b)</td><td></td><td></td><td></td></tr>
+      <tr><td>D2 (c)</td><td></td><td></td><td></td></tr>
+      <tr><td>D3</td><td></td><td></td><td></td></tr>
+      <tr><td>D6</td><td></td><td></td><td></td></tr>
+      <tr><td>D7</td><td></td><td></td><td></td></tr>
+    </tbody>
+  </table>
+  <p><em>The fourth column is the artifact.</em> "I was wrong" is not an entry. "I believed an id
+  named an object rather than a location" is an entry.</p>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="report">
+  <h2><span class="num">10</span> What to send back</h2>
+  <p class="sub">Not raw output. I grade the model, not the printout — a right answer with broken reasoning is marked wrong.</p>
+
+  <ol class="steps">
+    <li><b>Environment line</b>
+      Version, pointer size, free-threaded flag, and whether the layout verified.</li>
+    <li><b>Prediction ledger</b>
+      The filled table from §09 — specifically the fourth column, for D2, D3, D6, D7.</li>
+    <li><b>The five graded questions</b>
+      One paragraph each for D1, D4, D5, D6, D8. Prose, not bullet points — bullets let you skip
+      the connective reasoning, and the connective reasoning is what I am checking.</li>
+    <li><b>Complete this sentence</b>
+      <i>"<code>id()</code> is guaranteed unique only during an object's lifetime because ______,
+      which means ______ about the code I write."</i></li>
+    <li><b>One honest line</b>
+      Which drill made you realise you had been reasoning with a wrong model — and what the wrong
+      model was. If none did, say so; I will make 1.2 harder.</li>
+  </ol>
+
+  <div class="note">
+    <span class="lbl">Gate</span>
+    Drill 1.2 (namespaces) does not open until D1–D8 are reported. That gate is not ceremony:
+    1.2 is <em>about</em> the arrow in the figure in §01, and the arrow is meaningless until the box on
+    its right is fully solid.
+  </div>
+</section>
+
+<!-- ============================================================ 11 -->
+<section id="boundary">
+  <h2><span class="num">11</span> Ledger — language vs CPython</h2>
+  <p class="sub">Everything asserted in this document, sorted. Learn the split, not just the facts.</p>
+
+  <table>
+    <thead><tr><th style="width:120px">Badge</th><th>Claim</th><th>Consequence for your code</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Every object has identity, type, value.</td><td>Universally true. Reason with it everywhere.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Identity never changes during an object's lifetime.</td><td>Safe to rely on.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Objects with non-overlapping lifetimes may share an id.</td><td>Never cache or compare ids across time.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td><code>is</code> compares identity; <code>==</code> asks the type.</td><td>Choose deliberately; they answer different questions.</td></tr>
+      <tr><td><span class="pill pL">LANGUAGE</span></td><td>Types are objects; <code>type(type) is type</code>.</td><td>Foundation of the whole data model.</td></tr>
+      <tr><td><span class="pill pC">CPYTHON</span></td><td><code>id()</code> returns the memory address.</td><td>False on PyPy. Never write code assuming it.</td></tr>
+      <tr><td><span class="pill pC">CPYTHON</span></td><td>Header is <code>ob_refcnt</code> then <code>ob_type</code>.</td><td>Differs in free-threaded builds. Verify, never assume.</td></tr>
+      <tr><td><span class="pill pC">CPYTHON</span></td><td>Freed addresses are reused immediately.</td><td>Cause of the D2 trap. Not portable behaviour.</td></tr>
+      <tr><td><span class="pill pC">CPYTHON</span></td><td>Small ints and interned strings are cached and immortal.</td><td>Why <code>is</code> on numbers "works" and then doesn't.</td></tr>
+      <tr><td><span class="pill pC">CPYTHON</span></td><td>Reference counting exists at all.</td><td>Other implementations use tracing GC only. Drill 1.4.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The skill this table is really teaching</span>
+    Most engineers who "know Python deeply" actually know CPython deeply and cannot tell which is
+    which. That confusion is invisible until it costs you — a subtle bug on an alternative runtime, a
+    wrong answer in a design review, an optimisation that assumes semantics the language never
+    promised. <mark>Maintaining this split <em>is</em> the difference between senior and principal-level
+    knowledge of a language.</mark>
+  </div>
+</section>
+
+<!-- ============================================================ 12 -->
+<section id="next">
+  <h2><span class="num">12</span> What this unlocks</h2>
+  <p class="sub">Forward references. Do not chase them yet — just notice the wires you have already laid.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>Immediate — drill 1.2</h4>
+      <p>The arrow in §01's figure. A name is a key in a mapping; binding a name never copies and never
+      moves an object. Everything about aliasing follows mechanically from that plus today's model.</p>
+    </div>
+    <div class="card">
+      <h4>Immediate — drills 1.4 &amp; 1.5</h4>
+      <p><code>ob_refcnt</code> is already on your screen. Once you know what increments it, the
+      identity-reuse trap from D2 stops being folklore and becomes arithmetic.</p>
+    </div>
+    <div class="card">
+      <h4>Later — the data model</h4>
+      <p>"Value is an interface the type exposes" (§04) is the entire thesis of special methods.
+      <code>len(x)</code> is not a method call on <code>x</code>; it is a request routed to
+      <code>x</code>'s <em>type</em>. You have already met the reason why.</p>
+    </div>
+    <div class="card">
+      <h4>Later — dict and set</h4>
+      <p>Hashability is a rule about <em>value stability over an object's lifetime</em> — which is a
+      sentence you can only parse because of today. Every "unhashable type" error traces back to §04.</p>
+    </div>
+  </div>
+
+  <div class="life">
+    <span class="lbl">The standard for finishing 1.1</span>
+    You are done when you can take any line of Python and answer, without running it:
+    <b>which objects exist, which are new, which of their three properties changed, and which name or
+    container is still reaching them.</b> Not "lists are mutable". That is a memorised fact.
+    <mark>The goal is a model that generates the facts.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<button id="toTop" title="Back to top" aria-label="Back to top">↑</button>
+
+<footer>
+  Python Object Model · Stage 1, Drill 1.1 — identity, type, value.
+  Companion code: <code>python-model/d11_object_identity.py</code>.
+  Self-contained HTML; drill state is stored in this browser only.
+</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('on'); });
+        var a = map[e.target.id];
+        if(a) a.classList.add('on');
+      }
+    });
+  }, {rootMargin:'-72px 0px -70% 0px', threshold:0});
+  document.querySelectorAll('section').forEach(function(s){ obs.observe(s); });
+
+  var KEY = 'pyobj-11-drills-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('#checklist input'));
+  var counter = document.getElementById('chkCount');
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ state = {}; }
+
+  function paint(){
+    var n = 0;
+    boxes.forEach(function(b){
+      b.parentElement.classList.toggle('done', b.checked);
+      if(b.checked) n++;
+    });
+    counter.textContent = n + ' / ' + boxes.length + ' drills logged' +
+      (n === boxes.length ? ' — report back and 1.2 opens.' : '');
+  }
+  boxes.forEach(function(b){
+    b.checked = !!state[b.dataset.k];
+    b.addEventListener('change', function(){
+      state[b.dataset.k] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+      paint();
+    });
+  });
+  paint();
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    state = {};
+    try { localStorage.removeItem(KEY); } catch(e){}
+    boxes.forEach(function(b){ b.checked = false; });
+    paint();
+  });
+
+  var bar = document.getElementById('bar');
+  var top = document.getElementById('toTop');
+  function onScroll(){
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+    top.classList.toggle('show', window.scrollY > 600);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  top.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+})();
+</script>
+</body>
+</html>

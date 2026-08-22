@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tracks — Mitesh</title>
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="index.html" class="on">Tracks</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="wrap">
+  <p class="crumbs"><a href="../index.html">Home</a><span>/</span>Tracks</p>
+
+  <div class="now">
+    <div class="k">Tracks</div>
+    <h1>Worked in order, drilled, then condensed.</h1>
+    <p>Each track is a numbered sequence of lessons with runnable companion code, and ends in a
+    single cram sheet for recall. Lessons teach; the cram sheet is what gets repeated.</p>
+  </div>
+
+  <div class="rowhead"><h2>Python · Object Model</h2></div>
+  <p class="rowsub">What an object is, and how the language reaches it.</p>
+  <div class="items">
+    <a class="item" href="python/object-model/1.1-identity-type-value.html">
+      <div class="t">1.1 · Identity, type and value <span class="badge bEver">Evergreen</span></div>
+      <div class="d">Three properties. Two never change. One is not even defined by the language.</div>
+      <div class="m"><span>code: d11_object_identity.py</span></div>
+    </a>
+    <a class="item" href="python/object-model/1.2-namespaces.html">
+      <div class="t">1.2 · Namespaces <span class="badge bEver">Evergreen</span></div>
+      <div class="d">A name is a key, not a box. LEGB, shadowing, and why <code>locals()</code> cannot be live.</div>
+      <div class="m"><span>code: d12_namespaces.py</span></div>
+    </a>
+    <a class="item" href="python/object-model/1.3-references-aliasing.html">
+      <div class="t">1.3 · References &amp; aliasing <span class="badge bEver">Evergreen</span></div>
+      <div class="d">Containers hold references. Copy depth, argument passing and the <code>+=</code> paradox follow.</div>
+      <div class="m"><span>code: d13_references.py</span><span>drill: d13_predict.py</span></div>
+    </a>
+    <a class="item" href="python/object-model/cram.html">
+      <div class="t">Cram sheet · 1.1–1.3 <span class="badge bEver">Evergreen</span></div>
+      <div class="d">The chant, instant-recall table, why-cards with an error log, kill list, 60-second exit test.</div>
+      <div class="m"><span>repeat this one</span></div>
+    </a>
+  </div>
+
+  <div class="rowhead"><h2>Python · Data Model</h2></div>
+  <p class="rowsub">How syntax and builtins talk to your objects.</p>
+  <div class="items">
+    <a class="item" href="python/data-model/2.1-special-methods.html">
+      <div class="t">2.1 · Special methods as protocol hooks <span class="badge bGrow">Growing</span></div>
+      <div class="d"><code>len(x)</code> is <code>type(x).__len__(x)</code>. Fallback chains, <code>NotImplemented</code>, and why <code>__eq__</code> deletes <code>__hash__</code>.</div>
+      <div class="m"><span>code: d21_data_model.py</span></div>
+    </a>
+  </div>
+
+  <div class="rowhead"><h2>Systems Thinking</h2></div>
+  <p class="rowsub">Structure produces behaviour.</p>
+  <div class="items">
+    <a class="item" href="systems-thinking/overview.html">
+      <div class="t">Overview <span class="badge bSeed">Seed</span></div>
+      <div class="d">Stocks, flows, feedback loops, delays.</div>
+    </a>
+  </div>
+
+  <div class="rowhead"><h2>Planned</h2></div>
+  <p class="rowsub">Only listed once started. No roadmaps here.</p>
+  <div class="empty">System design, GATE and anything else lands here when day one is done.</div>
+
+</div>
+
+<footer>Tracks · numbered, sequential, drilled.</footer>
+
+</body>
+</html>
