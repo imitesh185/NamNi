@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Metacognition — Working Note</title>
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/systems.css" />
+<link rel="stylesheet" href="../../assets/notes.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Meta<span>·</span>cognition</div>
+    <div class="tagline">Working note · Flavell → Nelson &amp; Narens → Bjork → Tetlock · knowing what you know</div>
+    <button class="btn" onclick="window.print()">Print / PDF</button>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>The Apparatus</h4>
+  <a href="#why">00 · Why this exists</a>
+  <a href="#loop">01 · Monitoring &amp; control</a>
+  <a href="#fluency">02 · The fluency illusion</a>
+  <a href="#difficulty">03 · Desirable difficulties</a>
+  <h4>The Failures</h4>
+  <a href="#depth">04 · Explanatory depth</a>
+  <a href="#dk">05 · Dunning–Kruger, correctly</a>
+  <a href="#blindspot">06 · The bias blind spot</a>
+  <a href="#hindsight">07 · Hindsight &amp; resulting</a>
+  <h4>The Repair</h4>
+  <a href="#calibration">08 · Calibration</a>
+  <a href="#forecast">09 · What forecasters do</a>
+  <a href="#intuition">10 · When to trust intuition</a>
+  <a href="#aot">11 · Rationality ≠ intelligence</a>
+  <h4>Reference</h4>
+  <a href="#neuro">12 · The neuroscience</a>
+  <a href="#settle">13 · What these settle</a>
+  <a href="#sources">14 · Sources</a>
+</nav>
+
+<main>
+
+<div class="hero">
+  <div class="kicker">Working note · v1</div>
+  <h1>Metacognition</h1>
+  <p class="dropcap">Metacognition is cognition aimed at cognition: the monitoring layer that
+  estimates how well the object layer is doing, and the control layer that decides what to do about
+  it. It is why you can say "I know this" before being tested — and it is why that statement is
+  wrong far more often than it feels like it could be. Almost every wasted month is a monitoring
+  failure, not a capability failure.</p>
+  <div class="why">
+    <b>The one idea to carry.</b> <mark>The signal your brain uses to judge whether it has learned
+    something is ease — and ease is produced by familiarity, not by competence.</mark> The two come
+    apart precisely where it matters most. This is not a weakness of unusually overconfident people.
+    It is the default output of a correctly functioning mind, and it must be corrected externally.
+  </div>
+  <div class="tags">
+    <span class="tag">#monitoring</span>
+    <span class="tag t2">#fluency-illusion</span>
+    <span class="tag t3">#calibration</span>
+    <span class="tag">#desirable-difficulties</span>
+    <span class="tag t2">#brier-score</span>
+    <span class="tag t3">#feedback-validity</span>
+  </div>
+</div>
+
+<!-- ============================================================ 00 -->
+<section id="why">
+  <h2><span class="num">00</span> Why this exists</h2>
+  <p class="sub">Three findings that force the rest.</p>
+
+  <div class="pq"><span class="n">1</span>
+    <b>Your sense of understanding is a heuristic, not a measurement.</b>
+    It is computed from how smoothly the material processes. Since rereading, watching and
+    following along all increase smoothness without increasing retrievability, they
+    <mark>reliably raise confidence while lowering learning</mark>.
+  </div>
+  <div class="pq"><span class="n">2</span>
+    <b>The methods that feel best work worst.</b>
+    This is not a slogan. In controlled comparisons, learners predict the ranking of study methods
+    and get it <em>backwards</em> — and they do so even after experiencing the better method.
+  </div>
+  <div class="pq"><span class="n">3</span>
+    <b>Knowing about a bias does not remove it.</b>
+    Demonstrated directly for the bias blind spot: people told about a bias, and shown they exhibit
+    it, continue to rate themselves as less affected than others. Awareness is not a correction
+    mechanism. Only <em>scored feedback</em> is.
+  </div>
+
+  <div class="note">
+    <span class="lbl">The practical payoff</span>
+    Four questions worth being able to answer: (a) Is my confidence here based on anything I have
+    tested? (b) Does this environment give feedback fast and clear enough for my intuition to be
+    worth anything? (c) Did I write the prediction down before I looked? (d) When I was last
+    confident and wrong, what did that feel like — and does it feel like this?
+  </div>
+</section>
+
+<!-- ============================================================ 01 -->
+<section id="loop">
+  <h2><span class="num">01</span> Monitoring and control</h2>
+  <p class="sub">The standard framework, and it is genuinely just two arrows.</p>
+
+  <p>Flavell coined the term and split it into <b>metacognitive knowledge</b> (what you believe about
+  how your mind works) and <b>metacognitive regulation</b> (what you do with that belief). Nelson and
+  Narens then gave the structure that is still standard: a meta-level holding a model of the
+  object-level, with <b>monitoring</b> flowing upward and <b>control</b> flowing downward.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 190" role="img" aria-label="Nelson and Narens meta-level and object-level loop">
+      <g>
+        <rect x="170" y="18" width="300" height="46" rx="10" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.6"/>
+        <text x="320" y="46" class="st" text-anchor="middle" fill="#b45f35">META-LEVEL &#183; the model of yourself</text>
+        <rect x="170" y="126" width="300" height="46" rx="10" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.6"/>
+        <text x="320" y="154" class="st" text-anchor="middle" fill="#2f7a9e">OBJECT-LEVEL &#183; the actual work</text>
+
+        <path d="M240,126 L240,66" stroke="#2f7a9e" stroke-width="2" fill="none"/>
+        <path d="M236,72 L240,64 L244,72 z" fill="#2f7a9e"/>
+        <path d="M400,64 L400,124" stroke="#b45f35" stroke-width="2" fill="none"/>
+        <path d="M396,118 L400,126 L404,118 z" fill="#b45f35"/>
+
+        <text x="228" y="100" class="ss" text-anchor="end" fill="#2f7a9e">MONITORING</text>
+        <text x="228" y="114" class="ss" text-anchor="end">"how am I doing?"</text>
+        <text x="412" y="100" class="ss" fill="#b45f35">CONTROL</text>
+        <text x="412" y="114" class="ss">"keep going / stop / switch"</text>
+      </g>
+    </svg>
+    <figcaption>Control can only be as good as monitoring. A confident wrong estimate produces a
+    confident wrong decision about where to spend the next four hours.</figcaption>
+  </figure>
+
+  <p class="cite"><b>Flavell, J. (1979).</b> Metacognition and cognitive monitoring.
+  <i>American Psychologist</i> 34(10), 906–911. · <b>Nelson, T. &amp; Narens, L. (1990).</b>
+  Metamemory: a theoretical framework. <i>Psychology of Learning and Motivation</i> 26.
+  <span class="ev evR">Foundational</span></p>
+
+  <div class="rule">
+    <span class="lbl">Where the leverage is</span>
+    People try to improve at the object level — study harder, work longer. But <b>the object level is
+    being allocated by the meta level</b>, and a broken monitor misallocates every hour it directs.
+    Fixing the monitor is a multiplier on everything below it; adding hours is not.
+  </div>
+</section>
+
+<!-- ============================================================ 02 -->
+<section id="fluency">
+  <h2><span class="num">02</span> The fluency illusion</h2>
+  <p class="sub">Why the feeling of knowing is systematically miscalibrated.</p>
+
+  <p>Judgments of learning are not read off some internal store of knowledge. They are
+  <em>inferred</em> from cues — chiefly how easily the material comes to mind right now. Koriat's
+  cue-utilisation account is the standard treatment. The problem is that processing ease is
+  manipulable by things that have nothing to do with durable learning: recency, repetition,
+  clear typography, a well-organised explanation, a confident lecturer.</p>
+
+  <p>Underneath sits the Bjorks' distinction, which is the single most useful idea in this note:</p>
+
+  <div class="vs">
+    <div class="claim"><h5>Storage strength</h5>How well-learned something is. It only ever increases, and you have <b>no direct access to it</b>. Nothing in experience reports this number.</div>
+    <div class="real"><h5>Retrieval strength</h5>How accessible it is right now. Rises fast, decays fast, and <b>this is what your confidence is actually measuring.</b> Rereading spikes it while leaving storage untouched.</div>
+  </div>
+
+  <p class="cite"><b>Bjork, R. &amp; Bjork, E. (1992).</b> A new theory of disuse and an old theory of
+  stimulus fluctuation. · <b>Koriat, A. (1997).</b> <i>JEP: General</i> 126(4). <span class="ev evR">Robust</span></p>
+
+  <div class="trap">
+    <span class="lbl">Why rereading is worse than doing nothing with the time</span>
+    It is not merely low-yield. It <b>actively corrupts the monitor</b> by driving retrieval strength
+    up, which raises your confidence, which tells the control layer to stop studying this and move
+    on. The damage is the false signal, not the wasted minutes. This is the mechanism behind
+    recognising material perfectly and being unable to produce any of it.
+  </div>
+</section>
+
+<!-- ============================================================ 03 -->
+<section id="difficulty">
+  <h2><span class="num">03</span> Desirable difficulties</h2>
+  <p class="sub">Conditions that impair performance during practice and improve it at retention.</p>
+
+  <p>The Bjorks' term for interventions with a consistent and counter-intuitive signature: they make
+  practice slower and more error-prone, and they make later retention substantially better. The
+  learner, monitoring by fluency, experiences them as failing.</p>
+
+  <table>
+    <thead><tr><th>Difficulty</th><th>What it is</th><th>The finding</th></tr></thead>
+    <tbody>
+      <tr><td><b>Testing</b></td><td>Retrieving instead of reviewing</td><td>Roediger &amp; Karpicke: after one week, testing beat restudying by a wide margin — while learners who restudied <em>predicted they would do better</em>. <span class="ev evR">Robust</span></td></tr>
+      <tr><td><b>Spacing</b></td><td>Distributing practice over time</td><td>One of the oldest and most replicated effects in psychology, from Ebbinghaus onward. Massed practice wins on the day and loses on every later day. <span class="ev evR">Robust</span></td></tr>
+      <tr><td><b>Interleaving</b></td><td>Mixing problem types rather than blocking</td><td>Blocked practice produces better practice scores and worse test scores. Interleaving forces you to <em>select</em> the method, which is the part the real task requires. <span class="ev evR">Robust</span></td></tr>
+      <tr><td><b>Generation</b></td><td>Producing an answer before being shown one</td><td>Generated answers are retained better than read ones — <b>including when the generation attempt fails</b>, provided feedback follows. <span class="ev evR">Robust</span></td></tr>
+      <tr><td><b>Variation</b></td><td>Changing conditions, contexts, examples</td><td>Reduces context-dependence and improves transfer, at the cost of slower initial acquisition.</td></tr>
+    </tbody>
+  </table>
+  <p class="cite"><b>Roediger, H. &amp; Karpicke, J. (2006).</b> Test-enhanced learning.
+  <i>Psychological Science</i> 17(3), 249–255. · <b>Rohrer, D. &amp; Taylor, K. (2007)</b>
+  (interleaving). · <b>Slamecka, N. &amp; Graf, P. (1978)</b> (generation effect).</p>
+
+  <div class="life">
+    <span class="lbl">The line that makes this actionable</span>
+    Every item above has the same fingerprint: <b>worse now, better later, and mispredicted by the
+    learner in the same direction every time.</b> That regularity is itself a usable instrument —
+    if a study method feels smooth and productive, that is weak evidence against it.
+  </div>
+</section>
+
+<!-- ============================================================ 04 -->
+<section id="depth">
+  <h2><span class="num">04</span> The illusion of explanatory depth</h2>
+  <p class="sub">A one-question experiment that collapses confidence on the spot.</p>
+
+  <p>Rozenblit and Keil asked people to rate how well they understood everyday objects — a zip, a
+  flush toilet, a helicopter, a cylinder lock. Then they asked them to write a step-by-step causal
+  explanation of how it works. Then to re-rate their understanding.</p>
+
+  <p><b>Ratings dropped sharply</b>, and stayed down. People had confused knowing <em>what</em>
+  something does, and having seen it many times, with knowing <em>how</em> it does it. The
+  confidence was real; it simply was not tracking anything.</p>
+  <p class="cite"><b>Rozenblit, L. &amp; Keil, F. (2002).</b> The misunderstood limits of folk
+  science: an illusion of explanatory depth. <i>Cognitive Science</i> 26(5), 521–562.
+  <span class="ev evR">Robust</span></p>
+
+  <div class="note">
+    <span class="lbl">Two things worth noticing</span>
+    <b>(1)</b> The effect is specific to <em>causal, mechanistic</em> knowledge. It is much weaker
+    for facts, narratives and procedures — it targets exactly the kind of understanding that
+    technical work requires. <b>(2)</b> It has been extended to political positions: asking people
+    to mechanistically explain a policy reduces both their confidence <em>and</em> the extremity of
+    their position, where asking for reasons does not.
+    <span class="cite" style="display:block"><b>Fernbach et al. (2013)</b>, <i>Psychological Science</i>.</span>
+  </div>
+</section>
+
+<!-- ============================================================ 05 -->
+<section id="dk">
+  <h2><span class="num">05</span> Dunning–Kruger, stated correctly</h2>
+  <p class="sub">Included because the popular version is wrong, and the correction is instructive.</p>
+
+  <div class="vs">
+    <div class="claim"><h5>The popular claim</h5>"Incompetent people are wildly confident; experts are riddled with doubt." Rendered as a chart with a towering 'Mount Stupid' at the left. This is not what the paper reports and the famous chart appears nowhere in it.</div>
+    <div class="real"><h5>What the study found</h5>Across the whole ability range, self-assessment is <b>compressed toward the middle</b>. Low performers overestimate, high performers slightly <em>under</em>estimate, and everyone lands nearer average than they are. Top performers still rate themselves above bottom performers.</div>
+  </div>
+
+  <p class="cite"><b>Kruger, J. &amp; Dunning, D. (1999).</b> Unskilled and unaware of it.
+  <i>JPSP</i> 77(6), 1121–1134.</p>
+
+  <div class="trap">
+    <span class="lbl">And the effect is partly a statistical artifact <span class="ev evM">Mixed</span></span>
+    The characteristic pattern can be substantially reproduced from <b>regression to the mean plus a
+    general better-than-average tendency</b>, using simulated data containing no Dunning–Kruger
+    mechanism at all. Whether a distinct metacognitive deficit exists on top of the artifact remains
+    genuinely disputed.
+    <span class="cite" style="display:block"><b>Nuhfer et al. (2016/2017)</b>, <i>Numeracy</i>; <b>Gignac &amp; Zajenkowski (2020)</b>, <i>Intelligence</i>.</span>
+  </div>
+
+  <div class="rule">
+    <span class="lbl">Why this one is in the note</span>
+    It is the most cited result in popular metacognition and the most misstated. Being able to say
+    precisely what it does and does not show is a small, concrete demonstration of the thing the
+    note is about — and a reminder that <b>a finding you can only state as a meme is a finding you
+    do not have.</b>
+  </div>
+</section>
+
+<!-- ============================================================ 06 -->
+<section id="blindspot">
+  <h2><span class="num">06</span> The bias blind spot</h2>
+  <p class="sub">The result that explains why reading about biases achieves nothing.</p>
+
+  <p>Pronin, Lin and Ross found people consistently rate themselves as <em>less</em> susceptible to
+  cognitive biases than the average person — and continue to do so after the bias is explained to
+  them, and after they are shown evidence of their own susceptibility. Told they had just displayed
+  a bias, many participants concluded their self-assessment was accurate anyway.</p>
+  <p class="cite"><b>Pronin, E., Lin, D. &amp; Ross, L. (2002).</b> The bias blind spot: perceptions
+  of bias in self versus others. <i>PSPB</i> 28(3), 369–381. <span class="ev evR">Robust</span></p>
+
+  <p>The mechanism is introspective asymmetry. You judge others by their <em>behaviour</em>, which
+  is visibly biased. You judge yourself by your <em>introspection</em> — and bias does not announce
+  itself in introspection, because a biased judgement feels identical from the inside to an accurate
+  one.</p>
+
+  <div class="cpy">
+    <span class="lbl">The direct consequence</span>
+    <b>Bias lists are not an intervention.</b> Reading a taxonomy of fallacies gives you better
+    vocabulary for describing other people. The only things shown to move calibration are
+    <em>external and scored</em>: written predictions checked against outcomes, forced consideration
+    of the opposite, and structured post-mortems. Everything else is recognition.
+  </div>
+</section>
+
+<!-- ============================================================ 07 -->
+<section id="hindsight">
+  <h2><span class="num">07</span> Hindsight bias and resulting</h2>
+  <p class="sub">Two mechanisms that destroy the feedback you would otherwise learn from.</p>
+
+  <h3>Hindsight bias</h3>
+  <p>Once an outcome is known, the prior probability you assigned to it drifts upward, and you
+  cannot recover the original estimate by trying. Fischhoff called it <b>creeping determinism</b>:
+  the past reorganises itself into something that was obviously going to happen. The cost is
+  specific — it deletes the surprise, and surprise was the learning signal.</p>
+  <p class="cite"><b>Fischhoff, B. (1975).</b> Hindsight ≠ foresight. <i>JEP: Human Perception and
+  Performance</i> 1(3), 288–299. <span class="ev evR">Robust</span></p>
+
+  <h3>Resulting</h3>
+  <p>Judging the quality of a decision by the quality of its outcome. In any environment with real
+  variance, good decisions produce bad outcomes at some rate and vice versa. Grading on outcomes
+  therefore trains you toward whatever got lucky.</p>
+
+  <div class="life">
+    <span class="lbl">The two defences, both external</span>
+    <b>A written record made before the outcome</b> — the only thing hindsight bias cannot rewrite,
+    because it is not stored in you. And the <b>premortem</b>: before committing, state that the
+    project has failed and write down why. Klein's finding is that prospective hindsight
+    substantially increases the number and specificity of risks people can generate.
+    <span class="cite" style="display:block"><b>Klein, G. (2007).</b> Performing a project premortem. <i>Harvard Business Review</i>.</span>
+  </div>
+</section>
+
+<!-- ============================================================ 08 -->
+<section id="calibration">
+  <h2><span class="num">08</span> Calibration — making confidence mean something</h2>
+  <p class="sub">The measurable version of metacognition, and the only one that improves with practice.</p>
+
+  <p>You are <b>calibrated</b> if, across everything you call 70% likely, about 70% happens. Note
+  what this does: it converts a feeling into a claim that can be scored. Individual predictions
+  cannot be right or wrong at 70%; a <em>set</em> of them can be measurably off.</p>
+
+  <p>The scoring rule is the <b>Brier score</b> — the mean squared difference between your stated
+  probability and the outcome coded 0 or 1. Lower is better; 0 is perfect; 0.25 is what you get by
+  saying 50% to everything. Its virtue is that it is a <em>proper</em> scoring rule: your expected
+  score is best when you report your true belief, so hedging and bravado are both penalised.</p>
+
+  <div class="note">
+    <span class="lbl">Who is actually well calibrated, and why <span class="ev evR">Robust</span></span>
+    Weather forecasters and expert bridge players are close to perfectly calibrated. Physicians,
+    intelligence analysts and economists generally are not. The difference is not intelligence or
+    training — it is <b>feedback that is fast, frequent, unambiguous and scored</b>. A forecaster
+    learns tomorrow whether their 70% was any good, several hundred times a year.
+    <span class="cite" style="display:block"><b>Lichtenstein, Fischhoff &amp; Phillips (1982)</b>; <b>Murphy &amp; Winkler (1984)</b> on weather forecasters.</span>
+  </div>
+</section>
+
+<!-- ============================================================ 09 -->
+<section id="forecast">
+  <h2><span class="num">09</span> What good forecasters actually do</h2>
+  <p class="sub">The Good Judgment Project — a rare case of a real tournament with real scoring.</p>
+
+  <p>Tetlock's earlier work had already established the depressing baseline: across two decades and
+  roughly 28,000 predictions, expert political forecasters barely beat simple extrapolation, and
+  <b>the more famous the expert, the worse the calibration</b>. Fame rewarded confident storytelling,
+  which is the opposite of calibration.</p>
+  <p class="cite"><b>Tetlock, P. (2005).</b> <i>Expert Political Judgment.</i> Princeton.
+  <span class="ev evR">Robust</span></p>
+
+  <p>The Good Judgment Project then entered a US intelligence-community forecasting tournament and
+  won it repeatedly. Its top forecasters outperformed the competition, and reportedly beat
+  intelligence analysts with access to classified material. What separated them was not domain
+  expertise:</p>
+
+  <dl class="kv">
+    <dt>Base rates first</dt><dd>Start from how often this class of thing happens in general, then adjust. Most people start from the vivid specifics and never anchor on frequency at all.</dd>
+    <dt>Granularity</dt><dd>They distinguish 63% from 70%. Rounding to "likely" or "probably" discards real information and their accuracy measurably degraded when forced to round.</dd>
+    <dt>Frequent small updates</dt><dd>Many modest revisions as evidence arrives — not one bold call defended to the end. Neither over-updating nor anchoring.</dd>
+    <dt>Balanced attribution</dt><dd>They interrogate their hits as hard as their misses, which prevents luck being recorded as skill.</dd>
+    <dt>Training works</dt><dd>A single short module on probabilistic reasoning and bias produced measurable, persistent accuracy gains. This is one of the few interventions in the whole literature that does.</dd>
+  </dl>
+  <p class="cite"><b>Tetlock, P. &amp; Gardner, D. (2015).</b> <i>Superforecasting.</i> ·
+  <b>Mellers, B. et al. (2014).</b> Psychological strategies for winning a geopolitical forecasting
+  tournament. <i>Psychological Science</i> 25(5). <span class="ev evR">Robust</span></p>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="intuition">
+  <h2><span class="num">10</span> When intuition is worth trusting</h2>
+  <p class="sub">The most useful single paper in this note, written by two people who expected to disagree.</p>
+
+  <p>Kahneman had spent a career showing intuitive judgement is unreliable. Klein had spent a career
+  showing expert intuition — firefighters, nurses — is remarkable. They wrote a joint paper to find
+  out why both were right, and converged on two conditions. Intuitive expertise is trustworthy
+  when, and only when:</p>
+
+  <div class="grid g2">
+    <div class="card"><b>1 · The environment is high-validity</b><p style="margin:6px 0 0;font-size:13.6px">There are stable, learnable regularities linking cues to outcomes. Firefighting has them. Long-horizon stock picking does not — no amount of experience helps where the signal isn't there.</p></div>
+    <div class="card"><b>2 · There is prolonged practice with rapid, unambiguous feedback</b><p style="margin:6px 0 0;font-size:13.6px">You must have made many judgements <em>and learned the outcome quickly and clearly</em>. Slow, noisy or absent feedback produces confidence with no accompanying accuracy.</p></div>
+  </div>
+
+  <p class="cite"><b>Kahneman, D. &amp; Klein, G. (2009).</b> Conditions for intuitive expertise: a
+  failure to disagree. <i>American Psychologist</i> 64(6), 515–526. <span class="ev evR">Robust</span></p>
+
+  <div class="trap">
+    <span class="lbl">The part people skip</span>
+    <b>Subjective confidence does not distinguish the two cases.</b> Practitioners in low-validity
+    environments feel exactly as certain as practitioners in high-validity ones. So confidence cannot
+    be used to decide whether to trust confidence — you have to evaluate the <em>environment</em>,
+    from outside. Hiring, forecasting and long-horizon strategy are low-validity by this standard,
+    which is why structured procedures beat expert judgement there and not elsewhere.
+  </div>
+</section>
+
+<!-- ============================================================ 11 -->
+<section id="aot">
+  <h2><span class="num">11</span> Rationality is not intelligence</h2>
+  <p class="sub">They dissociate, and the gap has a name.</p>
+
+  <p>Stanovich's programme separates <b>algorithmic efficiency</b> — roughly what IQ tests measure —
+  from <b>rational thinking dispositions</b>: the tendency to seek out disconfirming evidence, to
+  override a fluent first answer, to hold beliefs proportionally. The correlations are modest, and
+  some biases show <em>none</em>.</p>
+
+  <p>The clearest case is <b>myside bias</b>: evaluating arguments more favourably when they support
+  your existing position. It is essentially uncorrelated with cognitive ability. Intelligent people
+  are not less prone to it — they are better at constructing justifications for it.</p>
+  <p class="cite"><b>Stanovich, K. (2009).</b> <i>What Intelligence Tests Miss.</i> Yale. ·
+  <b>Stanovich, West &amp; Toplak (2016).</b> <i>The Rationality Quotient.</i> MIT Press.
+  <span class="ev evR">Robust</span></p>
+
+  <p><b>Actively open-minded thinking</b> (Baron) is the measurable disposition that does predict
+  good calibration: treating a belief as a hypothesis with a weight, actively searching for reasons
+  it might be wrong, and counting the willingness to change your mind as a success rather than a
+  concession.</p>
+
+  <div class="rule">
+    <span class="lbl">The uncomfortable implication</span>
+    Raw ability does not protect you here, and in one specific way it makes things worse:
+    <b>greater fluency produces more convincing rationalisations of whatever you already thought.</b>
+    The corrective is procedural — written predictions, scored outcomes, forced consideration of the
+    opposite — and it is procedural precisely because it cannot be done from the inside.
+  </div>
+</section>
+
+<!-- ============================================================ 12 -->
+<section id="neuro">
+  <h2><span class="num">12</span> The neuroscience, briefly</h2>
+  <p class="sub">Enough to know the construct is measurable and partly separable.</p>
+
+  <p>Metacognitive ability is measured separately from task ability. <b>Sensitivity</b> (meta-d′) is
+  how well your confidence discriminates your own correct from incorrect responses; <b>bias</b> is
+  whether you are globally over- or under-confident. Two people with identical task accuracy can
+  differ substantially in sensitivity, which means metacognition is not simply a readout of skill.</p>
+
+  <p>Individual differences in metacognitive sensitivity correlate with structure and activity in
+  anterior prefrontal cortex, and the ability is partly <em>domain-specific</em> — good metacognition
+  for perception does not guarantee good metacognition for memory. There is no single global
+  self-knowledge faculty to install.</p>
+  <p class="cite"><b>Fleming, S. &amp; Lau, H. (2014).</b> How to measure metacognition.
+  <i>Frontiers in Human Neuroscience</i> 8:443. · <b>Fleming, S. et al. (2010).</b> <i>Science</i>
+  329(5998). <span class="ev evM">Established but evolving</span></p>
+</section>
+
+<!-- ============================================================ 13 -->
+<section id="settle">
+  <h2><span class="num">13</span> What these settle</h2>
+  <p class="sub">The conclusions, stated flat.</p>
+
+  <table>
+    <thead><tr><th>Question</th><th>Settled answer</th></tr></thead>
+    <tbody>
+      <tr><td>Why does confidence track learning so poorly?</td><td>Because confidence is computed from processing ease, and ease is produced by familiarity. Storage strength has no experiential signature.</td></tr>
+      <tr><td>Is rereading inefficient or actively harmful?</td><td>Harmful, via the monitor. It raises retrieval strength and therefore confidence, which tells you to stop — the false signal is the damage.</td></tr>
+      <tr><td>How do I tell a good study method from a bad one?</td><td>Good ones feel worse during practice. Worse now, better later, mispredicted by the learner — that fingerprint is consistent across testing, spacing, interleaving and generation.</td></tr>
+      <tr><td>Do I understand this, or have I just seen it a lot?</td><td>Try to give the step-by-step causal account. The illusion of explanatory depth collapses on contact with mechanism, and it targets exactly the technical kind of understanding.</td></tr>
+      <tr><td>Does Dunning–Kruger say what everyone thinks?</td><td>No. Self-assessment compresses toward the middle across the whole range, and the pattern is substantially reproducible from regression to the mean.</td></tr>
+      <tr><td>Will learning about biases make me less biased?</td><td>No. The bias blind spot survives being taught the bias and being shown your own. Only external scored feedback moves calibration.</td></tr>
+      <tr><td>Can I trust my gut here?</td><td>Only if the environment has learnable regularities <em>and</em> you have had fast unambiguous feedback. Confidence feels identical in both cases, so judge the environment, not the feeling.</td></tr>
+      <tr><td>Does being smart protect me?</td><td>No. Myside bias is roughly uncorrelated with cognitive ability, and greater fluency yields better rationalisations. The correctives are procedural by necessity.</td></tr>
+      <tr><td>Is any of this trainable?</td><td>Yes, and calibration is the part with the best evidence — short probabilistic-reasoning training produced lasting accuracy gains in the forecasting tournaments.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 14 -->
+<section id="sources">
+  <h2><span class="num">14</span> Sources</h2>
+  <p class="sub">Weighted toward primary work; popular books flagged as such.</p>
+
+  <h3>Books</h3>
+  <div class="shelf">
+    <div class="s"><b>Superforecasting</b> — <i>Tetlock &amp; Gardner (2015)</i>. Popular treatment of a serious tournament. The best single book here because the claims come attached to scored outcomes.</div>
+    <div class="s"><b>Know Thyself</b> — <i>Stephen Fleming (2021)</i>. The current science of metacognition from one of the people measuring it. The most direct match to this note's subject.</div>
+    <div class="s"><b>Make It Stick</b> — <i>Brown, Roediger &amp; McDaniel (2014)</i>. Desirable difficulties, written by two of the researchers. Popular register, real evidence.</div>
+    <div class="s"><b>What Intelligence Tests Miss</b> — <i>Stanovich (2009)</i>. Why intelligence and rationality come apart, and what the gap costs.</div>
+    <div class="s"><b>Expert Political Judgment</b> — <i>Tetlock (2005)</i>. The rigorous, less comfortable predecessor to <i>Superforecasting</i>.</div>
+  </div>
+
+  <h3>Papers</h3>
+  <div class="shelf">
+    <div class="s"><b>Flavell (1979)</b> Metacognition and cognitive monitoring · <i>American Psychologist</i> — where the term enters.</div>
+    <div class="s"><b>Nelson &amp; Narens (1990)</b> Metamemory: a theoretical framework — the monitoring/control architecture.</div>
+    <div class="s"><b>Rozenblit &amp; Keil (2002)</b> The illusion of explanatory depth · <i>Cognitive Science</i> — short, and it will do something to you while you read it.</div>
+    <div class="s"><b>Pronin, Lin &amp; Ross (2002)</b> The bias blind spot · <i>PSPB</i> — why awareness is not an intervention.</div>
+    <div class="s"><b>Roediger &amp; Karpicke (2006)</b> Test-enhanced learning · <i>Psychological Science</i> — the testing effect with the prediction reversal.</div>
+    <div class="s"><b>Kahneman &amp; Klein (2009)</b> Conditions for intuitive expertise · <i>American Psychologist</i> — read this one twice.</div>
+    <div class="s"><b>Fleming &amp; Lau (2014)</b> How to measure metacognition · <i>Frontiers in Human Neuroscience</i> — sensitivity versus bias, made precise.</div>
+  </div>
+
+  <h3>Practice environments</h3>
+  <div class="shelf">
+    <div class="s"><b>Good Judgment Open</b> — free public forecasting platform from the Tetlock lineage. Real questions, real resolution, real Brier scores. The only item on this page that supplies the scored feedback everything else says is required.</div>
+    <div class="s"><b>Learning How to Learn</b> — <i>Oakley &amp; Sejnowski</i>, UCSD/Coursera, free. Popular-level and light on rigor, but a correct and accessible summary of the desirable-difficulties literature.</div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Working note · Metacognition · the monitor is the thing worth fixing.</footer>
+
+</body>
+</html>

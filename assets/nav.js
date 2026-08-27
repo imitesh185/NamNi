@@ -2,32 +2,51 @@
 // Also injects the Contents toggle so a sidebar TOC is reachable on phones.
 (function () {
 
+  // [site-relative path, chip label]. Paths must be unique; filenames need not be.
   var TRACKS = [
     {
       name: 'Python · Object Model',
       items: [
-        ['1.1-identity-type-value.html', 'tracks/python/object-model/1.1-identity-type-value.html', '1.1 Identity'],
-        ['1.2-namespaces.html',          'tracks/python/object-model/1.2-namespaces.html',          '1.2 Namespaces'],
-        ['1.3-references-aliasing.html', 'tracks/python/object-model/1.3-references-aliasing.html', '1.3 References'],
-        ['cram.html',                    'tracks/python/object-model/cram.html',                    'Cram 1.1–1.3']
+        ['tracks/python/object-model/1.1-identity-type-value.html', '1.1 Identity'],
+        ['tracks/python/object-model/1.2-namespaces.html',          '1.2 Namespaces'],
+        ['tracks/python/object-model/1.3-references-aliasing.html', '1.3 References'],
+        ['tracks/python/object-model/cram.html',                    'Cram 1.1–1.3']
       ]
     },
     {
       name: 'Python · Data Model',
       items: [
-        ['2.1-special-methods.html', 'tracks/python/data-model/2.1-special-methods.html', '2.1 Special methods']
+        ['tracks/python/data-model/2.1-special-methods.html', '2.1 Special methods']
       ]
     },
     {
       name: 'Python · Runtime',
       items: [
-        ['the-write-path.html', 'tracks/python/runtime/the-write-path.html', 'The write path']
+        ['tracks/python/runtime/the-write-path.html', 'The write path']
       ]
     },
     {
       name: 'Systems Thinking',
       items: [
-        ['overview.html', 'tracks/systems-thinking/overview.html', 'Overview']
+        ['tracks/systems-thinking/overview.html', 'Overview']
+      ]
+    },
+    {
+      name: 'Game Theory & Signalling',
+      items: [
+        ['tracks/game-theory/overview.html', 'Overview']
+      ]
+    },
+    {
+      name: 'Predictive Processing',
+      items: [
+        ['tracks/predictive-processing/overview.html', 'Overview']
+      ]
+    },
+    {
+      name: 'Metacognition',
+      items: [
+        ['tracks/metacognition/overview.html', 'Overview']
       ]
     }
   ];
@@ -39,15 +58,17 @@
     return link.getAttribute('href').replace(/assets\/base\.css$/, '');
   }
 
-  function currentFile() {
-    var parts = window.location.pathname.split('/');
-    return decodeURIComponent(parts[parts.length - 1] || '');
+  function currentPath() {
+    return decodeURIComponent(window.location.pathname);
   }
 
-  function locate(file) {
+  function locate(path) {
     for (var t = 0; t < TRACKS.length; t++) {
       for (var i = 0; i < TRACKS[t].items.length; i++) {
-        if (TRACKS[t].items[i][0] === file) return { track: TRACKS[t], index: i };
+        var p = TRACKS[t].items[i][0];
+        if (path === p || path.slice(-(p.length + 1)) === '/' + p) {
+          return { track: TRACKS[t], index: i };
+        }
       }
     }
     return null;
@@ -83,7 +104,7 @@
       var chips = document.createElement('div');
       chips.className = 'sbchips';
       spot.track.items.forEach(function (item, i) {
-        chips.appendChild(link(root + item[1], item[2], i === spot.index ? 'chip cur' : 'chip'));
+        chips.appendChild(link(root + item[0], item[1], i === spot.index ? 'chip cur' : 'chip'));
       });
       inner.appendChild(chips);
     }
@@ -101,9 +122,9 @@
     wrap.className = 'pagenav';
 
     if (prev) {
-      var p = link(root + prev[1], null, 'pn prev');
+      var p = link(root + prev[0], null, 'pn prev');
       p.appendChild(kicker('Previous'));
-      p.appendChild(title(prev[2]));
+      p.appendChild(title(prev[1]));
       wrap.appendChild(p);
     }
 
@@ -113,9 +134,9 @@
     wrap.appendChild(up);
 
     if (next) {
-      var n = link(root + next[1], null, 'pn next');
+      var n = link(root + next[0], null, 'pn next');
       n.appendChild(kicker('Next'));
-      n.appendChild(title(next[2]));
+      n.appendChild(title(next[1]));
       wrap.appendChild(n);
     }
     return wrap;
@@ -167,7 +188,7 @@
   function init() {
     contentsToggle();
 
-    var spot = locate(currentFile());
+    var spot = locate(currentPath());
     if (!spot) return;
 
     var root = rootPrefix();

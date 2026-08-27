@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Predictive Processing — Working Note</title>
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/systems.css" />
+<link rel="stylesheet" href="../../assets/notes.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Predictive <span>·</span> Processing</div>
+    <div class="tagline">Working note · Helmholtz → Rao &amp; Ballard → Friston · perception as inference</div>
+    <button class="btn" onclick="window.print()">Print / PDF</button>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>The Inversion</h4>
+  <a href="#why">00 · Why this exists</a>
+  <a href="#inverse">01 · The inverse problem</a>
+  <a href="#arch">02 · The architecture</a>
+  <a href="#precision">03 · Precision</a>
+  <h4>The Machinery</h4>
+  <a href="#free">04 · Free energy</a>
+  <a href="#evidence">05 · The evidence</a>
+  <a href="#action">06 · Action as prediction</a>
+  <a href="#rpe">07 · Learning is error</a>
+  <h4>Consequences</h4>
+  <a href="#expertise">08 · Expertise</a>
+  <a href="#emotion">09 · Emotion &amp; the body</a>
+  <a href="#broken">10 · When priors go wrong</a>
+  <a href="#placebo">11 · Expectation as cause</a>
+  <h4>Limits</h4>
+  <a href="#critique">12 · The criticisms</a>
+  <a href="#settle">13 · What these settle</a>
+  <a href="#sources">14 · Sources</a>
+</nav>
+
+<main>
+
+<div class="hero">
+  <div class="kicker">Working note · v1</div>
+  <h1>Predictive Processing</h1>
+  <p class="dropcap">You do not see the world. You see your brain's best current hypothesis about
+  the world, continuously corrected by the small part of the incoming signal that the hypothesis
+  failed to anticipate. Perception is not a feed being read; it is a prediction being tested. The
+  senses do not deliver a picture — they deliver an error report on a picture the brain already
+  had.</p>
+  <div class="why">
+    <b>The one idea to carry.</b> <mark>Only the unexpected travels.</mark> Whatever your model
+    already accounts for is cancelled at the earliest opportunity and never reaches higher
+    processing. This is why a correct prediction feels like nothing, why surprise is the unit of
+    learning, and why comfort and understanding are so easy to confuse.
+  </div>
+  <div class="tags">
+    <span class="tag">#unconscious-inference</span>
+    <span class="tag t2">#prediction-error</span>
+    <span class="tag t3">#precision</span>
+    <span class="tag">#active-inference</span>
+    <span class="tag t2">#priors</span>
+    <span class="tag t3">#dopamine</span>
+  </div>
+</div>
+
+<!-- ============================================================ 00 -->
+<section id="why">
+  <h2><span class="num">00</span> Why this exists</h2>
+  <p class="sub">Three claims that reorganise everything downstream of them.</p>
+
+  <div class="pq"><span class="n">1</span>
+    <b>Perception is inference, not reception.</b>
+    Sensory data massively underdetermines its own cause. The brain must <em>guess</em>, and what
+    you experience is the guess — not the data. <mark>Experience is the model, not the input.</mark>
+  </div>
+  <div class="pq"><span class="n">2</span>
+    <b>The traffic runs downwards.</b>
+    The dominant flow in cortex is top-down prediction; the upward flow is residual error. In the
+    visual system, far more fibres carry signals <em>back</em> toward the sensory periphery than
+    forward from it. The architecture matches the theory better than the naive feed-forward story does.
+  </div>
+  <div class="pq"><span class="n">3</span>
+    <b>Learning is driven by error, not by exposure.</b>
+    Repetition of the already-predicted teaches nothing. This is not a metaphor imported from
+    psychology — it is the literal update rule in Rescorla–Wagner conditioning and in the firing
+    of midbrain dopamine neurons.
+  </div>
+
+  <div class="note">
+    <span class="lbl">Why it is worth your time</span>
+    It is the closest thing cognitive science currently has to a unifying account, and it reaches
+    across perception, action, attention, learning, emotion, psychiatry and machine learning
+    <em>using one quantity</em>: the difference between what was expected and what arrived.
+  </div>
+</section>
+
+<!-- ============================================================ 01 -->
+<section id="inverse">
+  <h2><span class="num">01</span> The inverse problem</h2>
+  <p class="sub">The reason a brain has no choice but to guess.</p>
+
+  <p>Light lands on a two-dimensional sheet of receptors. Infinitely many three-dimensional scenes
+  would produce exactly that pattern: a small nearby object and a large distant one, a bright
+  surface under dim light and a dim surface under bright light. The mapping from world to sensation
+  discards information, and it cannot be run backwards. Recovering the cause from the effect is
+  <b>underdetermined in principle</b>, not merely difficult.</p>
+
+  <p>Helmholtz named the solution in the 1860s: <b>unconscious inference</b>. The visual system
+  supplies the missing constraints from prior knowledge about how the world tends to be, and
+  settles on the most probable cause. You never experience the inference happening; you experience
+  its conclusion, delivered as fact.</p>
+  <p class="cite"><b>von Helmholtz, H. (1867).</b> <i>Handbuch der physiologischen Optik.</i>
+  <span class="ev evR">Foundational</span></p>
+
+  <div class="life">
+    <span class="lbl">The everyday consequence</span>
+    Illusions are not malfunctions. They are the machinery working exactly as designed, on input
+    engineered to make the most probable interpretation the wrong one. <b>Knowing an illusion is an
+    illusion does not dissolve it</b> — your explicit belief and your perceptual prior are different
+    quantities, held at different levels, and the higher one does not overwrite the lower.
+  </div>
+</section>
+
+<!-- ============================================================ 02 -->
+<section id="arch">
+  <h2><span class="num">02</span> The architecture</h2>
+  <p class="sub">A hierarchy of models, each predicting the level beneath it.</p>
+
+  <p>Picture the cortex as a stack. Each level holds a model of what the level below it should be
+  reporting, and sends that prediction downward. The lower level subtracts the prediction from what
+  it actually has. Whatever remains — the <b>prediction error</b> — is the only thing sent upward.
+  Higher levels then adjust their model to reduce future error.</p>
+
+  <figure>
+    <svg viewBox="0 0 700 230" role="img" aria-label="Hierarchical prediction and error flow">
+      <g>
+        <rect x="250" y="16"  width="200" height="42" rx="9" fill="#f7e4d7" stroke="#b45f35" stroke-width="1.6"/>
+        <text x="350" y="42"  class="st" text-anchor="middle" fill="#b45f35">ABSTRACT CAUSES</text>
+        <rect x="250" y="88"  width="200" height="42" rx="9" fill="#dcf0e9" stroke="#2b7d6d" stroke-width="1.6"/>
+        <text x="350" y="114" class="st" text-anchor="middle" fill="#2b7d6d">OBJECTS · SCENES</text>
+        <rect x="250" y="160" width="200" height="42" rx="9" fill="#ddedf7" stroke="#2f7a9e" stroke-width="1.6"/>
+        <text x="350" y="186" class="st" text-anchor="middle" fill="#2f7a9e">EDGES · CONTRAST</text>
+
+        <path d="M300,58 L300,86" stroke="#b45f35" stroke-width="2" fill="none"/>
+        <path d="M296,80 L300,88 L304,80 z" fill="#b45f35"/>
+        <path d="M300,130 L300,158" stroke="#2b7d6d" stroke-width="2" fill="none"/>
+        <path d="M296,152 L300,160 L304,152 z" fill="#2b7d6d"/>
+
+        <path d="M400,158 L400,130" stroke="#c0503f" stroke-width="2" stroke-dasharray="4 3" fill="none"/>
+        <path d="M396,136 L400,128 L404,136 z" fill="#c0503f"/>
+        <path d="M400,86 L400,58" stroke="#c0503f" stroke-width="2" stroke-dasharray="4 3" fill="none"/>
+        <path d="M396,64 L400,56 L404,64 z" fill="#c0503f"/>
+
+        <text x="196" y="98"  class="ss" text-anchor="end" fill="#b45f35">predictions</text>
+        <text x="196" y="114" class="ss" text-anchor="end" fill="#b45f35">(dense, downward)</text>
+        <text x="504" y="98"  class="ss" fill="#c0503f">error only</text>
+        <text x="504" y="114" class="ss" fill="#c0503f">(sparse, upward)</text>
+        <text x="350" y="222" class="sxs" text-anchor="middle">SENSORY SURFACE &#8594; the world</text>
+      </g>
+    </svg>
+    <figcaption>Prediction descends in full; only the residual ascends. A perfectly predicted
+    signal produces no upward traffic at all.</figcaption>
+  </figure>
+
+  <p>Rao and Ballard built exactly this as a computational model of visual cortex and found it
+  reproduced <b>end-stopping</b> and other "extra-classical" receptive field effects that had
+  resisted explanation — neurons that stop responding when a line extends beyond their patch,
+  because the extension makes the stimulus <em>more predictable</em>, not less present.</p>
+  <p class="cite"><b>Rao, R. &amp; Ballard, D. (1999).</b> Predictive coding in the visual cortex.
+  <i>Nature Neuroscience</i> 2(1), 79–87. <span class="ev evR">Robust</span></p>
+
+  <div class="note">
+    <span class="lbl">Repetition suppression</span>
+    A directly observable prediction of the model: neural response to a repeated stimulus
+    <em>declines</em>, not because the neurons tire but because the stimulus becomes predicted and
+    therefore stops generating error. Related: <b>mismatch negativity</b>, an EEG signature that
+    appears when a regular sequence of tones is violated — even when you are asleep or not
+    attending. The brain is running predictions whether or not you are involved.
+  </div>
+</section>
+
+<!-- ============================================================ 03 -->
+<section id="precision">
+  <h2><span class="num">03</span> Precision — the part that does the real work</h2>
+  <p class="sub">Not "how big is the error" but "how much should this error be trusted".</p>
+
+  <p>An error signal is useless without an estimate of its reliability. A prediction error from a
+  noisy source should barely move the model; the same error from a reliable source should move it a
+  lot. <b>Precision</b> is the inverse-variance weighting applied to each error signal before it
+  updates anything.</p>
+
+  <p>This single knob carries an enormous amount of the theory's explanatory load:</p>
+
+  <dl class="kv">
+    <dt>Attention</dt><dd>Is precision-weighting, not a spotlight. Attending to something means <b>increasing the gain on its prediction errors</b> so they win the competition to update the model.</dd>
+    <dt>Sensory context</dt><dd>In fog, visual precision drops and priors dominate — you see what you expect. In bright light, error dominates and you see what is there.</dd>
+    <dt>Confidence</dt><dd>A high-precision prior held against low-precision evidence produces certainty that is impervious to correction. This is a mechanism, not a character flaw.</dd>
+    <dt>Pathology</dt><dd>Most predictive-processing accounts of mental illness are accounts of <b>mis-set precision</b> — see <a href="#broken">§10</a>.</dd>
+  </dl>
+
+  <div class="rule">
+    <span class="lbl">The generalisation worth keeping</span>
+    Every belief you hold is a pair: <b>a claim, and a weight on how much new evidence is allowed to
+    move it.</b> Most reasoning failures are not wrong claims. They are correct claims held at the
+    wrong precision — and the fix is the weight, not the content.
+  </div>
+</section>
+
+<!-- ============================================================ 04 -->
+<section id="free">
+  <h2><span class="num">04</span> Free energy — the ambitious version</h2>
+  <p class="sub">One principle proposed to cover perception, action, learning and life itself.</p>
+
+  <p>Friston's <b>free energy principle</b> proposes that any system that maintains itself against
+  dissolution must act to minimise a quantity called variational free energy — a tractable upper
+  bound on surprise. Perception minimises it by changing the model to fit the world. Action
+  minimises it by changing the world to fit the model. Both are the same operation pointed in
+  opposite directions.</p>
+  <p class="cite"><b>Friston, K. (2010).</b> The free-energy principle: a unified brain theory?
+  <i>Nature Reviews Neuroscience</i> 11(2), 127–138. <span class="ev evM">Influential · contested</span></p>
+
+  <div class="trap">
+    <span class="lbl">The dark room problem</span>
+    If the goal is minimising surprise, the optimal organism finds a dark silent room and stays
+    there forever — perfectly predictable, perfectly still. It does not happen. The standard reply
+    is <b>expected free energy</b>: agents minimise surprise over the <em>long run</em>, which
+    requires reducing uncertainty about the world, which mandates exploration. Curiosity falls out
+    as a term in the objective rather than an add-on. Whether this reply is a genuine derivation or
+    a repair is exactly where the argument sits.
+  </div>
+
+  <div class="note">
+    <span class="lbl">How to hold this section</span>
+    Sections 01–03 are well-supported computational neuroscience. <b>Section 04 is a much larger
+    metaphysical claim resting on the same machinery.</b> The strong form of the free energy
+    principle is difficult to falsify — a frequent and fair criticism. Use predictive processing as
+    the working model; treat the free energy principle as an interesting frame, not a settled result.
+  </div>
+</section>
+
+<!-- ============================================================ 05 -->
+<section id="evidence">
+  <h2><span class="num">05</span> The evidence you can feel</h2>
+  <p class="sub">Phenomena that are strange under the "perception is a feed" model and ordinary under this one.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <b>The hollow mask</b> <span class="ev evR">Robust</span>
+      <p style="margin:6px 0 0;font-size:13.6px">A mask viewed from behind — genuinely concave —
+      is seen as a normal convex face. The prior "faces stick out" overwhelms the depth cues.
+      Notably, people with schizophrenia are <em>less</em> susceptible, consistent with weakened
+      perceptual priors.</p>
+    </div>
+    <div class="card">
+      <b>The McGurk effect</b> <span class="ev evR">Robust</span>
+      <p style="margin:6px 0 0;font-size:13.6px">Video of lips saying "ga" dubbed with audio "ba"
+      is heard as "da" — a compromise neither channel contained. You cannot un-hear it by knowing.
+      Perception is a fusion of evidence, not a transcript of one channel.</p>
+    </div>
+    <div class="card">
+      <b>Sine-wave speech</b> <span class="ev evR">Robust</span>
+      <p style="margin:6px 0 0;font-size:13.6px">Degraded whistles sound like meaningless noise
+      until you are told the sentence — after which they sound unmistakably like speech, permanently.
+      The stimulus did not change. The prior did. This is the cleanest demonstration available that
+      you hear your model.</p>
+    </div>
+    <div class="card">
+      <b>You cannot tickle yourself</b> <span class="ev evR">Robust</span>
+      <p style="margin:6px 0 0;font-size:13.6px">Self-generated touch is predicted from the motor
+      command and cancelled before it reaches awareness. Introduce a delay or a trajectory
+      perturbation between your movement and the touch and the ticklishness returns in proportion.</p>
+      <p class="cite"><b>Blakemore, Wolpert &amp; Frith (1998)</b>, <i>Nature Neuroscience</i>.</p>
+    </div>
+    <div class="card">
+      <b>Binocular rivalry</b> <span class="ev evR">Robust</span>
+      <p style="margin:6px 0 0;font-size:13.6px">Show each eye a different image and you do not see
+      a blend — you see one, then the other, alternating. The system will not hold two incompatible
+      hypotheses; it commits to one explanation at a time.</p>
+    </div>
+    <div class="card">
+      <b>The blind spot</b> <span class="ev evR">Robust</span>
+      <p style="margin:6px 0 0;font-size:13.6px">Each eye has a receptor-free hole where the optic
+      nerve leaves. You perceive no gap. Nothing is "filling it in" with pixels — there is simply no
+      prediction error arising from a region that reports nothing, so the model proceeds unchallenged.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ 06 -->
+<section id="action">
+  <h2><span class="num">06</span> Action as prediction — active inference</h2>
+  <p class="sub">The second way to reduce error: make the world match the guess.</p>
+
+  <p>There are exactly two ways to close a gap between prediction and reality. Change the
+  prediction — that is perception and learning. Or change reality — that is action.</p>
+
+  <p>Active inference takes this literally. A motor command, on this account, is not an instruction
+  to a muscle. It is a <b>proprioceptive prediction</b>: the brain predicts the sensory consequences
+  of the arm already being raised, and classical reflex arcs then act to eliminate the resulting
+  error by moving the arm. Movement is error-cancellation, and intention is a prediction the body is
+  obliged to make true.</p>
+
+  <div class="cpy">
+    <span class="lbl">Why this reframe earns its keep</span>
+    It removes the awkward split between the system that perceives and the system that acts. Both
+    are running one algorithm on one quantity. It also explains why <b>attenuating your own
+    sensations is necessary for action at all</b> — if self-generated signals were not cancelled,
+    every movement would be an avalanche of unexplained error.
+  </div>
+</section>
+
+<!-- ============================================================ 07 -->
+<section id="rpe">
+  <h2><span class="num">07</span> Learning is literally error</h2>
+  <p class="sub">The most solidly established piece of the whole picture.</p>
+
+  <p>Rescorla and Wagner showed in 1972 that classical conditioning is not driven by pairing but by
+  <b>surprise</b>. If a cue already fully predicts an outcome, adding a second cue teaches nothing
+  about it — the phenomenon of <em>blocking</em>. Learning occurs in proportion to how wrong the
+  existing prediction was, and stops when prediction is accurate.</p>
+  <p class="cite"><b>Rescorla, R. &amp; Wagner, A. (1972).</b> A theory of Pavlovian conditioning.
+  <span class="ev evR">Foundational</span></p>
+
+  <p>Two decades later, Schultz recorded midbrain dopamine neurons and found they do not signal
+  reward. They signal <b>reward prediction error</b>. An unexpected reward produces a burst. Once a
+  cue reliably predicts the reward, the burst migrates backwards to the cue and the reward itself
+  produces nothing. Omit an expected reward and the neurons <em>dip below baseline</em> at exactly
+  the moment it should have arrived.</p>
+  <p class="cite"><b>Schultz, W., Dayan, P. &amp; Montague, P.R. (1997).</b> A neural substrate of
+  prediction and reward. <i>Science</i> 275(5306), 1593–1599. <span class="ev evR">Robust</span></p>
+
+  <div class="life">
+    <span class="lbl">The same equation twice</span>
+    That dip is a negative number in a subtraction. It is the identical update rule as
+    temporal-difference learning in reinforcement learning — a case where a machine learning
+    algorithm and a mammalian midbrain turned out to be computing the same thing. <b>Not an analogy.
+    The same equation.</b>
+  </div>
+</section>
+
+<!-- ============================================================ 08 -->
+<section id="expertise">
+  <h2><span class="num">08</span> Expertise is a better generative model</h2>
+  <p class="sub">Why the expert sees a different scene, using the same eyes.</p>
+
+  <p>Chase and Simon showed chess masters reconstructing board positions after a five-second glance
+  far better than novices — but <em>only</em> for positions from real games. On randomly scattered
+  pieces the advantage collapsed to nearly nothing. The master has no superior visual memory. The
+  master has priors that make legal positions <b>highly predictable and therefore cheap to encode</b>.</p>
+  <p class="cite"><b>Chase, W. &amp; Simon, H. (1973).</b> Perception in chess.
+  <i>Cognitive Psychology</i> 4(1), 55–81. <span class="ev evR">Robust</span></p>
+
+  <p>The same result recurs everywhere it is looked for: radiologists detect abnormality at
+  above-chance rates from a fraction of a second's exposure; experienced readers perceive words
+  rather than letters. Expertise is compression, and compression is prediction.</p>
+
+  <div class="rule">
+    <span class="lbl">The consequence for how skill is acquired</span>
+    If learning is proportional to prediction error, then a session that produced no error produced
+    no learning, regardless of how long it lasted or how good it felt. <mark>Comfort is the absence
+    of an error signal.</mark> The corollary is uncomfortable and unavoidable: <b>a prediction you
+    never committed to cannot be violated</b>, so material consumed without a stated expectation
+    generates nothing to learn from. Reading confirms; only a wrong guess updates.
+  </div>
+</section>
+
+<!-- ============================================================ 09 -->
+<section id="emotion">
+  <h2><span class="num">09</span> Emotion and the body</h2>
+  <p class="sub">The most contested extension, and the most interesting if it holds.</p>
+
+  <p>Turn the machinery inward. The brain also predicts the state of its own body — heart rate, gut,
+  temperature, blood chemistry — from signals that are noisy and slow. This is <b>interoceptive
+  inference</b>, and its regulatory purpose is <em>allostasis</em>: anticipating bodily needs before
+  they become deficits rather than reacting after.</p>
+
+  <p>Barrett's theory of constructed emotion argues that an emotion is what you get when
+  interoceptive prediction is categorised using a learned concept. The same physiological arousal
+  becomes "fear" or "excitement" depending on the model applied. On this account emotions are not
+  triggered and released; they are <b>constructed and inferred</b>, like colours.</p>
+  <p class="cite"><b>Barrett, L.F. (2017).</b> <i>How Emotions Are Made.</i> Also Barrett (2017),
+  <i>Social Cognitive and Affective Neuroscience</i>. <span class="ev evM">Influential · disputed</span></p>
+
+  <div class="trap">
+    <span class="lbl">Where this is genuinely contested</span>
+    Basic-emotion theorists dispute it directly, arguing for evolutionarily conserved affect
+    programmes with distinct signatures. The debate is live and neither side has closed it. What is
+    <em>not</em> in serious dispute: interoceptive signals are predicted rather than merely read, and
+    the same bodily state can be experienced as different emotions depending on context.
+  </div>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="broken">
+  <h2><span class="num">10</span> When priors and precision go wrong</h2>
+  <p class="sub">Computational psychiatry — symptoms as mis-set parameters rather than deficits.</p>
+
+  <table>
+    <thead><tr><th>Condition</th><th>Proposed computational account</th><th>Standing</th></tr></thead>
+    <tbody>
+      <tr><td>Psychosis</td><td>Prediction errors assigned excessive precision, so noise is treated as meaningful. Delusion is then a high-level model recruited to explain persistent unexplained salience.</td><td><span class="ev evM">Mixed</span></td></tr>
+      <tr><td>Autism</td><td>Priors weighted unusually low relative to sensory error — "hypo-priors" — producing sensory overwhelm and a world that fails to become predictable.</td><td><span class="ev evM">Mixed</span></td></tr>
+      <tr><td>Anxiety</td><td>A high-precision threat prior. Ambiguous evidence resolves toward danger, and the resulting avoidance prevents the error that would correct the prior.</td><td><span class="ev evM">Mixed</span></td></tr>
+      <tr><td>Chronic pain</td><td>Pain as inference about bodily threat rather than a readout of tissue damage — which is why pain persists after healing and varies with expectation.</td><td><span class="ev evM">Mixed</span></td></tr>
+      <tr><td>Hallucination</td><td>Priors so strong they generate percepts without input. Demonstrated experimentally: people with hallucination-prone profiles are more readily conditioned to hear a tone that is not played.</td><td><span class="ev evM">Suggestive</span></td></tr>
+    </tbody>
+  </table>
+  <p class="cite">Representative: <b>Pellicano &amp; Burr (2012)</b>, <i>Trends in Cognitive Sciences</i>
+  (autism); <b>Sterzer et al. (2018)</b>, <i>Biological Psychiatry</i> (psychosis);
+  <b>Powers, Mathys &amp; Corlett (2017)</b>, <i>Science</i> (conditioned hallucinations).</p>
+
+  <div class="note">
+    <span class="lbl">Read these as frameworks, not diagnoses</span>
+    Each is a research programme with supportive findings and unresolved problems. They are included
+    because the <b>shape</b> of the explanation is the point: a symptom recast as a parameter set to
+    the wrong value, rather than a part that is broken. That reframing is doing real work in
+    psychiatry even where the specific models remain unsettled.
+  </div>
+</section>
+
+<!-- ============================================================ 11 -->
+<section id="placebo">
+  <h2><span class="num">11</span> Expectation as a cause, not a bias</h2>
+  <p class="sub">The cleanest proof that priors alter the outcome and not merely the report.</p>
+
+  <p>Benedetti's open–hidden paradigm removes the reporting problem entirely. Give an analgesic
+  openly, with the patient watching, and compare with the identical drug delivered by a
+  pre-programmed pump at a time the patient does not know. Same drug, same dose, same bloodstream.
+  <b>The hidden administration is reliably less effective.</b> The difference is the expectation,
+  and it is a component of the drug's measured effect.</p>
+  <p class="cite"><b>Benedetti, F. et al.</b> Open versus hidden medical treatments.
+  <i>Prevention &amp; Treatment</i> (2003); extended in <i>Lancet Neurology</i> (2004).
+  <span class="ev evR">Robust</span></p>
+
+  <div class="life">
+    <span class="lbl">The point being made</span>
+    This is not "believing makes it so". It is that <b>the prediction is one of the inputs from
+    which the experience is constructed</b>, on equal footing with the sensory evidence. Change the
+    prior and you have changed a term in the computation whose output is the experience.
+  </div>
+</section>
+
+<!-- ============================================================ 12 -->
+<section id="critique">
+  <h2><span class="num">12</span> The criticisms, stated fairly</h2>
+  <p class="sub">Held honestly, because a framework that explains everything explains nothing.</p>
+
+  <div class="grid g2">
+    <div class="card"><b>Unfalsifiability</b><p style="margin:6px 0 0;font-size:13.5px">In its strong form the free energy principle can accommodate any observation. A theory that cannot be embarrassed by data is a language, not a hypothesis. Critics have pressed this hard, and the reply — that it is a mathematical framework generating falsifiable <em>process</em> models — concedes part of the point.</p></div>
+    <div class="card"><b>Where are the error units?</b><p style="margin:6px 0 0;font-size:13.5px">The architecture predicts distinct populations computing prediction versus error. Evidence exists but is not decisive, and cortical microcircuitry has not cleanly delivered the required division of labour.</p></div>
+    <div class="card"><b>"Predictive processing" is not one theory</b><p style="margin:6px 0 0;font-size:13.5px">Rao–Ballard predictive coding, Bayesian brain accounts, active inference and the free energy principle are related but distinct, with different commitments and different evidence. They are frequently blurred together, including in popular treatments.</p></div>
+    <div class="card"><b>Alternative explanations survive</b><p style="margin:6px 0 0;font-size:13.5px">Several signature findings — repetition suppression especially — have adaptation-based accounts that do not require predictive coding. The framework is well-motivated, not established.</p></div>
+  </div>
+
+  <div class="rule">
+    <span class="lbl">How to hold the whole note</span>
+    Treat <a href="#inverse">§01</a>, <a href="#arch">§02</a>, <a href="#rpe">§07</a> and
+    <a href="#placebo">§11</a> as solid. Treat <a href="#precision">§03</a>,
+    <a href="#action">§06</a> and <a href="#expertise">§08</a> as strongly supported framework.
+    Treat <a href="#free">§04</a>, <a href="#emotion">§09</a> and <a href="#broken">§10</a> as live
+    research you are watching, not conclusions you are carrying.
+  </div>
+</section>
+
+<!-- ============================================================ 13 -->
+<section id="settle">
+  <h2><span class="num">13</span> What these settle</h2>
+  <p class="sub">The conclusions, stated flat.</p>
+
+  <table>
+    <thead><tr><th>Question</th><th>Settled answer</th></tr></thead>
+    <tbody>
+      <tr><td>Am I perceiving the world or a model of it?</td><td>A model. The world underdetermines the sensation, so inference is mandatory, and what reaches awareness is the conclusion.</td></tr>
+      <tr><td>Why doesn't knowing about an illusion remove it?</td><td>Explicit belief and perceptual prior sit at different levels. The higher one does not overwrite the lower.</td></tr>
+      <tr><td>What is attention?</td><td>Precision-weighting. Turning up the gain on selected prediction errors so they are allowed to update the model.</td></tr>
+      <tr><td>Why does the expert see more from less?</td><td>Better priors. Expertise is compression; compression is prediction. It is not superior raw memory or acuity.</td></tr>
+      <tr><td>What actually causes learning?</td><td>Prediction error. Established in conditioning (Rescorla–Wagner) and in dopamine firing (Schultz). Exposure without error teaches nothing.</td></tr>
+      <tr><td>Why is comfortable study ineffective?</td><td>Comfort is the absence of an error signal. No violated expectation, no update — and an expectation never stated cannot be violated.</td></tr>
+      <tr><td>Is expectation just a reporting bias?</td><td>No. Open–hidden drug administration removes the reporting channel and the effect remains. Expectation is an input to the experience.</td></tr>
+      <tr><td>Is the free energy principle established?</td><td>No. It is an influential and contested unifying claim. The underlying predictive coding is far better supported than the grand version.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 14 -->
+<section id="sources">
+  <h2><span class="num">14</span> Sources</h2>
+  <p class="sub">Ordered by where to start, not by importance.</p>
+
+  <h3>Books</h3>
+  <div class="shelf">
+    <div class="s"><b>Being You</b> — <i>Anil Seth (2021)</i>. The best entry point. "Controlled hallucination" is his phrase; the interoceptive and selfhood chapters are the strongest popular treatment available.</div>
+    <div class="s"><b>Surfing Uncertainty</b> — <i>Andy Clark (2016)</i>. The philosophical synthesis. Harder, and the one that made the framework respectable outside neuroscience.</div>
+    <div class="s"><b>The Predictive Mind</b> — <i>Jakob Hohwy (2013)</i>. Tighter and more argumentative than Clark; better if you want the claims sharply stated and defended.</div>
+    <div class="s"><b>How Emotions Are Made</b> — <i>Lisa Feldman Barrett (2017)</i>. The interoceptive extension. Read with <a href="#emotion">§09</a>'s caveat in hand.</div>
+  </div>
+
+  <h3>Papers</h3>
+  <div class="shelf">
+    <div class="s"><b>Rao &amp; Ballard (1999)</b> Predictive coding in the visual cortex · <i>Nature Neuroscience</i> — the foundational computational model.</div>
+    <div class="s"><b>Clark (2013)</b> Whatever next? Predictive brains, situated agents · <i>Behavioral and Brain Sciences</i> 36(3) — the target article, published with dozens of peer commentaries. Read the commentaries; that is where the criticisms live.</div>
+    <div class="s"><b>Friston (2010)</b> The free-energy principle · <i>Nature Reviews Neuroscience</i> — the ambitious unification.</div>
+    <div class="s"><b>Schultz, Dayan &amp; Montague (1997)</b> A neural substrate of prediction and reward · <i>Science</i> — dopamine as prediction error.</div>
+    <div class="s"><b>Blakemore, Wolpert &amp; Frith (1998)</b> Central cancellation of self-produced tickle · <i>Nature Neuroscience</i> — small, elegant, decisive.</div>
+  </div>
+
+  <h3>Courses and talks</h3>
+  <div class="shelf">
+    <div class="s"><b>MIT 9.13 · The Human Brain</b> — <i>Nancy Kanwisher</i>, OCW, free video. Not a predictive-processing course, but the best grounding in how visual and cognitive neuroscience actually establishes anything.</div>
+    <div class="s"><b>Anil Seth · "Your brain hallucinates your conscious reality"</b> — TED. Fifteen minutes, and it contains the sine-wave speech demonstration you should experience rather than read about.</div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Working note · Predictive processing · only the unexpected travels.</footer>
+
+</body>
+</html>

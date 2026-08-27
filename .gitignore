@@ -7,3 +7,7 @@ Thumbs.db
 
 # pre-migration originals; would otherwise be published at /_archive/
 _archive/
+
+# experiment output
+results.txt
+results_*.txt

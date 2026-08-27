@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Game Theory &amp; Signalling — Working Note</title>
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/systems.css" />
+<link rel="stylesheet" href="../../assets/notes.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Game Theory <span>&amp;</span> Signalling</div>
+    <div class="tagline">Working note · von Neumann → Nash → Schelling → Spence · strategy under interdependence</div>
+    <button class="btn" onclick="window.print()">Print / PDF</button>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Foundations</h4>
+  <a href="#why">00 · Why this exists</a>
+  <a href="#anatomy">01 · Anatomy of a game</a>
+  <a href="#nash">02 · Dominance &amp; equilibrium</a>
+  <a href="#zoo">03 · The five games</a>
+  <h4>Time &amp; Commitment</h4>
+  <a href="#repeat">04 · Repetition</a>
+  <a href="#sequential">05 · Sequential play</a>
+  <a href="#commit">06 · Commitment</a>
+  <h4>Information</h4>
+  <a href="#lemons">07 · Asymmetric information</a>
+  <a href="#signal">08 · Signalling</a>
+  <a href="#screen">09 · Screening</a>
+  <a href="#curse">10 · The winner's curse</a>
+  <h4>Application</h4>
+  <a href="#bargain">11 · Bargaining</a>
+  <a href="#evo">12 · Evolutionary games</a>
+  <a href="#mechanism">13 · Mechanism design</a>
+  <h4>Limits</h4>
+  <a href="#fails">14 · Where it fails</a>
+  <a href="#settle">15 · What these settle</a>
+  <a href="#sources">16 · Sources</a>
+</nav>
+
+<main>
+
+<div class="hero">
+  <div class="kicker">Working note · v1</div>
+  <h1>Game Theory &amp; Signalling</h1>
+  <p class="dropcap">Game theory is the mathematics of situations where your best move depends on
+  someone else's best move, and theirs depends on yours. The instant that circularity appears,
+  ordinary optimisation stops working — there is no "best" action to compute, only a fixed point
+  to find. Signalling is the branch that asks the harder question underneath: when nobody can
+  verify what you claim to be, what makes a claim worth believing?</p>
+  <div class="why">
+    <b>The one idea to carry.</b> Rational players, each doing the best they can, routinely
+    arrive somewhere all of them dislike. <mark>Bad outcomes do not require bad actors.</mark>
+    They fall out of the structure of the payoffs — which means the lever is almost never
+    persuasion, and almost always a change to the game.
+  </div>
+  <div class="tags">
+    <span class="tag">#equilibrium</span>
+    <span class="tag t2">#commitment</span>
+    <span class="tag t3">#costly-signals</span>
+    <span class="tag">#adverse-selection</span>
+    <span class="tag t2">#repeated-games</span>
+    <span class="tag t3">#mechanism-design</span>
+  </div>
+</div>
+
+<!-- ============================================================ 00 -->
+<section id="why">
+  <h2><span class="num">00</span> Why this exists</h2>
+  <p class="sub">Three claims that justify the field.</p>
+
+  <div class="pq"><span class="n">1</span>
+    <b>Interdependence breaks ordinary reasoning.</b>
+    Deciding what to do requires modelling what they will do, which requires modelling what they
+    think you will do. Left unstructured this regresses forever. Equilibrium is the device that
+    <mark>cuts the regress</mark> by asking for a set of expectations that are self-consistent.
+  </div>
+  <div class="pq"><span class="n">2</span>
+    <b>Individually rational, collectively terrible.</b>
+    The Prisoner's Dilemma is not a puzzle about criminals. It is a proof that the sum of
+    locally optimal choices can be globally worst — arms races, overfishing, price wars,
+    unmaintained code. No villain is required.
+  </div>
+  <div class="pq"><span class="n">3</span>
+    <b>Words are free, so words are ignored.</b>
+    Anything you can say costs nothing to say, therefore a liar can say it too, therefore it
+    carries no information. What survives is what a liar <em>could not afford to imitate</em>.
+    This single asymmetry generates credentials, warranties, peacock tails and hostage-taking.
+  </div>
+
+  <div class="note">
+    <span class="lbl">The practical payoff</span>
+    Four questions you can answer before acting: (a) Who are the players, really — including the
+    ones not in the room? (b) What is each one's payoff, as opposed to their stated position?
+    (c) Is this played once or repeatedly, and does everyone know which? (d) What can I do that
+    someone weaker than me <em>could not</em> do?
+  </div>
+</section>
+
+<!-- ============================================================ 01 -->
+<section id="anatomy">
+  <h2><span class="num">01</span> Anatomy of a game</h2>
+  <p class="sub">Four components. Getting them wrong is the usual source of a wrong answer.</p>
+
+  <dl class="kv">
+    <dt>Players</dt><dd>Every party whose choices affect payoffs. The commonest modelling error is omitting one — the regulator, the other candidate, your future self.</dd>
+    <dt>Strategies</dt><dd>A complete plan of action, specifying what you do at every point you might be asked to move. Not a single choice — a full contingent plan.</dd>
+    <dt>Payoffs</dt><dd>Preferences over outcomes, on an ordinal or expected-utility scale. Payoffs are <em>not</em> money; reputation, spite and fairness sit inside them.</dd>
+    <dt>Information</dt><dd>Who knows what, and who knows that others know. <b>Common knowledge</b> means everyone knows, everyone knows everyone knows, ad infinitum — a far stronger condition than "everyone was told".</dd>
+  </dl>
+
+  <p>Two structural splits matter more than any other. <strong>Simultaneous</strong> games (you
+  move without seeing their move — normal form, the payoff matrix) versus <strong>sequential</strong>
+  games (you observe, then respond — extensive form, the tree). And <strong>complete</strong>
+  information (payoffs known to all) versus <strong>incomplete</strong> information (types are
+  private — this is where signalling lives).</p>
+
+  <div class="rule">
+    <span class="lbl">Modelling discipline</span>
+    "Simultaneous" does not mean same instant. It means <b>neither party observes the other's
+    choice before committing.</b> Sealed bids submitted a week apart are simultaneous. A reply
+    sent one second later, having read theirs, is sequential.
+  </div>
+</section>
+
+<!-- ============================================================ 02 -->
+<section id="nash">
+  <h2><span class="num">02</span> Dominance and Nash equilibrium</h2>
+  <p class="sub">The solution concept the whole field is built on, and the thing it does not promise.</p>
+
+  <p>A strategy is <b>dominant</b> if it beats your alternatives regardless of what anyone else
+  does. If you have one, the game is easy — play it. The Prisoner's Dilemma's cruelty is that
+  defection is dominant for both, so the reasoning is trivial and the outcome is bad.</p>
+
+  <table class="mx">
+    <tr><th></th><th>They cooperate</th><th>They defect</th></tr>
+    <tr><td class="rh">You cooperate</td><td class="best">3, 3</td><td>0, 5</td></tr>
+    <tr><td class="rh">You defect</td><td>5, 0</td><td class="eq">1, 1</td></tr>
+  </table>
+  <p class="cite">Amber = the Nash equilibrium. Green = the outcome both players prefer. That
+  they are different cells <b>is</b> the dilemma.</p>
+
+  <p>Most games have no dominant strategy. <b>Nash equilibrium</b> generalises: a profile of
+  strategies where no player can improve by changing theirs <em>alone</em>. It is a mutual
+  best-response, a fixed point of the "what should I do given what they do" map.</p>
+
+  <div class="card">
+    <p style="margin:0"><b>Nash's theorem (1950).</b> Every finite game — any number of players,
+    any finite strategy sets — has at least one equilibrium, provided mixed strategies are
+    allowed. Proved on one and a half pages via a fixed-point theorem. Nobel 1994.</p>
+    <p class="cite"><b>Nash, J. (1950).</b> Equilibrium points in n-person games. <i>PNAS</i> 36(1), 48–49.</p>
+  </div>
+
+  <div class="trap">
+    <span class="lbl">What equilibrium does not mean</span>
+    Not optimal. Not fair. Not unique. Not stable against coalitions. Not necessarily what people
+    do. It means exactly one thing: <b>no individual can profit by deviating on their own.</b>
+    Every popular misuse of "Nash equilibrium" comes from importing a guarantee that isn't there.
+  </div>
+</section>
+
+<!-- ============================================================ 03 -->
+<section id="zoo">
+  <h2><span class="num">03</span> The five games worth memorising</h2>
+  <p class="sub">Each isolates one difficulty. Almost every real situation is one of these wearing a costume.</p>
+
+  <div class="grid g2">
+
+    <div class="fw f5">
+      <div class="fh"><span class="fx">G1</span><span class="fn">Prisoner's Dilemma</span></div>
+      <p class="fq">Mutual defection is the unique equilibrium and is worse for everyone than mutual cooperation.</p>
+      <dl>
+        <dt>Difficulty</dt><dd>Cooperation is <b>individually irrational</b> even when collectively obvious.</dd>
+        <dt>In the wild</dt><dd>Arms races, price wars, overfishing, technical debt, doping.</dd>
+        <dt>The exit</dt><dd>Repetition, enforceable contracts, or changing the payoffs. Never exhortation.</dd>
+      </dl>
+    </div>
+
+    <div class="fw f2">
+      <div class="fh"><span class="fx">G2</span><span class="fn">Stag Hunt</span></div>
+      <p class="fq">Two equilibria: both hunt stag (higher payoff) or both hunt hare (safer). Stag pays more but fails if the other defects.</p>
+      <dl>
+        <dt>Difficulty</dt><dd>Not greed — <b>trust</b>. Payoff-dominance versus risk-dominance.</dd>
+        <dt>In the wild</dt><dd>Startup co-founders, standards adoption, bank runs, joint migrations.</dd>
+        <dt>The exit</dt><dd>Assurance. Anything that raises confidence the other will show up.</dd>
+      </dl>
+    </div>
+
+    <div class="fw f4">
+      <div class="fh"><span class="fx">G3</span><span class="fn">Chicken / Hawk–Dove</span></div>
+      <p class="fq">Both swerving is fine, one swerving is a win for the other, neither swerving is catastrophic.</p>
+      <dl>
+        <dt>Difficulty</dt><dd>The winner is whoever <b>credibly cannot yield</b>. Weakness of will is strength.</dd>
+        <dt>In the wild</dt><dd>Brinkmanship, strikes, deadline chicken, territorial disputes.</dd>
+        <dt>The exit</dt><dd>Visible commitment — see <a href="#commit">§06</a>.</dd>
+      </dl>
+    </div>
+
+    <div class="fw f6">
+      <div class="fh"><span class="fx">G4</span><span class="fn">Battle of the Sexes</span></div>
+      <p class="fq">Both want to coordinate, but on different options. Any coordination beats none.</p>
+      <dl>
+        <dt>Difficulty</dt><dd>Coordination <b>with conflicting preferences</b>. Two equilibria, and a fight over which.</dd>
+        <dt>In the wild</dt><dd>Meeting venues, API standards, which team's tooling wins.</dd>
+        <dt>The exit</dt><dd>Focal points, turn-taking, or moving first.</dd>
+      </dl>
+    </div>
+
+    <div class="fw f3">
+      <div class="fh"><span class="fx">G5</span><span class="fn">Matching Pennies</span></div>
+      <p class="fq">Pure conflict. Whatever you do, they want the opposite. No equilibrium in pure strategies.</p>
+      <dl>
+        <dt>Difficulty</dt><dd>Forces <b>mixed strategies</b>: the only equilibrium is to randomise.</dd>
+        <dt>In the wild</dt><dd>Penalty kicks, auditing, security patrols, bluffing.</dd>
+        <dt>The lesson</dt><dd>Predictability is itself exploitable. Being readable is a payoff loss.</dd>
+      </dl>
+    </div>
+
+    <div class="fw f1">
+      <div class="fh"><span class="fx">·</span><span class="fn">How to tell them apart</span></div>
+      <p class="fq">Ask one question: <b>what happens if the other player defects while I cooperate?</b></p>
+      <dl>
+        <dt>Bad for me, good for them</dt><dd>Prisoner's Dilemma.</dd>
+        <dt>Bad for both</dt><dd>Stag Hunt.</dd>
+        <dt>Catastrophic for both if neither yields</dt><dd>Chicken.</dd>
+        <dt>Merely uncoordinated</dt><dd>Battle of the Sexes.</dd>
+      </dl>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================================================ 04 -->
+<section id="repeat">
+  <h2><span class="num">04</span> Repetition changes everything</h2>
+  <p class="sub">The shadow of the future is the cheapest cooperation technology known.</p>
+
+  <p>Played once, defection is dominant. Played indefinitely, defection today costs you every
+  future round of cooperation — and if the future matters enough, cooperation becomes an
+  equilibrium. This is the <b>folk theorem</b>: with a high enough discount factor, almost any
+  reasonable outcome can be sustained by the threat of future punishment.</p>
+
+  <p>Axelrod ran the question as a tournament. Researchers submitted strategies to play repeated
+  Prisoner's Dilemma against each other. The winner, twice, was the shortest program entered —
+  <b>TIT FOR TAT</b>: cooperate first, then copy the opponent's last move.</p>
+
+  <div class="card">
+    <p style="margin:0 0 8px"><b>Why it won, in Axelrod's own decomposition:</b></p>
+    <dl class="kv" style="margin:0">
+      <dt>Nice</dt><dd>Never defects first. Every high-scoring strategy in the tournament shared this.</dd>
+      <dt>Retaliatory</dt><dd>Punishes defection immediately, so it cannot be farmed.</dd>
+      <dt>Forgiving</dt><dd>Returns to cooperation the moment they do. Prevents death spirals.</dd>
+      <dt>Clear</dt><dd>Legible enough that the opponent can learn the rule. Unpredictability is worthless here — you <em>want</em> to be modelled correctly.</dd>
+    </dl>
+    <p class="cite"><b>Axelrod, R. (1984).</b> <i>The Evolution of Cooperation.</i> Basic Books. Tournament results first published in <i>Journal of Conflict Resolution</i> (1980).</p>
+  </div>
+
+  <div class="trap">
+    <span class="lbl">Two honest caveats <span class="ev evM">Mixed</span></span>
+    <b>(1) Known finite horizon unravels it.</b> If both know the last round, defection is optimal
+    there; knowing that, the second-to-last unravels too, all the way back. Cooperation needs an
+    open-ended or uncertain end. <b>(2) TIT FOR TAT is not unbeatable.</b> A Southampton team won
+    the 2004 anniversary tournament by entering colluding programs that recognised each other and
+    sacrificed themselves. Press &amp; Dyson (2012, <i>PNAS</i>) later found "zero-determinant"
+    strategies that can unilaterally set an opponent's payoff. The <em>result</em> was
+    tournament-specific; the <em>mechanism</em> — future consequences make cooperation rational —
+    is what generalises.
+  </div>
+</section>
+
+<!-- ============================================================ 05 -->
+<section id="sequential">
+  <h2><span class="num">05</span> Sequential play and non-credible threats</h2>
+  <p class="sub">Solve the tree backwards, and most threats evaporate.</p>
+
+  <p>When moves are observed, you solve by <b>backward induction</b>: start at the final decision,
+  work out what that player does, replace the branch with its outcome, repeat. What survives is a
+  <b>subgame perfect equilibrium</b> (Selten, Nobel 1994) — an equilibrium that remains sensible in
+  every subgame, not just along the expected path.</p>
+
+  <p>Its main use is destructive. It deletes threats that would be irrational to carry out. "Match
+  my price or I'll burn the market down" is a Nash equilibrium strategy but not subgame perfect,
+  because when the moment arrives, burning the market hurts the threatener. <mark>A threat that
+  is against your own interest to execute conveys nothing</mark> — unless you have removed your
+  own ability to not execute it, which is the next section.</p>
+
+  <div class="note">
+    <span class="lbl">Where backward induction predicts badly <span class="ev evM">Mixed</span></span>
+    In the <b>centipede game</b> the theory says take the money immediately; real players continue
+    for many rounds and earn more. Backward induction assumes common knowledge of rationality
+    through arbitrarily long chains — an assumption that breaks in humans well before round ten.
+    <span class="cite" style="display:block"><b>Rosenthal (1981)</b>; <b>McKelvey &amp; Palfrey (1992)</b>, <i>Econometrica</i>.</span>
+  </div>
+</section>
+
+<!-- ============================================================ 06 -->
+<section id="commit">
+  <h2><span class="num">06</span> Commitment — the strategic value of fewer options</h2>
+  <p class="sub">Schelling's inversion, and the most counter-intuitive result in the field.</p>
+
+  <blockquote>The power to constrain an adversary depends upon the power to bind oneself.
+  <span style="display:block;font-style:normal;font-size:12.5px;color:var(--tx3);margin-top:6px">— Thomas Schelling, <i>The Strategy of Conflict</i> (1960). Nobel 2005.</span></blockquote>
+
+  <p>Ordinary reasoning says more options is better. In strategic interaction the reverse holds:
+  <strong>options are a liability, because they can be used against you.</strong> If you are able to
+  back down, they know you are able to back down, so they push. If you have burned the bridge,
+  their push has nowhere to land.</p>
+
+  <div class="grid g3">
+    <div class="card"><b>Burn the bridge</b><p style="margin:6px 0 0;font-size:13.5px">Destroy the retreat physically. Cortés scuttling the ships. Deploying tripwire forces that cannot be withdrawn quietly.</p></div>
+    <div class="card"><b>Delegate to a rigid agent</b><p style="margin:6px 0 0;font-size:13.5px">"Policy forbids it." A negotiator with no authority to concede is stronger than one with full authority.</p></div>
+    <div class="card"><b>Make it public</b><p style="margin:6px 0 0;font-size:13.5px">Reputation cost converts a soft preference into a hard constraint. Announced positions are expensive to abandon.</p></div>
+  </div>
+
+  <h3>Focal points</h3>
+  <p>Schelling's other durable contribution. When players must coordinate without communicating,
+  they converge on whatever is <em>salient</em> — not optimal, just conspicuous. Asked to meet a
+  stranger in New York with no time or place agreed, a large majority named Grand Central at noon.
+  Nothing in the payoff structure selects it. Shared culture does.</p>
+
+  <div class="life">
+    <span class="lbl">Why this matters outside game theory</span>
+    Focal points explain why arbitrary conventions are so stable: round numbers in pricing and
+    salary, the status quo option, the incumbent, "whatever we did last time". <b>Defaults win not
+    because they are good but because they are obvious</b>, and obviousness is what coordination
+    runs on.
+  </div>
+</section>
+
+<!-- ============================================================ 07 -->
+<section id="lemons">
+  <h2><span class="num">07</span> Asymmetric information and adverse selection</h2>
+  <p class="sub">The market that destroys itself because quality is invisible.</p>
+
+  <p>Akerlof's used-car argument. Sellers know whether a car is good or a lemon; buyers do not.
+  Buyers can only pay the average value. That price is below what a good car is worth, so owners
+  of good cars withdraw. The average quality drops, so the price drops, so more good cars leave.
+  <mark>The market can unravel to nothing while every participant behaves sensibly.</mark></p>
+
+  <p class="cite"><b>Akerlof, G. (1970).</b> The market for "lemons": Quality uncertainty and the
+  market mechanism. <i>Quarterly Journal of Economics</i> 84(3), 488–500. Nobel 2001, shared with
+  Spence and Stiglitz. <span class="ev evR">Foundational</span></p>
+
+  <div class="note">
+    <span class="lbl">The generalisation</span>
+    Wherever quality is private and unverifiable, the good side exits first. Insurance attracts the
+    sick. Cheap freelance marketplaces attract the desperate. Job markets where nothing is checkable
+    fill with people whose claims cannot be checked. <b>The remedy is never trust — it is
+    verification, warranty, or a costly signal.</b>
+  </div>
+</section>
+
+<!-- ============================================================ 08 -->
+<section id="signal">
+  <h2><span class="num">08</span> Signalling — the informed side moves</h2>
+  <p class="sub">The one condition that separates a signal from noise.</p>
+
+  <p>Spence's answer to the lemons problem: if you are the good type, do something that a bad type
+  would find too expensive to copy. Education, in his model, raises wages partly independent of any
+  skill it imparts — because it is <em>cheaper to obtain for the able</em>, so completing it sorts
+  the population.</p>
+
+  <div class="rule">
+    <span class="lbl">The single-crossing condition — the whole theory in one line</span>
+    A signal transmits information if and only if it is <b>differentially costly</b>: the cost of
+    producing it must be lower for high types than for low types, by enough that low types decline
+    to imitate. If the cost is the same for everyone, everyone sends it, and it means nothing.
+  </div>
+
+  <p class="cite"><b>Spence, M. (1973).</b> Job market signaling. <i>Quarterly Journal of Economics</i>
+  87(3), 355–374. <span class="ev evR">Foundational</span></p>
+
+  <p>Two equilibria are possible. In a <b>separating equilibrium</b>, types choose different signal
+  levels and are correctly identified. In a <b>pooling equilibrium</b>, everyone sends the same
+  signal and the market learns nothing — which is what happens to a credential once it becomes
+  cheap enough that everyone acquires it.</p>
+
+  <h3>Biology found it independently</h3>
+  <p>Zahavi's <b>handicap principle</b>: the peacock's tail is honest <em>because</em> it is
+  costly. Only a genuinely healthy bird can afford to drag it around. A gazelle that spots — leaping
+  vertically on sighting a predator — is burning energy to announce that it has energy to burn, and
+  predators preferentially chase the ones that don't. Waste is the mechanism, not a side effect.</p>
+  <p class="cite"><b>Zahavi, A. (1975).</b> Mate selection — a selection for a handicap. <i>Journal of
+  Theoretical Biology</i> 53(1), 205–214. Formalised by <b>Grafen (1990)</b>. <span class="ev evR">Robust</span></p>
+
+  <h3>Cheap talk</h3>
+  <p>Costless, non-binding messages. Crawford and Sobel showed these convey real information only
+  to the degree that the parties' interests already align. Where interests conflict, cheap talk
+  degrades to noise — which is the formal reason unverifiable self-description is discounted to
+  approximately zero.</p>
+  <p class="cite"><b>Crawford, V. &amp; Sobel, J. (1982).</b> Strategic information transmission.
+  <i>Econometrica</i> 50(6), 1431–1451.</p>
+
+  <div class="vs">
+    <div class="claim"><h5>Cheap talk</h5>"I am highly proficient in distributed systems." Costs nothing to type. A person without the skill can type the identical sentence at identical cost. Information content: zero.</div>
+    <div class="real"><h5>Costly signal</h5>A repository with two years of commits; a specific number you can be interrogated on for forty minutes; a referral from someone spending their own reputation. Each is expensive for a low type to fake.</div>
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The negative signal</span>
+    A signal you point at but cannot back is worse than sending none. Silence leaves you
+    unclassified; an <em>invitation to verify</em> that fails verification classifies you.
+    Adverse selection punishes the unverifiable; failed verification punishes harder.
+  </div>
+
+  <h3>Countersignalling</h3>
+  <p>The wrinkle. When quality is already evident by other means, the very highest types stop
+  signalling — precisely to distinguish themselves from the anxious middle who must. Hence the
+  worst-dressed person in the room being the most senior. Note the trap: countersignalling only
+  works when your quality is <em>already independently visible</em>. Skipping the signal before
+  that point is indistinguishable from having nothing to send.</p>
+  <p class="cite"><b>Feltovich, N., Harbaugh, R. &amp; To, T. (2002).</b> Too cool for school?
+  Signalling and countersignalling. <i>RAND Journal of Economics</i> 33(4), 630–649. <span class="ev evM">Mixed</span></p>
+</section>
+
+<!-- ============================================================ 09 -->
+<section id="screen">
+  <h2><span class="num">09</span> Screening — the uninformed side moves</h2>
+  <p class="sub">Same information problem, opposite mover.</p>
+
+  <p>Signalling is the informed party proving their type. <b>Screening</b> is the uninformed party
+  designing a menu that makes the types sort themselves. Insurance offers a high-deductible cheap
+  plan and a low-deductible expensive one; the healthy pick the first, the sick the second, and the
+  insurer learns a type it was never told.</p>
+
+  <table>
+    <thead><tr><th>Mechanism</th><th>Who moves</th><th>How it separates</th></tr></thead>
+    <tbody>
+      <tr><td>Signalling</td><td>Informed party</td><td>Sends something the other type can't afford</td></tr>
+      <tr><td>Screening</td><td>Uninformed party</td><td>Offers a menu only one type will pick</td></tr>
+      <tr><td>Probation period</td><td>Uninformed</td><td>Cheap for the competent to survive, expensive otherwise</td></tr>
+      <tr><td>Take-home task</td><td>Uninformed</td><td>Time cost is low for the able, prohibitive for the bluffing</td></tr>
+      <tr><td>Warranty</td><td>Informed (seller)</td><td>Only affordable if the failure rate really is low</td></tr>
+    </tbody>
+  </table>
+  <p class="cite"><b>Rothschild, M. &amp; Stiglitz, J. (1976).</b> Equilibrium in competitive
+  insurance markets. <i>Quarterly Journal of Economics</i> 90(4), 629–649.</p>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="curse">
+  <h2><span class="num">10</span> The winner's curse</h2>
+  <p class="sub">In a common-value auction, winning is evidence you were wrong.</p>
+
+  <p>Several bidders estimate the value of the same object. Estimates scatter around the truth.
+  The winner is, by construction, <mark>the one who overestimated most</mark>. Unless bidders
+  shade their bids downward to account for this, winning is systematically bad news — and the
+  correction required grows with the number of competitors.</p>
+
+  <div class="life">
+    <span class="lbl">Outside auctions</span>
+    Applies wherever selection is by highest estimate. The candidate a company is most excited
+    about is the one it has most overestimated. The project that looked best on paper had the most
+    optimistic assumptions. <b>The selection process itself introduces the bias</b>, independent of
+    anyone's judgement.
+  </div>
+  <p class="cite"><b>Capen, Clapp &amp; Campbell (1971)</b>, from offshore oil lease bidding;
+  formalised by <b>Wilson</b> and <b>Milgrom &amp; Weber (1982)</b>. Nobel 2020 to Milgrom and Wilson.</p>
+</section>
+
+<!-- ============================================================ 11 -->
+<section id="bargain">
+  <h2><span class="num">11</span> Bargaining — patience as power</h2>
+  <p class="sub">Rubinstein's result, and the only number that matters in a negotiation.</p>
+
+  <p>In alternating-offer bargaining, agreement is reached immediately and the split is determined
+  by <b>relative impatience</b>. The party who loses less from another round of delay captures more
+  of the surplus. Not skill, not charm — discount rates.</p>
+  <p class="cite"><b>Rubinstein, A. (1982).</b> Perfect equilibrium in a bargaining model.
+  <i>Econometrica</i> 50(1), 97–109. <span class="ev evR">Robust</span></p>
+
+  <p>The practical form of impatience is your <b>outside option</b> — the Harvard Negotiation
+  Project's BATNA, the best alternative to a negotiated agreement. Your leverage is not what you
+  say inside the room; it is the quality of what happens if you walk out of it. This is why
+  improving the alternative moves outcomes far more than improving the arguments.</p>
+
+  <div class="note">
+    <span class="lbl">Anchoring, and the correct defence <span class="ev evR">Robust</span></span>
+    First offers exert a strong pull on final outcomes, even among experienced negotiators. The
+    effective counter is not to argue with the anchor but to <b>reorient attention to your own
+    target and alternative</b> before responding.
+    <span class="cite" style="display:block"><b>Galinsky, A. &amp; Mussweiler, T. (2001).</b> First offers as anchors. <i>JPSP</i> 81(4), 657–669.</span>
+  </div>
+</section>
+
+<!-- ============================================================ 12 -->
+<section id="evo">
+  <h2><span class="num">12</span> Evolutionary game theory</h2>
+  <p class="sub">Equilibrium without anyone reasoning at all.</p>
+
+  <p>Maynard Smith removed rationality from the theory and kept the results. Strategies are not
+  chosen, they are <em>inherited or copied</em>, and successful ones reproduce. An
+  <b>evolutionarily stable strategy</b> is one that, once common, cannot be invaded by a rare
+  mutant. Every ESS is a Nash equilibrium; the converse fails.</p>
+
+  <p>The Hawk–Dove game then predicts a stable <em>mixture</em>: too many hawks and they destroy
+  each other, too few and hawkishness pays. The population settles at proportions set by the ratio
+  of contest value to injury cost. No individual optimises; the distribution does.</p>
+  <p class="cite"><b>Maynard Smith, J. &amp; Price, G. (1973).</b> The logic of animal conflict.
+  <i>Nature</i> 246, 15–18. <span class="ev evR">Robust</span></p>
+
+  <div class="cpy">
+    <span class="lbl">Why this matters for the rest of the note</span>
+    It is the bridge from "what should a rational agent do" to "what will actually be observed in a
+    population over time" — markets, cultures, codebases, organisations. <b>You do not need anyone
+    to be clever for game-theoretic structure to show up in the outcome.</b>
+  </div>
+</section>
+
+<!-- ============================================================ 13 -->
+<section id="mechanism">
+  <h2><span class="num">13</span> Mechanism design — inverse game theory</h2>
+  <p class="sub">Stop predicting the game. Design one whose equilibrium is the outcome you want.</p>
+
+  <p>Given a desired outcome, what rules make self-interested play produce it? The central target
+  is <b>incentive compatibility</b>: honesty must be the individually optimal move, so the mechanism
+  never has to detect lying.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <b>Vickrey (second-price) auction</b>
+      <p style="margin:6px 0 0;font-size:13.6px">Highest bidder wins, pays the <em>second</em>-highest
+      bid. Bidding your true value becomes a dominant strategy — your bid decides whether you win,
+      never what you pay. Strategising is eliminated by construction.</p>
+      <p class="cite"><b>Vickrey, W. (1961).</b> Nobel 1996.</p>
+    </div>
+    <div class="card">
+      <b>Deferred acceptance</b>
+      <p style="margin:6px 0 0;font-size:13.6px">Gale–Shapley produces a stable matching — no pair
+      would both rather defect to each other — and is truth-telling for the proposing side. Used
+      for national medical residency matching and school assignment.</p>
+      <p class="cite"><b>Gale &amp; Shapley (1962).</b> Nobel 2012 to Shapley and Roth.</p>
+    </div>
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The impossibility result <span class="ev evR">Proved</span></span>
+    You cannot always have everything. <b>Myerson–Satterthwaite (1983)</b>: for bilateral trade with
+    private values, no mechanism is simultaneously efficient, individually rational and budget
+    balanced. Some surplus is unavoidably lost. And <b>Arrow's impossibility theorem</b> (1951)
+    rules out any voting rule satisfying a short list of reasonable conditions. Design has hard
+    limits, not just hard problems.
+  </div>
+</section>
+
+<!-- ============================================================ 14 -->
+<section id="fails">
+  <h2><span class="num">14</span> Where the theory fails — and how it fails</h2>
+  <p class="sub">The deviations are systematic, which makes them informative rather than embarrassing.</p>
+
+  <h3>The ultimatum game</h3>
+  <p>One player splits a sum; the other accepts (both paid) or rejects (both get nothing). Subgame
+  perfection says offer the minimum and accept anything positive. Reality: offers below roughly
+  20–30% are rejected around half the time, and proposers anticipate this, typically offering
+  40–50%. People pay real money to punish unfairness.</p>
+  <p class="cite"><b>Güth, Schmittberger &amp; Schwarze (1982)</b>, <i>JEBO</i>. Replicated
+  extensively. <span class="ev evR">Robust</span></p>
+
+  <h3>And it is cultural</h3>
+  <p>Henrich and colleagues ran the game across fifteen small-scale societies. Behaviour varied
+  widely with local norms of exchange and sharing. Among the Machiguenga, low offers were routinely
+  accepted; in gift-economy cultures such as the Au and Gnau, <em>hyper-generous</em> offers were
+  frequently rejected, because accepting a large gift incurs an obligation. There is no universal
+  fairness constant.</p>
+  <p class="cite"><b>Henrich, J. et al. (2001).</b> In search of Homo economicus. <i>American Economic
+  Review</i> 91(2); expanded in <i>Behavioral and Brain Sciences</i> (2005). <span class="ev evR">Robust</span></p>
+
+  <div class="rule">
+    <span class="lbl">How to hold the theory</span>
+    Game theory is not a prediction engine for human behaviour. It is a <b>structural clarifier</b>:
+    it tells you what the incentives are, which tells you what has to be overcome. Where real
+    players deviate — fairness, spite, trust, reciprocity — the deviation is itself the finding, and
+    usually points at a payoff you failed to write down.
+  </div>
+</section>
+
+<!-- ============================================================ 15 -->
+<section id="settle">
+  <h2><span class="num">15</span> What these settle</h2>
+  <p class="sub">The conclusions, stated flat.</p>
+
+  <table>
+    <thead><tr><th>Question</th><th>Settled answer</th></tr></thead>
+    <tbody>
+      <tr><td>Why do sensible people end up somewhere nobody wanted?</td><td>Because equilibrium is a fixed point, not an optimum. Structure produces the outcome; no bad actor is needed.</td></tr>
+      <tr><td>Does having more options make me stronger?</td><td>No. In strategic settings, visibly removing your own options is a source of power. Credibility comes from inability to yield.</td></tr>
+      <tr><td>Why is cooperation possible at all?</td><td>Repetition with an open-ended horizon. Nice, retaliatory, forgiving and legible beats clever.</td></tr>
+      <tr><td>Why is an unverifiable claim worth so little?</td><td>Cheap talk. If a low type can produce the identical message at identical cost, the message carries no information by construction.</td></tr>
+      <tr><td>What makes a claim believable?</td><td>Differential cost. It must be something a weaker type could not afford to imitate. Nothing else qualifies.</td></tr>
+      <tr><td>Why do good options disappear from bad markets?</td><td>Adverse selection. When quality is invisible, price converges to average, and above-average quality exits first.</td></tr>
+      <tr><td>What actually decides a negotiation?</td><td>Relative patience, which in practice means the quality of each side's outside option — not the arguments made inside the room.</td></tr>
+      <tr><td>Why does winning a competitive bid feel bad later?</td><td>The winner's curse. Selection by highest estimate selects the largest overestimate.</td></tr>
+      <tr><td>Can I design my way out of a bad game?</td><td>Often — that is mechanism design. But not always: Myerson–Satterthwaite and Arrow set hard limits.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 16 -->
+<section id="sources">
+  <h2><span class="num">16</span> Sources</h2>
+  <p class="sub">Primary where it matters, courses where they are genuinely free and good.</p>
+
+  <h3>Courses</h3>
+  <div class="shelf">
+    <div class="s"><b>Yale ECON 159 · Game Theory</b> — <i>Ben Polak</i>. Open Yale Courses, full video, free. The best undergraduate treatment available anywhere, and it assumes almost no mathematics.</div>
+    <div class="s"><b>MIT 14.12 · Economic Applications of Game Theory</b> — OCW. Problem sets and notes. More formal than Yale; take it second.</div>
+    <div class="s"><b>Stanford CS364A · Algorithmic Game Theory</b> — <i>Tim Roughgarden</i>. Lecture notes and videos free. Where mechanism design meets computation.</div>
+  </div>
+
+  <h3>Books</h3>
+  <div class="shelf">
+    <div class="s"><b>The Strategy of Conflict</b> — <i>Schelling (1960)</i>. Commitment, focal points, the whole logic of bargaining and deterrence. Almost no mathematics. If you read one, read this.</div>
+    <div class="s"><b>The Evolution of Cooperation</b> — <i>Axelrod (1984)</i>. The tournaments, and why nice strategies win in a world with a future.</div>
+    <div class="s"><b>The Art of Strategy</b> — <i>Dixit &amp; Nalebuff (2008)</i>. The applied companion; the readable entry point.</div>
+    <div class="s"><b>An Introduction to Game Theory</b> — <i>Osborne (2003)</i>. The standard rigorous textbook when you want proofs.</div>
+  </div>
+
+  <h3>Papers</h3>
+  <div class="shelf">
+    <div class="s"><b>Nash (1950)</b> Equilibrium points in n-person games · <i>PNAS</i> — one and a half pages.</div>
+    <div class="s"><b>Akerlof (1970)</b> The market for lemons · <i>QJE</i> — adverse selection.</div>
+    <div class="s"><b>Spence (1973)</b> Job market signaling · <i>QJE</i> — the single-crossing condition.</div>
+    <div class="s"><b>Zahavi (1975)</b> Mate selection · <i>J. Theor. Biol.</i> — the handicap principle.</div>
+    <div class="s"><b>Crawford &amp; Sobel (1982)</b> Strategic information transmission · <i>Econometrica</i> — cheap talk.</div>
+    <div class="s"><b>Rubinstein (1982)</b> Perfect equilibrium in a bargaining model · <i>Econometrica</i> — patience is power.</div>
+    <div class="s"><b>Henrich et al. (2001/2005)</b> In search of Homo economicus — fairness is not a constant.</div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Working note · Game theory &amp; signalling · claims carry citations, not vibes.</footer>
+
+</body>
+</html>
