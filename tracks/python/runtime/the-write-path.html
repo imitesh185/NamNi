@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Python Runtime — Field Notes · The Write Path</title>
+<link rel="stylesheet" href="../../../assets/base.css" />
+<script src="../../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Python Runtime <span>·</span> Field Notes</div>
+    <div class="tagline">P3 · rungs 1–2 · earned by killing programs</div>
+    <button class="btn" onclick="window.print()">Print / PDF</button>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#frame">00 · Where this came from</a>
+  <a href="#claim">01 · A write is an intention</a>
+  <h4>The Model</h4>
+  <a href="#stages">02 · Three stages, two boundaries</a>
+  <a href="#crossing">03 · Which calls actually cross</a>
+  <a href="#deaths">04 · The two deaths</a>
+  <h4>Evidence</h4>
+  <a href="#measured">05 · What we measured</a>
+  <a href="#which">06 · Which disaster each call covers</a>
+  <a href="#quiet">07 · Empty is worse than absent</a>
+  <h4>Debris</h4>
+  <a href="#thirteen">08 · The thirteenth byte</a>
+  <a href="#traps">09 · Traps we actually hit</a>
+  <h4>Reference</h4>
+  <a href="#recap">10 · The model, restated</a>
+  <a href="#real">11 · Where this shows up</a>
+  <a href="#next">12 · Open debts</a>
+</nav>
+
+<main>
+
+<div class="hero">
+  <div class="kicker">Project P3 · Crash Survival · Rungs 1–2</div>
+  <h1>The write path</h1>
+  <p class="dropcap">These are not lecture notes. Every claim below was produced by writing a naive
+  program, killing it two different ways, and reading what was left on the disk. Several of the
+  claims contradicted what we predicted, and one contradicted what the guide asserted — that one
+  was settled by checking the artifact, which is the only authority that counts here.</p>
+  <div class="why">
+    <b>The whole thing in one sentence.</b> <mark>A call that looks like one operation is really
+    several, with different owners and different failure semantics.</mark> <code>out.write(...)</code>
+    does not put anything on a disk. It puts bytes in a buffer that belongs to your process, and
+    your process is the thing most likely to die.
+  </div>
+  <div class="tags">
+    <span class="tag">#buffering</span>
+    <span class="tag t2">#durability</span>
+    <span class="tag t3">#flush-vs-fsync</span>
+    <span class="tag">#crash-semantics</span>
+    <span class="tag t2">#quiet-failure</span>
+  </div>
+</div>
+
+<!-- ============================================================ 00 -->
+<section id="frame">
+  <h2><span class="num">00</span> Where this came from</h2>
+  <p class="sub">No concept was introduced because it was next. Each one arrived because a program lied.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>The setup</h4>
+      <p>A ten-item loop. Each iteration writes one line to a file and prints
+      <code>processed item N</code>. Twelve lines of code, deliberately naive — no error handling,
+      no cleanup, the file opened once outside the loop.</p>
+    </div>
+    <div class="card">
+      <h4>The question</h4>
+      <p>Kill it at item 5 — once with <b>Ctrl-C</b>, once with <b>taskkill /F</b>. The console said
+      <code>processed item 5</code> both times. <mark>Was the console telling the truth?</mark></p>
+    </div>
+  </div>
+
+  <div class="rule">
+    <span class="lbl">Method</span>
+    Predictions committed <b>in writing before running</b>, in a gate that refuses to execute the
+    program until they are filled. An unpredicted result is a data point. A result that contradicts
+    a written prediction is a finding.
+  </div>
+</section>
+
+<!-- ============================================================ 01 -->
+<section id="claim">
+  <h2><span class="num">01</span> A write is an intention, not a fact</h2>
+  <p class="sub">The console was lying, and it was lying about something specific.</p>
+
+  <p>The instinct is that <code>out.write(...)</code> puts data on the disk, and that if the program
+  said it happened, it happened. Both halves are false, and they are false for the same reason.</p>
+
+  <div class="note">
+    <span class="lbl">The finding</span>
+    <mark>Data survives a crash only if it has crossed out of the dying thing's control before the
+    crash.</mark> A write still sitting inside your process is not a write — it is an intention. The
+    <code>print</code> reported the intention, never the crossing.
+  </div>
+
+  <p>Which reframes the whole problem. You cannot make a false statement verifiable by inspecting it
+  afterwards — checking the file's size after the fact is checking too late, and from the wrong side.
+  You <b>reorder</b> instead: force the crossing to happen <em>before</em> you make the claim, and the
+  claim becomes incapable of being false.</p>
+</section>
+
+<!-- ============================================================ 02 -->
+<section id="stages">
+  <h2><span class="num">02</span> Three stages, two boundaries</h2>
+  <p class="sub">"On disk" is not one place. It is three, and they have different owners.</p>
+
+  <figure>
+    <svg viewBox="0 0 760 268" role="img" aria-label="The write path from Python buffer through kernel page cache to disk">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#b07d3a"/>
+        </marker>
+      </defs>
+
+      <text class="sxs" x="18" y="26">STAGE 1 · YOU OWN IT</text>
+      <rect x="14" y="38" width="196" height="92" rx="13" fill="#fdf3e4" stroke="#d9b98a"/>
+      <text class="st" x="112" y="72" text-anchor="middle">Python file buffer</text>
+      <text class="sm" x="112" y="94" text-anchor="middle">~8 KB</text>
+      <text class="ss" x="112" y="114" text-anchor="middle">inside your process</text>
+
+      <text class="sxs" x="286" y="26">STAGE 2 · KERNEL OWNS IT</text>
+      <rect x="282" y="38" width="196" height="92" rx="13" fill="#eef3ea" stroke="#a8bd96"/>
+      <text class="st" x="380" y="72" text-anchor="middle">OS page cache</text>
+      <text class="sm" x="380" y="94" text-anchor="middle">kernel memory</text>
+      <text class="ss" x="380" y="114" text-anchor="middle">outlives your process</text>
+
+      <text class="sxs" x="554" y="26">STAGE 3 · HARDWARE</text>
+      <rect x="550" y="38" width="196" height="92" rx="13" fill="#eaeff5" stroke="#93a8c2"/>
+      <text class="st" x="648" y="72" text-anchor="middle">Physical disk</text>
+      <text class="sm" x="648" y="94" text-anchor="middle">platter / flash</text>
+      <text class="ss" x="648" y="114" text-anchor="middle">outlives the machine</text>
+
+      <line x1="212" y1="84" x2="276" y2="84" stroke="#b07d3a" stroke-width="2" marker-end="url(#ah)"/>
+      <text class="sm" x="244" y="72" text-anchor="middle">flush()</text>
+
+      <line x1="480" y1="84" x2="544" y2="84" stroke="#b07d3a" stroke-width="2" marker-end="url(#ah)"/>
+      <text class="sm" x="512" y="72" text-anchor="middle">fsync()</text>
+
+      <text class="sxs" x="18" y="176">WHAT EACH DEATH DESTROYS</text>
+
+      <rect x="14" y="188" width="196" height="34" rx="9" fill="#f7e6e3" stroke="#d4a49b"/>
+      <text class="sm" x="112" y="210" text-anchor="middle">taskkill /F  ·  crash  ·  bug</text>
+      <line x1="14" y1="232" x2="210" y2="232" stroke="#c0605a" stroke-width="2.5"/>
+      <text class="ss" x="112" y="252" text-anchor="middle">stage 1 is lost, 2 and 3 survive</text>
+
+      <rect x="282" y="188" width="464" height="34" rx="9" fill="#f7e6e3" stroke="#d4a49b"/>
+      <text class="sm" x="514" y="210" text-anchor="middle">power cut  ·  kernel panic  ·  VM destroyed</text>
+      <line x1="14" y1="240" x2="478" y2="240" stroke="#c0605a" stroke-width="2.5" stroke-dasharray="5 4"/>
+      <text class="ss" x="514" y="252" text-anchor="middle">stages 1 and 2 are both lost</text>
+    </svg>
+    <figcaption>Two boundaries, two calls, two entirely different disasters. Choosing a durability
+    guarantee means choosing which of these you are afraid of.</figcaption>
+  </figure>
+
+  <div class="life">
+    <span class="lbl">Why buffering exists at all</span>
+    Crossing into the kernel is a <b>syscall</b> — expensive. Batching thousands of small writes into
+    one crossing is why writing a line at a time is not catastrophically slow. The buffer is not a
+    bug; it is a bargain, and the price is the window in which your data exists only in a place that
+    dies with you.
+  </div>
+</section>
+
+<!-- ============================================================ 03 -->
+<section id="crossing">
+  <h2><span class="num">03</span> Which calls actually cross</h2>
+  <p class="sub">The boundary is not "file operations". It runs between specific calls, and you have to know which.</p>
+
+  <table class="nw">
+    <thead><tr><th>You call</th><th>What it really is</th><th>Reaches the kernel?</th></tr></thead>
+    <tbody>
+      <tr><td><code>open(path, "a")</code></td><td>a syscall</td><td><b>Immediately.</b> The directory entry is created right there.</td></tr>
+      <tr><td><code>out.write(s)</code></td><td>a copy into your own buffer</td><td><b>No.</b> Usually not until the buffer fills or is flushed.</td></tr>
+      <tr><td><code>out.flush()</code></td><td>a syscall</td><td><b>Yes.</b> Pushes stage 1 → stage 2.</td></tr>
+      <tr><td><code>os.fsync(out.fileno())</code></td><td>a syscall</td><td><b>Yes,</b> and forces stage 2 → stage 3 before returning.</td></tr>
+      <tr><td><code>out.close()</code></td><td>flush, then release</td><td><b>Yes</b> — but only if it is reached.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The asymmetry that surprised us</span>
+    A hard-killed run left behind a file that <b>existed and was zero bytes</b>. The prediction "the
+    file will not exist at all" was wrong. <mark>Opening announced the file to the kernel instantly;
+    the contents never crossed.</mark> Metadata and contents travel on different schedules.
+  </div>
+
+  <p>Order matters between the two crossings, and it only works one way:</p>
+
+<pre><code>out.<span class="f">write</span>(<span class="s">f"item {i} done\n"</span>)   <span class="c"># stage 1 only</span>
+out.<span class="f">flush</span>()                       <span class="c"># stage 1 -&gt; 2</span>
+os.<span class="f">fsync</span>(out.<span class="f">fileno</span>())         <span class="c"># stage 2 -&gt; 3</span></code></pre>
+
+  <p>Calling <code>fsync</code> without flushing first is useless: it orders the kernel to write out
+  what it holds, and the kernel does not hold bytes that are still in your process. You cannot skip
+  the first crossing to get to the second. Note also that <code>fsync</code> takes the file's
+  <b>integer OS handle</b>, not the Python file object — the two live on opposite sides of the
+  boundary, and the API says so.</p>
+</section>
+
+<!-- ============================================================ 04 -->
+<section id="deaths">
+  <h2><span class="num">04</span> The two deaths</h2>
+  <p class="sub">The difference has nothing to do with threads, ports or process trees. We predicted that it did. It doesn't.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>Ctrl-C — a death you can react to</h4>
+      <p>Delivers an interrupt Python is <b>allowed to handle</b>. It raises
+      <code>KeyboardInterrupt</code>, the exception propagates, and the interpreter shuts down in an
+      orderly way. During shutdown the file object is finalized, and finalizing flushes it.
+      <mark>The program got to execute more code on its way out.</mark></p>
+    </div>
+    <div class="card">
+      <h4>taskkill /F — a death you cannot</h4>
+      <p>The OS terminates the process outright. <b>Zero Python code runs.</b> No handler, no
+      <code>finally</code>, no finalizer, no cleanup. Stage 1 was your process's own memory, and it
+      is gone with the process. Stages 2 and 3 never heard about the item.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="lbl">The question that unlocks it</span>
+    Not "which processes die". <mark>What is one kind of death allowing the program to <em>do</em>
+    that the other isn't?</mark> Every cleanup mechanism in Python — <code>finally</code>,
+    <code>with</code>, <code>__del__</code>, <code>atexit</code> — is code, and code needs a running
+    process. A guarantee that depends on your own cleanup running is not a guarantee against a hard
+    kill.
+  </div>
+</section>
+
+<!-- ============================================================ 05 -->
+<section id="measured">
+  <h2><span class="num">05</span> What we measured</h2>
+  <p class="sub">Same program, same kill, three write policies. Real numbers from real runs.</p>
+
+  <table>
+    <thead><tr><th style="width:118px">Mode</th><th>Policy</th><th>After <code>taskkill /F</code></th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><code>naive</code></td><td>write only</td><td><b>0 bytes</b>, file exists</td><td>everything claimed was lost</td></tr>
+      <tr><td><code>flush</code></td><td>write + flush</td><td><b>52 bytes</b> — items 0–3</td><td>every claimed item survived</td></tr>
+      <tr><td><code>sync</code></td><td>write + flush + fsync</td><td><b>52 bytes</b> — items 0–3</td><td>byte-for-byte identical to flush</td></tr>
+    </tbody>
+  </table>
+
+  <p>And separately, the naive program interrupted with <b>Ctrl-C</b> at item 5 kept items 0–5 —
+  the same policy that lost everything under a hard kill. The write policy did not change. The
+  <em>kind of death</em> did.</p>
+
+  <div class="life">
+    <span class="lbl">Prediction ledger</span>
+    <b>naive → empty:</b> predicted, correct. &nbsp;<b>flush → survives:</b> predicted, correct —
+    this is the core result. &nbsp;<b>flush vs sync:</b> not predicted; recorded honestly as "unable
+    to say", which is a better entry than a guess dressed as an answer.
+  </div>
+</section>
+
+<!-- ============================================================ 06 -->
+<section id="which">
+  <h2><span class="num">06</span> Which disaster each call covers</h2>
+  <p class="sub">Identical files are not evidence that fsync does nothing. They are evidence we simulated the wrong disaster.</p>
+
+  <p><code>taskkill /F</code> kills your <b>process</b>. It does not scratch the kernel — the kernel
+  keeps running, still holding your bytes, and writes them out when it feels like it. So once
+  <code>flush()</code> pushed the bytes across the first boundary, your process became irrelevant to
+  their survival. Forcing the second crossing changes nothing <em>unless the thing that dies is the
+  kernel itself.</em></p>
+
+  <table class="nw">
+    <thead><tr><th>Call</th><th>Protects against</th><th>Does nothing about</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td><code>flush()</code></td><td>process death — kill, crash, exception, bug</td><td>power loss, kernel panic</td><td>cheap: one syscall</td></tr>
+      <tr><td><code>fsync()</code></td><td>machine death — power cut, panic, VM destroyed</td><td>nothing further; this is the strong one</td><td><b>expensive: waits for hardware</b></td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Honest limit of this experiment</span>
+    <code>flush</code> is genuinely testable — you can kill a process. <code>fsync</code> is
+    <b>not</b> testable this way; proving it would require cutting power to the machine mid-write.
+    <mark>Knowing which disaster your test actually simulates is worth more than the result of the
+    test.</mark>
+  </div>
+
+  <p>This is why "make it durable" is a <b>throughput decision</b>, not a correctness checkbox.
+  Syncing per record means waiting on hardware per record. Every serious system exposes this as a
+  knob rather than choosing for you.</p>
+</section>
+
+<!-- ============================================================ 07 -->
+<section id="quiet">
+  <h2><span class="num">07</span> Empty is worse than absent</h2>
+  <p class="sub">The hard kill produced the expensive kind of failure, not the cheap kind.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4><span class="pill pL">LOUD</span> No file</h4>
+      <p>Downstream asks "is the output there?" → <b>no</b> → fails immediately. Someone is paged, the
+      run is retried. Annoying, cheap, contained.</p>
+    </div>
+    <div class="card">
+      <h4><span class="pill pC">QUIET</span> Empty file</h4>
+      <p>Downstream asks "is the output there?" → <b>yes</b> → proceeds with zero rows, computes a
+      total of zero, and reports success. No error anywhere. <mark>This is the kind that reaches
+      production and stays there.</mark></p>
+    </div>
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The check that fails</span>
+    "The output path exists, therefore the job succeeded" is a real check that real pipelines really
+    make, and a zero-byte file defeats it. <b>Existence of an artifact and validity of an artifact
+    are separate claims,</b> and nothing about a filename tells you the second one.
+  </div>
+</section>
+
+<!-- ============================================================ 08 -->
+<section id="thirteen">
+  <h2><span class="num">08</span> The thirteenth byte</h2>
+  <p class="sub">A small one, found by dividing file sizes and getting a non-integer.</p>
+
+  <p><code>item 0 done\n</code> is <b>12 characters</b>. The file measured <b>13 bytes per line</b>.
+  On Windows, a file opened in text mode translates <code>\n</code> into <code>\r\n</code> on the way
+  out. The runtime silently rewrote the data.</p>
+
+  <div class="note">
+    <span class="lbl">Why it matters beyond trivia</span>
+    It is the reason CSV files get mangled crossing between Windows and Linux, and why the
+    <code>csv</code> module tells you to open files with <code>newline=""</code>.
+    <mark>Your program's idea of what it wrote and the disk's idea of what it holds are not the same
+    thing</mark> — the same lesson as the rest of this page, arriving from a different direction.
+  </div>
+</section>
+
+<!-- ============================================================ 09 -->
+<section id="traps">
+  <h2><span class="num">09</span> Traps we actually hit</h2>
+  <p class="sub">Three mistakes, all made for real. The first inverted a correct result into a wrong conclusion.</p>
+
+  <div class="card">
+    <h4>T1 · Stale state read as fresh output — cost: a wrong conclusion</h4>
+    <p>The file was opened in <b>append</b> mode and not deleted between runs. After the hard kill
+    wrote nothing, reading the file showed the <em>previous</em> run's data — so the hard kill looked
+    like it had preserved everything, the exact reverse of the truth. The prediction had been correct
+    all along.</p>
+    <p>Detected by arithmetic, not by intuition: two surviving runs would have left twelve lines.
+    There were six. Exactly one run had ever flushed, and a hard-killed process cannot be the one
+    that did.</p>
+    <div class="life">
+      <span class="lbl">The lesson is the project</span>
+      "Is this output from this run or the last one?" is not a testing-hygiene footnote here — it is
+      the central question of the whole project, reproduced by accident in its own harness. Every
+      mode now writes to its own file.
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>T2 · <code>out.fsync()</code> does not exist — cost: one dead run</h4>
+    <p>Written by pattern-matching the <code>out.flush()</code> line above it, despite the
+    instruction stating it was a function in <code>os</code> that takes the integer handle, not a
+    method on the file object. The run died with <code>AttributeError</code> at item 0.</p>
+    <p>Three signals said so and all three were initially missed: the Python command exited with code
+    <b>1</b>; the follow-up <code>taskkill</code> <em>also</em> exited 1 because the process was
+    already gone; and the file held exactly one line, written by the flush immediately before the
+    crash. <mark>Those bytes were not a result. They were wreckage.</mark></p>
+  </div>
+
+  <div class="card">
+    <h4>T3 · Comparing runs killed at different points — cost: an invalid comparison</h4>
+    <p>One mode was killed at item 1, another at item 0. Different byte counts, no conclusion
+    available — the variable under test was not the only thing that varied. Re-run with the kill at a
+    fixed item, the two modes came out identical, and only then did the comparison mean anything.</p>
+  </div>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="recap">
+  <h2><span class="num">10</span> The model, restated</h2>
+  <p class="sub">Everything above, compressed to the seven statements worth carrying away.</p>
+
+  <table>
+    <thead><tr><th style="width:34px">#</th><th>What is now settled</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b></td><td>There are three stages — <b>Python's buffer</b> (yours), the <b>OS page cache</b> (the kernel's), the <b>disk</b>. Only stage 1 dies with your process.</td></tr>
+      <tr><td><b>2</b></td><td>The hard-killed file <b>existed</b> because <code>open()</code> is a syscall and created the directory entry at once. It was <b>empty</b> because <code>write()</code> only filled a buffer inside the process, and that buffer died with it.</td></tr>
+      <tr><td><b>3</b></td><td>Ctrl-C raises an exception the program is allowed to handle, so shutdown code runs and the file is flushed during finalization. <code>taskkill /F</code> runs no Python at all. <mark>The difference is whether the dying program gets to execute anything.</mark></td></tr>
+      <tr><td><b>4</b></td><td><code>flush</code> and <code>fsync</code> came out identical because the kill destroyed only the <b>process</b>, and flush had already handed the bytes to the kernel. Separating them would require killing the kernel — a power cut.</td></tr>
+      <tr><td><b>5</b></td><td><code>fsync</code> without a prior <code>flush</code> is useless: the kernel can only write out what it holds, and unflushed bytes are still sitting in your process.</td></tr>
+      <tr><td><b>6</b></td><td>A zero-byte file defeats the check <em>"does the output exist?"</em> — it answers <b>yes</b>, so downstream proceeds with no rows and reports success. A missing file would have failed loudly and cheaply.</td></tr>
+      <tr><td><b>7</b></td><td>The ordering rule: <mark>make it true before you say it.</mark> A claim cannot be verified after it has been published — force the crossing first, then print.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 11 -->
+<section id="real">
+  <h2><span class="num">11</span> Where this shows up in real work</h2>
+  <p class="sub">Five things that look unrelated and are one model.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>Kafka <code>acks</code></h4>
+      <p><code>acks=0</code> / <code>1</code> / <code>all</code> is a producer choosing <b>which stage
+      counts as written</b>. It is the same axis as write / flush / fsync, spelled with brokers
+      instead of buffers. <code>send()</code> returning is not delivery.</p>
+    </div>
+    <div class="card">
+      <h4>Spark's commit protocol</h4>
+      <p>Tasks write to a temporary location and commit by <b>atomic rename</b>, then drop a separate
+      <code>_SUCCESS</code> marker. Spark does not trust the output directory either — because
+      existence is not validity, exactly as §07 found.</p>
+    </div>
+    <div class="card">
+      <h4>Database group commit</h4>
+      <p>Syncing per transaction means waiting on hardware per transaction. Databases batch many
+      commits into one <code>fsync</code> for the reason in §06: the strong crossing is expensive, so
+      you amortise it rather than skip it.</p>
+    </div>
+    <div class="card">
+      <h4>Write-ahead logging</h4>
+      <p>Record the intention durably <em>before</em> performing the change, so a crash leaves
+      something that can be replayed. It is §01's rule turned into a storage design: never claim
+      before the crossing.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="lbl">The interview version</span>
+    <mark>"How does Spark guarantee exactly-once output when a task dies mid-write?"</mark> is
+    answerable from this page without having memorised anything about Spark — stages, owners,
+    crossings, atomic rename, marker file. One model, generating the answer on demand, beats five
+    remembered facts.
+  </div>
+</section>
+
+<!-- ============================================================ 12 -->
+<section id="next">
+  <h2><span class="num">12</span> Open debts and what comes next</h2>
+  <p class="sub">Parked deliberately, under the 25-minute rule. Not chased, not dropped.</p>
+
+  <table>
+    <thead><tr><th style="width:60px">#</th><th>Question</th><th>Raised by</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Local variables "live on the stack" — but where do their <em>values</em> live? Stack vs heap, and which one a Python name points into.</td><td>Rung 1 Q1</td></tr>
+      <tr><td>2</td><td>Can a write be torn in half — a partially written record rather than a missing one? Possible on a real filesystem, or prevented?</td><td>Rung 1 Q2</td></tr>
+      <tr><td>3</td><td>What does durability actually cost in records/second? The measurement that would close rung 2's research bar.</td><td>Rung 2</td></tr>
+    </tbody>
+  </table>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4>Next — the file must testify</h4>
+      <p>If the program's word is worthless, the <b>artifact</b> has to carry the truth. That forces a
+      self-describing record format: markers, and a way for a reader to tell a complete record from a
+      truncated one without trusting anything external.</p>
+    </div>
+    <div class="card">
+      <h4>Then — recovery, and the first real class</h4>
+      <p>A second run reads the log and resumes where the first died. That requires holding "what have
+      I already done" across calls — state with an owner and a lifetime. <mark>That pressure, and not
+      a syllabus, is what will introduce classes.</mark></p>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<button id="toTop" title="Back to top" aria-label="Back to top">↑</button>
+
+<footer>
+  Python Runtime · Field notes from project P3, rungs 1–2 — the write path and crash semantics.
+  Companion code: <code>tracks/Projects/p3-crash-survival/</code>.
+</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('on'); });
+        var a = map[e.target.id];
+        if(a) a.classList.add('on');
+      }
+    });
+  }, {rootMargin:'-72px 0px -70% 0px', threshold:0});
+  document.querySelectorAll('section').forEach(function(s){ obs.observe(s); });
+
+  var bar = document.getElementById('bar');
+  var top = document.getElementById('toTop');
+  function onScroll(){
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+    top.classList.toggle('show', window.scrollY > 600);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  top.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+})();
+</script>
+</body>
+</html>

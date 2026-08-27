@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Python Object Model — Drill 1.1 · Identity, Type, Value</title>
+<title>Python Object Model — 1.1 · Identity, Type, Value</title>
 <link rel="stylesheet" href="../../../assets/base.css" />
 <link rel="stylesheet" href="../../../assets/1.1-identity-type-value.css" />
 <script src="../../../assets/nav.js" defer></script>
@@ -13,9 +13,8 @@
 <header>
   <div class="hwrap">
     <div class="brand">Python Object Model <span>·</span></div>
-    <div class="tagline">Stage 1 of 6 · identity, type, value · predict before you run</div>
+    <div class="tagline">Stage 1 of 6 · identity, type, value</div>
     <button class="btn" onclick="window.print()">Print / PDF</button>
-    <button class="btn" id="resetBtn">Reset drills</button>
   </div>
   <div id="bar"></div>
 </header>
@@ -33,20 +32,19 @@
   <h4>Underneath</h4>
   <a href="#header">05 · The object header</a>
   <a href="#immortal">06 · Immortal objects</a>
-  <h4>Hands On</h4>
+  <h4>Worked</h4>
   <a href="#setup">07 · Setup</a>
-  <a href="#drills">08 · The eight drills</a>
-  <a href="#ledger">09 · Prediction ledger</a>
-  <a href="#report">10 · What to send back</a>
+  <a href="#drills">08 · Worked examples</a>
+  <a href="#ledger">09 · What these settle</a>
   <h4>Reference</h4>
-  <a href="#boundary">11 · Language vs CPython</a>
-  <a href="#next">12 · What this unlocks</a>
+  <a href="#boundary">10 · Language vs CPython</a>
+  <a href="#next">11 · What this unlocks</a>
 </nav>
 
 <main>
 
 <div class="hero">
-  <div class="kicker">Stage 1 · Python Model · Drill 1.1</div>
+  <div class="kicker">Stage 1 · Python Model · Notes 1.1</div>
   <h1>Objects: Identity, Type, Value</h1>
   <p class="dropcap">Python does not manipulate variables. It manipulates <em>objects</em>, and it
   reaches them through <em>names</em>. Almost every confusing behaviour you will ever meet in this
@@ -529,246 +527,228 @@
 
   <div class="trap">
     <span class="lbl">Hard stop condition</span>
-    If step 2 prints <code>header layout verified: False</code>, <b>stop and tell me before doing D5 or
-    D6.</b> Every <code>ctypes</code> reading would be arbitrary memory interpreted as the wrong type.
-    Nothing dangerous happens, but every number would be fiction and you would build a false model.
-  </div>
-
-  <div class="rule">
-    <span class="lbl">The only rule that matters in this section</span>
-    <mark>Write the prediction down before you press Enter.</mark> A prediction you did not commit to
-    is a prediction you will retroactively believe you made. The entire diagnostic value of these
-    drills lives in the gap between what you wrote and what printed — if you do not write it, there is
-    no gap, and you have learned nothing while feeling like you did.
+    If step 2 prints <code>header layout verified: False</code>, the <code>ctypes</code> readings in
+    §05 and §08 are <b>meaningless</b> — arbitrary memory interpreted as the wrong type. Nothing
+    dangerous happens, but every number would be fiction.
   </div>
 </section>
 
 <!-- ============================================================ 08 -->
 <section id="drills">
-  <h2><span class="num">08</span> The eight drills</h2>
-  <p class="sub">Predict → run → diagnose. The italic question is the part I actually grade.</p>
+  <h2><span class="num">08</span> Worked examples</h2>
+  <p class="sub">Code with what it actually produced, and the conclusion each one forces.</p>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D1</span><span class="dt">Establish the three properties</span><span class="dw">Foundational</span></div>
-    <div class="db">
+  <div class="card">
+    <h4>The three properties, and the two kinds of change</h4>
 <pre><code>x = [<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>]
-<span class="f">id</span>(x), <span class="f">type</span>(x), x
+<span class="f">id</span>(x)              <span class="c"># 0x1f3a...</span>
+
+x.<span class="f">append</span>(<span class="n">4</span>)       <span class="c"># value changed</span>
+<span class="f">id</span>(x)              <span class="c"># 0x1f3a...  SAME</span>
+
+x = [<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>,<span class="n">4</span>]     <span class="c"># value looks identical</span>
+<span class="f">id</span>(x)              <span class="c"># 0x2c81...  DIFFERENT</span>
 </code></pre>
-      <p>Now write <b>two lines</b>: one that changes <code>x</code>'s value while keeping the same
-      identity, and one that changes the identity. Print <code>id(x)</code> before and after each.</p>
-      <div class="ask"><b>Question</b>
-        One of those operations is what people call "mutation" and the other is what people call
-        "assignment". State the difference between them <strong>without using either word</strong>,
-        and without the word "variable".
-      </div>
+    <div class="life">
+      <span class="lbl">Stated without "mutation", "assignment" or "variable"</span>
+      <mark>The first changed the object a name reaches. The second changed which object the name
+      reaches.</mark> In one, identity survives and value moves; in the other, a second object is
+      created and the name is re-pointed at it. The original is untouched — and if nothing else
+      reaches it, it stops existing.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D2</span><span class="dt">The identity trap</span><span class="dw">Predict all three separately</span></div>
-    <div class="db">
-<pre><code><span class="c"># (a)</span>
-<span class="f">id</span>([<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>]) == <span class="f">id</span>([<span class="n">4</span>,<span class="n">5</span>,<span class="n">6</span>])
+  <div class="card">
+    <h4>The identity trap — three cases that do not agree</h4>
+<pre><code><span class="c"># (a) no names involved</span>
+<span class="f">id</span>([<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>]) == <span class="f">id</span>([<span class="n">4</span>,<span class="n">5</span>,<span class="n">6</span>])   <span class="c"># True   (!)</span>
 
-<span class="c"># (b)</span>
-a = [<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>]
-b = [<span class="n">4</span>,<span class="n">5</span>,<span class="n">6</span>]
-<span class="f">id</span>(a) == <span class="f">id</span>(b)
+<span class="c"># (b) both held by names</span>
+a = [<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>]; b = [<span class="n">4</span>,<span class="n">5</span>,<span class="n">6</span>]
+<span class="f">id</span>(a) == <span class="f">id</span>(b)                 <span class="c"># False</span>
 
-<span class="c"># (c)</span>
+<span class="c"># (c) no names again</span>
 <span class="k">class</span> C: <span class="k">pass</span>
-<span class="f">id</span>(C()) == <span class="f">id</span>(C())
+<span class="f">id</span>(<span class="f">C</span>()) == <span class="f">id</span>(<span class="f">C</span>())             <span class="c"># True   (!)</span>
 </code></pre>
-      <p>They do not all agree. Commit to three separate predictions before running any of them.</p>
-      <div class="ask"><b>Question</b>
-        What is structurally different about (b)? Answer in terms of <em>when each object's lifetime
-        ends</em> — not in terms of variables. Then: is the result of (a) something you would be willing
-        to write a test against?
-      </div>
+    <p>In (a) and (c) nothing holds the first object, so its <b>lifetime ends the moment
+    <code>id()</code> returns</b>. The address is immediately free, and the second object is built
+    right where the first one was. In (b) both objects are alive at the same time, so they cannot
+    share an address.</p>
+    <div class="trap">
+      <span class="lbl">Would you test against (a)?</span>
+      No. <mark>The language only guarantees that ids are unique among objects alive at the same
+      time.</mark> The <code>True</code> in (a) is an address-reuse artifact of CPython's allocator,
+      not a fact about Python. Never cache an id, and never compare ids across time.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D3</span><span class="dt">Build an object that lies about its type</span><span class="dw">One line will surprise you</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d11_object_identity <span class="k">import</span> Liar
+  <div class="card">
+    <h4>An object that lies about its type</h4>
+<pre><code><span class="k">class</span> Liar:
+    <span class="f">@property</span>
+    <span class="k">def</span> <span class="f">__class__</span>(self): <span class="k">return</span> <span class="f">int</span>
+
 l = <span class="f">Liar</span>()
-
-<span class="f">type</span>(l)
-l.__class__
-<span class="f">isinstance</span>(l, <span class="f">int</span>)
-l + <span class="n">1</span>
+<span class="f">type</span>(l)              <span class="c"># &lt;class 'Liar'&gt;   the truth</span>
+l.__class__          <span class="c"># &lt;class 'int'&gt;    the lie</span>
+<span class="f">isinstance</span>(l, <span class="f">int</span>)   <span class="c"># True             the lie is believed</span>
+l + <span class="n">1</span>                <span class="c"># TypeError: unsupported operand type(s)</span>
 </code></pre>
-      <p>Predict all four lines. The fourth is the one that settles the argument.</p>
-      <div class="ask"><b>Question</b>
-        <code>isinstance()</code> and <code>type()</code> disagree. Before running, which did you assume
-        was "the real answer"? Now use line 4 to argue which one is authoritative about what the object
-        <em>can do</em>. Then explain in one sentence why mocking libraries need this to be possible.
-      </div>
+    <p>Line 4 settles it. <code>isinstance()</code> deliberately consults <code>__class__</code>, so
+    it can be fooled. <b><code>type()</code> is authoritative about what the object can <em>do</em></b>,
+    because behaviour dispatches through the real type — and the real type has no
+    <code>__add__</code> for integers.</p>
+    <div class="note">
+      <span class="lbl">Why the hole exists on purpose</span>
+      Mocking libraries, lazy proxies and ORM row objects all need to <mark>pass an
+      <code>isinstance</code> check without being the real class</mark>. If <code>isinstance</code>
+      consulted only <code>type()</code>, none of them could work.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D4</span><span class="dt">Types are objects</span><span class="dw">The recursion terminates</span></div>
-    <div class="db">
-<pre><code><span class="f">type</span>(<span class="n">3</span>), <span class="f">type</span>(<span class="f">int</span>), <span class="f">type</span>(<span class="f">type</span>)
-<span class="f">type</span>(<span class="f">type</span>) <span class="k">is</span> <span class="f">type</span>
-<span class="f">isinstance</span>(<span class="f">int</span>, <span class="f">object</span>), <span class="f">isinstance</span>(<span class="f">object</span>, <span class="f">type</span>)
+  <div class="card">
+    <h4>Types are objects, and the recursion terminates</h4>
+<pre><code><span class="f">type</span>(<span class="n">3</span>)                      <span class="c"># &lt;class 'int'&gt;</span>
+<span class="f">type</span>(<span class="f">int</span>)                    <span class="c"># &lt;class 'type'&gt;</span>
+<span class="f">type</span>(<span class="f">type</span>)                   <span class="c"># &lt;class 'type'&gt;</span>
+<span class="f">type</span>(<span class="f">type</span>) <span class="k">is</span> <span class="f">type</span>            <span class="c"># True</span>
+<span class="f">isinstance</span>(<span class="f">int</span>, <span class="f">object</span>)       <span class="c"># True</span>
+<span class="f">isinstance</span>(<span class="f">object</span>, <span class="f">type</span>)      <span class="c"># True</span>
 </code></pre>
-      <div class="ask"><b>Question</b>
-        <code>int</code> is an object, so it has all three properties. State its identity, its type, and
-        its <em>value</em> — concretely. The third is the hard one, and §04 tells you how to think about
-        it. Then: why must <code>type(type)</code> be <code>type</code> rather than some
-        <code>metatype</code>?
-      </div>
+    <p><code>int</code> is an object, so it has all three properties: its <b>identity</b> is its
+    address, <code>id(int)</code>; its <b>type</b> is <code>type</code>; and its <b>value</b> is the
+    set of attributes and behaviours it carries — the methods that define what its instances can do.</p>
+    <div class="life">
+      <span class="lbl">Why <code>type(type)</code> must be <code>type</code></span>
+      If <code>type</code> had a distinct metatype, that metatype would itself need a type, and so on
+      without end. <mark>Making <code>type</code> its own type is what bottoms the recursion out</mark>
+      — the same trick as a directory that contains itself as <code>.</code>.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D5</span><span class="dt">Read the header out of live memory</span><span class="dw">CPython · run the sanity check first</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d11_object_identity <span class="k">import</span> raw_refcount, raw_type_ptr, header, layout_is_sane
-<span class="f">layout_is_sane</span>()          <span class="c"># must be True before you continue</span>
+  <div class="card">
+    <h4>Reading the object header out of live memory <span class="pill pC">CPYTHON</span></h4>
+<pre><code><span class="f">layout_is_sane</span>()            <span class="c"># True  — verify before trusting anything below</span>
 
 x = [<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>]
 <span class="f">header</span>(x, <span class="s">"x"</span>)
-<span class="f">hex</span>(<span class="f">id</span>(<span class="f">list</span>))              <span class="c"># compare against the ob_type you just printed</span>
+<span class="c"># x    id=0x1f3a...  refcnt=1  ob_type=0x7ff8... (list)</span>
+<span class="f">hex</span>(<span class="f">id</span>(<span class="f">list</span>))                <span class="c"># '0x7ff8...'  — the same address</span>
+
+<span class="k">for</span> obj <span class="k">in</span> ([], (), <span class="s">"s"</span>, <span class="n">3.5</span>):
+    <span class="f">raw_type_ptr</span>(obj) == <span class="f">id</span>(<span class="f">type</span>(obj))   <span class="c"># True, all four</span>
 </code></pre>
-      <p>Then do it for three objects of different types and confirm each <code>ob_type</code> matches
-      <code>id()</code> of its own type:</p>
-<pre><code><span class="k">for</span> obj <span class="k">in</span> ([], (), <span class="s">"s"</span>, <span class="n">3.5</span>):
-    <span class="f">print</span>(<span class="f">type</span>(obj).__name__, <span class="f">hex</span>(<span class="f">raw_type_ptr</span>(obj)) == <span class="f">hex</span>(<span class="f">id</span>(<span class="f">type</span>(obj))))
+    <p>Every object stores a <b>pointer</b> to its type, and every list in the process points at the
+    <em>same</em> <code>list</code> type object. Two consequences:</p>
+    <ul>
+      <li><b>The per-object cost of knowing your own type is one pointer</b> — 8 bytes on 64-bit. The
+      type is shared, never copied.</li>
+      <li><b><code>type(x)</code> is O(1) regardless of inheritance depth</b>, because it is a single
+      read at a fixed offset. Depth affects <em>attribute lookup</em>, which walks the MRO — not
+      <code>type()</code>, which never searches anything.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h4>Immortal objects, and where the boundary sits <span class="pill pC">CPYTHON</span></h4>
+<pre><code>sys.<span class="f">getrefcount</span>(<span class="k">None</span>)    <span class="c"># an absurd constant</span>
+sys.<span class="f">getrefcount</span>(<span class="k">True</span>)    <span class="c"># an absurd constant</span>
+sys.<span class="f">getrefcount</span>(<span class="n">1</span>)       <span class="c"># an absurd constant</span>
+sys.<span class="f">getrefcount</span>(<span class="n">1000</span>)    <span class="c"># an ordinary small number</span>
+
+<span class="f">raw_refcount</span>(<span class="n">256</span>)         <span class="c"># immortal    &lt;- boundary</span>
+<span class="f">raw_refcount</span>(<span class="n">257</span>)         <span class="c"># ordinary    &lt;- boundary</span>
 </code></pre>
-      <div class="ask"><b>Question</b>
-        You just dereferenced a pointer stored inside your object and landed on the shared
-        <code>list</code> type object. What does that tell you about (a) the per-object cost of
-        "knowing your own type", and (b) why <code>type(x)</code> is O(1) no matter how deep the
-        inheritance hierarchy is?
-      </div>
+    <p>Small integers (<code>-5</code>…<code>256</code>), <code>None</code>, <code>True</code> and
+    <code>False</code> are cached and <b>immortal</b>. The exact sentinel constant differs across
+    3.12 / 3.13 / 3.14, so read yours rather than memorising one.</p>
+    <div class="life">
+      <span class="lbl">The second-order fact — this is the real payload</span>
+      Immortality is an <em>optimisation</em>, so it removes a cost. The cost is that every single
+      reference to a shared object like <code>None</code> would otherwise require incrementing and
+      decrementing a counter <b>written into memory shared by the whole program</b>.<br>
+      Which forces the inference: <mark>ordinary objects are paying that write constantly</mark> — on
+      every name binding, every argument passed, every container insertion, every scope exit. That is
+      the on-ramp to object lifetime.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D6</span><span class="dt">Immortal objects</span><span class="dw">Find the boundary</span></div>
-    <div class="db">
-<pre><code><span class="k">import</span> sys
-sys.<span class="f">getrefcount</span>(<span class="k">None</span>), sys.<span class="f">getrefcount</span>(<span class="k">True</span>)
-sys.<span class="f">getrefcount</span>(<span class="n">1</span>), sys.<span class="f">getrefcount</span>(<span class="n">1000</span>)
+  <div class="card">
+    <h4>Identity across mutation vs rebinding</h4>
+<pre><code>a = [<span class="n">1</span>, <span class="n">2</span>, <span class="n">3</span>]
+before = <span class="f">id</span>(a)
 
-<span class="k">from</span> d11_object_identity <span class="k">import</span> raw_refcount
-<span class="f">raw_refcount</span>(<span class="k">None</span>), <span class="f">raw_refcount</span>(<span class="n">256</span>), <span class="f">raw_refcount</span>(<span class="n">257</span>)
+a.<span class="f">append</span>(<span class="n">4</span>)
+after_mutate = <span class="f">id</span>(a)      <span class="c"># == before</span>
+
+a = a + [<span class="n">5</span>]
+after_rebind = <span class="f">id</span>(a)      <span class="c"># != before</span>
 </code></pre>
-      <p>Predict which produce ordinary small numbers and which produce absurd ones — and
-      <em>where the boundary sits</em>.</p>
-      <div class="ask"><b>Question</b>
-        Immortality is an optimisation, so it removes a cost. Name the cost. Then draw the inference
-        that matters: what does the existence of this optimisation tell you about what
-        <em>ordinary</em> objects are doing constantly? Reason from first principles about what a
-        refcount is — you have not been taught refcount mechanics yet, and you do not need them.
-      </div>
+    <p>The first two match; the third differs. <b>Two lists were created</b> — the original, and the
+    one <code>+</code> built. <code>append</code> created none; <code>a + [5]</code> created one and
+    the name was moved onto it.</p>
+    <div class="trap">
+      <span class="lbl">The liveness trap</span>
+      Is the object from line 1 still alive at the end? <b>No</b> — no name reaches it any more, so it
+      was freed. And <mark>you cannot check with <code>before</code></mark>: that is an integer, not a
+      reference, and the address may already have been handed to something else. The only honest way
+      to ask is to hold a <code>weakref</code> to it before rebinding and see whether it is dead
+      afterwards.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D7</span><span class="dt">Identity across mutation vs rebinding</span><span class="dw">Which pair matches?</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d11_object_identity <span class="k">import</span> mutate_vs_rebind
-<span class="f">mutate_vs_rebind</span>()
+  <div class="card">
+    <h4>The cost of being an object</h4>
+<pre><code>sys.<span class="f">getsizeof</span>([<span class="n">1</span>,<span class="n">2</span>]) - sys.<span class="f">getsizeof</span>([<span class="n">1</span>])    <span class="c"># 8 on 64-bit</span>
 </code></pre>
-      <p>Predict the three returned ids — specifically <b>which two are equal</b>. Then open the
-      function and read it.</p>
-      <div class="ask"><b>Question</b>
-        Explain the result entirely in terms of objects: how many list objects were created, which
-        operations produced new ones, and which did not. Then answer the trap: after the last line,
-        <em>is the object from line 1 still alive?</em> How would you find out?
-      </div>
-    </div>
-  </div>
-
-  <div class="drill">
-    <div class="dh"><span class="did">D8</span><span class="dt">The cost of being an object</span><span class="dw">Prove your answer</span></div>
-    <div class="db">
-<pre><code><span class="k">import</span> sys
-sys.<span class="f">getsizeof</span>(<span class="n">0</span>), sys.<span class="f">getsizeof</span>(<span class="n">1</span>), sys.<span class="f">getsizeof</span>(<span class="n">10</span>**<span class="n">100</span>)
-sys.<span class="f">getsizeof</span>(<span class="f">object</span>()), sys.<span class="f">getsizeof</span>([]), sys.<span class="f">getsizeof</span>([<span class="n">1</span>]), sys.<span class="f">getsizeof</span>([<span class="n">1</span>,<span class="n">2</span>])
-sys.<span class="f">getsizeof</span>(<span class="s">""</span>), sys.<span class="f">getsizeof</span>(<span class="s">"a"</span>), sys.<span class="f">getsizeof</span>(<span class="s">"ab"</span>)
+    <p>That 8 is <b>one pointer</b> — the size of the extra <em>slot</em> in the list's array. It is
+    <b>not</b> the size of the integer <code>2</code>, and one line proves it:</p>
+<pre><code>sys.<span class="f">getsizeof</span>([<span class="n">10</span>**<span class="n">100</span>]) == sys.<span class="f">getsizeof</span>([<span class="n">1</span>])   <span class="c"># True</span>
 </code></pre>
-      <div class="ask"><b>Question</b>
-        <code>getsizeof([1,2]) - getsizeof([1])</code> gives you a number. What is that number the size
-        of? It is <strong>not</strong> the size of the integer <code>2</code> — prove your claim with
-        one additional line of code. Then explain why <code>getsizeof</code> of a list of a million
-        ints wildly understates the memory actually consumed.
-      </div>
+    <p>A hundred-digit integer is far larger than a small one, yet the containing list is exactly the
+    same size. The list holds references, not values.</p>
+    <div class="note">
+      <span class="lbl">Why <code>getsizeof</code> understates a big list</span>
+      <mark>It measures the container and nothing it points at.</mark> A list of a million distinct
+      ints reports roughly 8 MB of pointers while the ints themselves consume tens of MB more, unseen.
+      Every "small" container in Python is a table of addresses, and the real memory is somewhere
+      else — which is exactly why aliasing and copy depth matter in 1.3.
     </div>
   </div>
 </section>
 
 <!-- ============================================================ 09 -->
 <section id="ledger">
-  <h2><span class="num">09</span> Prediction ledger</h2>
-  <p class="sub">Tick as you go — state is saved in this browser. The third column is the only one that teaches.</p>
+  <h2><span class="num">09</span> What these settle</h2>
+  <p class="sub">The conclusions worth carrying out of this page.</p>
 
-  <div id="checklist">
-    <label class="chk"><input type="checkbox" data-k="d0"><span class="q"><b>Setup</b> — environment report captured, <code>layout_is_sane()</code> is True</span></label>
-    <label class="chk"><input type="checkbox" data-k="d1"><span class="q"><b>D1</b> — three properties; mutation vs rebinding stated without either word</span></label>
-    <label class="chk"><input type="checkbox" data-k="d2"><span class="q"><b>D2</b> — three predictions committed before running; lifetime explanation written</span></label>
-    <label class="chk"><input type="checkbox" data-k="d3"><span class="q"><b>D3</b> — <code>Liar</code> built; line 4 explained; authority question answered</span></label>
-    <label class="chk"><input type="checkbox" data-k="d4"><span class="q"><b>D4</b> — identity/type/value of <code>int</code> stated concretely</span></label>
-    <label class="chk"><input type="checkbox" data-k="d5"><span class="q"><b>D5</b> — <code>ob_type</code> matched <code>id(type(obj))</code> for four objects</span></label>
-    <label class="chk"><input type="checkbox" data-k="d6"><span class="q"><b>D6</b> — immortality boundary located; the inference about ordinary objects drawn</span></label>
-    <label class="chk"><input type="checkbox" data-k="d7"><span class="q"><b>D7</b> — object count reasoned; liveness trap answered</span></label>
-    <label class="chk"><input type="checkbox" data-k="d8"><span class="q"><b>D8</b> — size delta identified and <em>proved</em> with code</span></label>
-  </div>
-  <span id="chkCount"></span>
-
-  <h3>Copy this table into your notes and fill it in</h3>
   <table>
-    <thead><tr><th style="width:70px">Drill</th><th>I predicted</th><th>It printed</th><th>The belief that was wrong</th></tr></thead>
+    <thead><tr><th style="width:34px">#</th><th>Settled</th></tr></thead>
     <tbody>
-      <tr><td>D2 (a)</td><td></td><td></td><td></td></tr>
-      <tr><td>D2 (b)</td><td></td><td></td><td></td></tr>
-      <tr><td>D2 (c)</td><td></td><td></td><td></td></tr>
-      <tr><td>D3</td><td></td><td></td><td></td></tr>
-      <tr><td>D6</td><td></td><td></td><td></td></tr>
-      <tr><td>D7</td><td></td><td></td><td></td></tr>
+      <tr><td><b>1</b></td><td>Two kinds of change: one alters <b>the object a name reaches</b> (identity survives), the other alters <b>which object the name reaches</b> (a new object exists). Neither needs the word "variable" to describe.</td></tr>
+      <tr><td><b>2</b></td><td>Ids are unique only among objects <b>alive at the same time</b>. Unnamed temporaries die immediately, so their addresses get reused — which is why <code>id(C()) == id(C())</code> can be <code>True</code>. Never cache or compare ids across time.</td></tr>
+      <tr><td><b>3</b></td><td><code>isinstance()</code> consults <code>__class__</code> and can be fooled; <code>type()</code> reports the real type and is authoritative about <b>what the object can do</b>. The hole is deliberate — mocks and proxies depend on it.</td></tr>
+      <tr><td><b>4</b></td><td><code>int</code> is an object: identity = its address, type = <code>type</code>, value = the attributes and behaviours it carries. <code>type(type) is type</code> because the chain has to bottom out somewhere.</td></tr>
+      <tr><td><b>5</b></td><td>Every object stores <b>one pointer</b> to a shared type object. That makes <code>type(x)</code> O(1) at any inheritance depth — depth costs you attribute lookup, not <code>type()</code>.</td></tr>
+      <tr><td><b>6</b></td><td>Immortality removes a <b>memory write per reference</b> for the most-shared objects. Its existence proves ordinary objects pay that write constantly — on every binding, call, insertion and scope exit.</td></tr>
+      <tr><td><b>7</b></td><td><code>append</code> creates no object; <code>a + [5]</code> creates one. After rebinding, the original is unreachable and freed — and the saved <code>id</code> cannot tell you, because it is an integer, not a reference.</td></tr>
+      <tr><td><b>8</b></td><td><code>getsizeof</code> measures the container only. The 8-byte delta is a <b>pointer slot</b>, proven by <code>getsizeof([10**100]) == getsizeof([1])</code>. Containers hold addresses; the memory lives elsewhere.</td></tr>
     </tbody>
   </table>
-  <p><em>The fourth column is the artifact.</em> "I was wrong" is not an entry. "I believed an id
-  named an object rather than a location" is an entry.</p>
+
+  <div class="life">
+    <span class="lbl">The sentence that compresses the page</span>
+    <mark><code>id()</code> is guaranteed unique only during an object's lifetime, because it names a
+    <em>location</em> rather than an object</mark> — which means identity is a fact about <em>now</em>,
+    and any code that stores one and compares it later is asking a question the language never agreed
+    to answer.
+  </div>
 </section>
 
 <!-- ============================================================ 10 -->
-<section id="report">
-  <h2><span class="num">10</span> What to send back</h2>
-  <p class="sub">Not raw output. I grade the model, not the printout — a right answer with broken reasoning is marked wrong.</p>
-
-  <ol class="steps">
-    <li><b>Environment line</b>
-      Version, pointer size, free-threaded flag, and whether the layout verified.</li>
-    <li><b>Prediction ledger</b>
-      The filled table from §09 — specifically the fourth column, for D2, D3, D6, D7.</li>
-    <li><b>The five graded questions</b>
-      One paragraph each for D1, D4, D5, D6, D8. Prose, not bullet points — bullets let you skip
-      the connective reasoning, and the connective reasoning is what I am checking.</li>
-    <li><b>Complete this sentence</b>
-      <i>"<code>id()</code> is guaranteed unique only during an object's lifetime because ______,
-      which means ______ about the code I write."</i></li>
-    <li><b>One honest line</b>
-      Which drill made you realise you had been reasoning with a wrong model — and what the wrong
-      model was. If none did, say so; I will make 1.2 harder.</li>
-  </ol>
-
-  <div class="note">
-    <span class="lbl">Gate</span>
-    Drill 1.2 (namespaces) does not open until D1–D8 are reported. That gate is not ceremony:
-    1.2 is <em>about</em> the arrow in the figure in §01, and the arrow is meaningless until the box on
-    its right is fully solid.
-  </div>
-</section>
-
-<!-- ============================================================ 11 -->
 <section id="boundary">
-  <h2><span class="num">11</span> Ledger — language vs CPython</h2>
+  <h2><span class="num">10</span> Ledger — language vs CPython</h2>
   <p class="sub">Everything asserted in this document, sorted. Learn the split, not just the facts.</p>
 
   <table>
@@ -797,9 +777,9 @@ sys.<span class="f">getsizeof</span>(<span class="s">""</span>), sys.<span class
   </div>
 </section>
 
-<!-- ============================================================ 12 -->
+<!-- ============================================================ 11 -->
 <section id="next">
-  <h2><span class="num">12</span> What this unlocks</h2>
+  <h2><span class="num">11</span> What this unlocks</h2>
   <p class="sub">Forward references. Do not chase them yet — just notice the wires you have already laid.</p>
 
   <div class="grid g2">
@@ -841,9 +821,8 @@ sys.<span class="f">getsizeof</span>(<span class="s">""</span>), sys.<span class
 <button id="toTop" title="Back to top" aria-label="Back to top">↑</button>
 
 <footer>
-  Python Object Model · Stage 1, Drill 1.1 — identity, type, value.
+  Python Object Model · Stage 1, Notes 1.1 — identity, type, value.
   Companion code: <code>python-model/d11_object_identity.py</code>.
-  Self-contained HTML; drill state is stored in this browser only.
 </footer>
 
 <script>
@@ -861,38 +840,6 @@ sys.<span class="f">getsizeof</span>(<span class="s">""</span>), sys.<span class
     });
   }, {rootMargin:'-72px 0px -70% 0px', threshold:0});
   document.querySelectorAll('section').forEach(function(s){ obs.observe(s); });
-
-  var KEY = 'pyobj-11-drills-v1';
-  var boxes = Array.prototype.slice.call(document.querySelectorAll('#checklist input'));
-  var counter = document.getElementById('chkCount');
-  var state = {};
-  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ state = {}; }
-
-  function paint(){
-    var n = 0;
-    boxes.forEach(function(b){
-      b.parentElement.classList.toggle('done', b.checked);
-      if(b.checked) n++;
-    });
-    counter.textContent = n + ' / ' + boxes.length + ' drills logged' +
-      (n === boxes.length ? ' — report back and 1.2 opens.' : '');
-  }
-  boxes.forEach(function(b){
-    b.checked = !!state[b.dataset.k];
-    b.addEventListener('change', function(){
-      state[b.dataset.k] = b.checked;
-      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
-      paint();
-    });
-  });
-  paint();
-
-  document.getElementById('resetBtn').addEventListener('click', function(){
-    state = {};
-    try { localStorage.removeItem(KEY); } catch(e){}
-    boxes.forEach(function(b){ b.checked = false; });
-    paint();
-  });
 
   var bar = document.getElementById('bar');
   var top = document.getElementById('toTop');

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Python Object Model — Drill 1.2 · Namespaces</title>
+<title>Python Object Model — 1.2 · Namespaces</title>
 <link rel="stylesheet" href="../../../assets/base.css" />
 <link rel="stylesheet" href="../../../assets/1.2-namespaces.css" />
 <script src="../../../assets/nav.js" defer></script>
@@ -12,10 +12,9 @@
 
 <header>
   <div class="hwrap">
-    <div class="brand">Python Object Model <span>·</span> Drill 1.2</div>
-    <div class="tagline">Namespaces · one exit checkpoint, no follow-up rounds</div>
+    <div class="brand">Python Object Model <span>·</span> Notes 1.2</div>
+    <div class="tagline">Namespaces · a name is a key, not a box</div>
     <button class="btn" onclick="window.print()">Print / PDF</button>
-    <button class="btn" id="resetBtn">Reset drills</button>
   </div>
   <div id="bar"></div>
 </header>
@@ -32,9 +31,9 @@
   <a href="#fast">04 · Why locals can't be a dict</a>
   <a href="#binding">05 · Every binding operation</a>
   <a href="#del">06 · del, shadowing, scope traps</a>
-  <h4>Hands On</h4>
-  <a href="#drills">07 · Seven drills</a>
-  <a href="#exit">08 · Exit checkpoint</a>
+  <h4>Worked</h4>
+  <a href="#drills">07 · Worked examples</a>
+  <a href="#exit">08 · What these settle</a>
   <h4>Reference</h4>
   <a href="#ledger">09 · Language vs CPython</a>
   <a href="#next">10 · What this unlocks</a>
@@ -43,9 +42,9 @@
 <main>
 
 <div class="hero">
-  <div class="kicker">Stage 1 · Python Model · Drill 1.2</div>
+  <div class="kicker">Stage 1 · Python Model · Notes 1.2</div>
   <h1>Namespaces: the name → object mapping</h1>
-  <p class="dropcap">Drill 1.1 established the object. This drill establishes the <em>arrow</em> — the
+  <p class="dropcap">1.1 established the object. This page establishes the <em>arrow</em> — the
   thing that connects a name to it. The single claim is small and its consequences are enormous:
   a name is not storage, it is a <em>key in a mapping</em>. Once that is real to you, aliasing,
   <code>del</code>, scope, closures, shadowing and the entire "does Python pass by value or by
@@ -85,16 +84,9 @@
     </div>
   </div>
 
-  <p>The consequence is immediate and it is the whole drill: <mark>an operation either rebinds a
+  <p>The consequence is immediate and it is the whole point: <mark>an operation either rebinds a
   name or mutates an object — never both by accident, and never neither.</mark> Sorting Python
   statements into those two buckets is the skill 1.2 installs.</p>
-
-  <div class="rule">
-    <span class="lbl">Protocol for this drill</span>
-    There is exactly <b>one</b> checkpoint, in §08, and it is a fixed finite list. No follow-up
-    round. If a question in the drill body is one you do not want to chase, skip it — say
-    <b>"banked"</b> and it will not be re-raised.
-  </div>
 </section>
 
 <!-- ============================================================ 01 -->
@@ -364,139 +356,159 @@ err                   <span class="c"># NameError</span>
 
 <!-- ============================================================ 07 -->
 <section id="drills">
-  <h2><span class="num">07</span> Seven drills</h2>
-  <p class="sub">Companion code: <code>python-model/d12_namespaces.py</code>. Bare REPL.</p>
+  <h2><span class="num">07</span> Worked examples</h2>
+  <p class="sub">Code with what it actually produced. Companion: <code>python-model/d12_namespaces.py</code>.</p>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D1</span><span class="dt">The namespace is a real dict</span><span class="dw">Prove the claim</span></div>
-    <div class="db">
+  <div class="card">
+    <h4>The namespace really is a dict, and you can edit it</h4>
 <pre><code>x = <span class="n">100</span>
-<span class="f">globals</span>()[<span class="s">'x'</span>] <span class="k">is</span> x
+<span class="f">globals</span>()[<span class="s">'x'</span>] <span class="k">is</span> x        <span class="c"># True  — same object, reached by key</span>
 <span class="f">globals</span>()[<span class="s">'y'</span>] = <span class="n">7</span>
-y
+y                          <span class="c"># 7     — a name created without an assignment</span>
 <span class="k">del</span> <span class="f">globals</span>()[<span class="s">'y'</span>]
-y
-<span class="f">type</span>(<span class="f">globals</span>()), <span class="f">locals</span>() <span class="k">is</span> <span class="f">globals</span>()
+y                          <span class="c"># NameError: name 'y' is not defined</span>
+
+<span class="f">type</span>(<span class="f">globals</span>())            <span class="c"># &lt;class 'dict'&gt;</span>
+<span class="f">locals</span>() <span class="k">is</span> <span class="f">globals</span>()      <span class="c"># True — at module level they are one mapping</span>
 </code></pre>
+    <p>A name is a <b>key</b>, not a box. <code>NameError</code> is a failed dictionary lookup with a
+    friendlier message.</p>
+  </div>
+
+  <div class="card">
+    <h4>Rebinding moves a key; mutation changes an object</h4>
+<pre><code>data = [<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>]; alias = data; backup = data
+<span class="f">names_bound_to</span>(data)       <span class="c"># ['data', 'alias', 'backup'] — one object, 3 keys</span>
+
+alias = alias + [<span class="n">4</span>]        <span class="c"># REBIND: builds a new list, moves one key</span>
+<span class="f">names_bound_to</span>(data)       <span class="c"># ['data', 'backup']  — alias left</span>
+
+data.<span class="f">append</span>(<span class="n">4</span>)            <span class="c"># MUTATE: changes the shared object</span>
+backup                     <span class="c"># [1, 2, 3, 4]  — backup never touched, sees it anyway</span>
+</code></pre>
+    <div class="life">
+      <span class="lbl">The classification that matters</span>
+      <mark>Rebinding is observed by exactly one name. Mutation is observed by every name bound to
+      the object.</mark> Both statements look like "changing data". Only one of them is.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D2</span><span class="dt">Many names, one object</span><span class="dw">Aliasing from first principles</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d12_namespaces <span class="k">import</span> names_bound_to
-data = [<span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>]
-alias = data
-backup = data
-<span class="f">names_bound_to</span>(data)          <span class="c"># which keys hold this exact object?</span>
+  <div class="card">
+    <h4><code>locals()</code> hands you a snapshot, not a live view</h4>
+<pre><code><span class="k">def</span> <span class="f">f</span>():
+    a = <span class="n">1</span>
+    snap = <span class="f">locals</span>()          <span class="c"># taken here</span>
+    b = <span class="n">2</span>                   <span class="c"># created after</span>
+    <span class="k">return</span> snap, <span class="f">locals</span>()
 
-alias = alias + [<span class="n">4</span>]           <span class="c"># rebind</span>
-<span class="f">names_bound_to</span>(data)
-data.<span class="f">append</span>(<span class="n">4</span>)               <span class="c"># mutate</span>
-backup
+snap, live = <span class="f">f</span>()
+<span class="s">'b'</span> <span class="k">in</span> snap                <span class="c"># False  &lt;- the telling detail</span>
+snap <span class="k">is</span> live               <span class="c"># False</span>
 </code></pre>
-      <p>For each of the last three statements, classify it as <b>rebind</b> or <b>mutate</b> before
-      running, and say which names observe the effect.</p>
+    <p>Writing into that dict does not reach the function's variables either. Function locals are not
+    stored in a dict at all — the dict is manufactured on request, which is why edits to it go
+    nowhere.</p>
+    <div class="cpy">
+      <span class="lbl">Version-sensitive</span>
+      PEP 667 (Python 3.13+) makes each call return an <b>independent</b> snapshot. Older versions
+      returned a dict that was refreshed in place. In every version, <mark>writes through
+      <code>locals()</code> never affect the frame</mark> — only the sharpness of the snapshot
+      changed.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D3</span><span class="dt">locals() is a snapshot</span><span class="dw">PEP 667 · version-sensitive</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d12_namespaces <span class="k">import</span> try_to_write_through_locals, locals_is_a_snapshot
-<span class="f">try_to_write_through_locals</span>()
-snap, live = <span class="f">locals_is_a_snapshot</span>()
-snap, live, snap <span class="k">is</span> live
+  <div class="card">
+    <h4>Two lookups, two opcodes — and that is the whole asymmetry</h4>
+<pre><code>LOAD_FAST   <span class="n">0</span>       <span class="c"># function local: an INTEGER slot in an array</span>
+LOAD_GLOBAL <span class="s">'x'</span>     <span class="c"># module global: a NAME, looked up in a dict</span>
 </code></pre>
-      <p>Look at whether <code>b</code> appears in <code>snap</code>. That one detail tells you
-      whether you got a snapshot or a live view.</p>
-    </div>
+    <p>Function locals are decided at compile time and compiled into fixed array slots, so they are
+    fast and <b>not</b> a real dict — hence the snapshot above. Module globals are a genuine dict
+    looked up by string at runtime, which is why <code>globals()</code> is editable and
+    <code>locals()</code> is not.</p>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D4</span><span class="dt">Two lookups, two opcodes</span><span class="dw">CPython</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d12_namespaces <span class="k">import</span> compare_bytecode
-<span class="f">compare_bytecode</span>()
-</code></pre>
-      <p>Find <code>LOAD_FAST</code> and <code>LOAD_GLOBAL</code>. One takes an integer index, the
-      other takes a name. Connect that to why §03's table has the asymmetry it has.</p>
-    </div>
-  </div>
-
-  <div class="drill">
-    <div class="dh"><span class="did">D5</span><span class="dt">Shadow a builtin, then repair it</span><span class="dw">Do this in a throwaway REPL</span></div>
-    <div class="db">
-<pre><code><span class="f">list</span>((<span class="n">1</span>,<span class="n">2</span>))
-<span class="f">list</span> = [<span class="n">1</span>,<span class="n">2</span>]
-<span class="f">list</span>((<span class="n">1</span>,<span class="n">2</span>))            <span class="c"># ?</span>
+  <div class="card">
+    <h4>Shadowing a builtin, and what "repairing" it really does</h4>
+<pre><code><span class="f">list</span>((<span class="n">1</span>,<span class="n">2</span>))                <span class="c"># [1, 2]</span>
+<span class="f">list</span> = [<span class="n">1</span>,<span class="n">2</span>]                <span class="c"># bind 'list' in the MODULE namespace</span>
+<span class="f">list</span>((<span class="n">1</span>,<span class="n">2</span>))                <span class="c"># TypeError: 'list' object is not callable</span>
 
 <span class="k">import</span> builtins
-builtins.<span class="f">list</span>((<span class="n">1</span>,<span class="n">2</span>))   <span class="c"># still fine — different namespace</span>
+builtins.<span class="f">list</span>((<span class="n">1</span>,<span class="n">2</span>))       <span class="c"># [1, 2]  — untouched, different namespace</span>
 <span class="k">del</span> <span class="f">list</span>
-<span class="f">list</span>((<span class="n">1</span>,<span class="n">2</span>))            <span class="c"># repaired</span>
+<span class="f">list</span>((<span class="n">1</span>,<span class="n">2</span>))                <span class="c"># [1, 2]  — working again</span>
 </code></pre>
-      <p>Explain the repair: <code>del list</code> did not restore anything. What actually happened?</p>
+    <div class="trap">
+      <span class="lbl"><code>del list</code> restored nothing</span>
+      The builtin was never modified or lost. LEGB searches <b>globals before builtins</b>, so the new
+      module-level key was simply found first. Deleting that key removed the obstruction and the
+      search continued one step further, to the entry that had been there the whole time.
+      <mark>Shadowing hides; it does not overwrite.</mark><br>
+      Practical note: if this REPL survives into 1.3, <code>list(original)</code> will raise
+      "not callable" until you run <code>del list</code>.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D6</span><span class="dt">The three scope traps</span><span class="dw">Predict all three</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d12_namespaces <span class="k">import</span> ClassBodyScope, err_survives_the_block
-c = <span class="f">ClassBodyScope</span>()
-c.<span class="f">via_self</span>()
-c.<span class="f">bare_name</span>()
+  <div class="card">
+    <h4>The three scope traps</h4>
+<pre><code><span class="c"># 1 - a class body is NOT an enclosing scope for its methods</span>
+c.<span class="f">via_self</span>()               <span class="c"># works    — attribute lookup on the instance</span>
+c.<span class="f">bare_name</span>()             <span class="c"># NameError — the class body's name is invisible here</span>
 
+<span class="c"># 2 - a comprehension has its own scope; a for loop does not</span>
 x = <span class="s">'outer'</span>
-[x <span class="k">for</span> x <span class="k">in</span> <span class="f">range</span>(<span class="n">3</span>)]; x
+[x <span class="k">for</span> x <span class="k">in</span> <span class="f">range</span>(<span class="n">3</span>)]; x   <span class="c"># 'outer'  — no leak</span>
 <span class="k">for</span> x <span class="k">in</span> <span class="f">range</span>(<span class="n">3</span>): <span class="k">pass</span>
-x
+x                          <span class="c"># 2       — the loop variable leaked</span>
 
-<span class="f">err_survives_the_block</span>()
+<span class="c"># 3 - `except ... as e` unbinds e at the end of the block</span>
+<span class="f">err_survives_the_block</span>()  <span class="c"># NameError on e, after the block</span>
 </code></pre>
+    <div class="note">
+      <span class="lbl">Trap 3 exists to protect object lifetime</span>
+      The exception references its traceback, the traceback references the frame, and the frame holds
+      <code>e</code> — a cycle that would keep the entire frame alive. <mark>A language rule
+      introduced purely for memory reasons</mark>, which is the bridge into object lifetime.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D7</span><span class="dt">Modules are objects with namespaces</span><span class="dw">Ties it together</span></div>
-    <div class="db">
+  <div class="card">
+    <h4>Modules are objects with namespaces</h4>
 <pre><code><span class="k">import</span> sys
-sys <span class="k">is</span> sys.modules[<span class="s">'sys'</span>]
-<span class="f">type</span>(sys), <span class="f">type</span>(sys.__dict__)
-sys.__dict__[<span class="s">'platform'</span>] <span class="k">is</span> sys.platform
-
-<span class="k">import</span> d12_namespaces <span class="k">as</span> m
-m.__dict__[<span class="s">'SOME_GLOBAL'</span>]
-m.SOME_GLOBAL
+sys <span class="k">is</span> sys.modules[<span class="s">'sys'</span>]           <span class="c"># True</span>
+<span class="f">type</span>(sys)                            <span class="c"># &lt;class 'module'&gt;</span>
+<span class="f">type</span>(sys.__dict__)                   <span class="c"># &lt;class 'dict'&gt;</span>
+sys.__dict__[<span class="s">'platform'</span>] <span class="k">is</span> sys.platform   <span class="c"># True</span>
 </code></pre>
-      <p>State the relationship in one sentence: what is attribute access on a module, in terms of
-      the mapping model?</p>
-    </div>
+    <p>In one sentence: <b>attribute access on a module is a key lookup in that module's
+    <code>__dict__</code>.</b> The dot and the square brackets reach the same mapping. Import is not a
+    special mechanism — it binds a name to an object that happens to carry a namespace.</p>
   </div>
 </section>
 
 <!-- ============================================================ 08 -->
 <section id="exit">
-  <h2><span class="num">08</span> Exit checkpoint — the only one</h2>
-  <p class="sub">Six items. Fixed list. When these land, 1.3 opens. There is no second round.</p>
+  <h2><span class="num">08</span> What these settle</h2>
+  <p class="sub">The six conclusions worth carrying out of this page.</p>
 
-  <div id="checklist">
-    <label class="chk"><input type="checkbox" data-k="c1"><span class="q"><b>1</b> — D3 result: did <code>b</code> appear in the snapshot? Snapshot or live view?</span></label>
-    <label class="chk"><input type="checkbox" data-k="c2"><span class="q"><b>2</b> — D2: classify the three statements as <b>rebind</b> or <b>mutate</b>, and name which names observe each</span></label>
-    <label class="chk"><input type="checkbox" data-k="c3"><span class="q"><b>3</b> — D5: explain the repair. <code>del list</code> restored nothing — what actually happened?</span></label>
-    <label class="chk"><input type="checkbox" data-k="c4"><span class="q"><b>4</b> — D6: which of the three traps did you predict wrong, and what were you assuming?</span></label>
-    <label class="chk"><input type="checkbox" data-k="c5"><span class="q"><b>5</b> — One sentence: why is <code>except … as e</code> unbound on exit, and what does that tell you about the <em>next</em> drill?</span></label>
-    <label class="chk"><input type="checkbox" data-k="c6"><span class="q"><b>6</b> — One paragraph: rewrite "Python is pass by reference" as a correct statement using only <em>names</em>, <em>namespaces</em>, <em>objects</em> and <em>binding</em></span></label>
-  </div>
-  <span id="chkCount"></span>
+  <table>
+    <thead><tr><th style="width:34px">#</th><th>Settled</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b></td><td><code>b</code> did <b>not</b> appear in the snapshot, so <code>locals()</code> is a <b>snapshot</b>, not a live view. Writes into it never reach the frame, because function locals live in array slots rather than a dict.</td></tr>
+      <tr><td><b>2</b></td><td><code>alias = alias + [4]</code> is a <b>rebind</b> — observed by <code>alias</code> alone. <code>data.append(4)</code> is a <b>mutation</b> — observed by <code>data</code> and <code>backup</code>, because all three names were keys pointing at one object.</td></tr>
+      <tr><td><b>3</b></td><td><code>del list</code> restored nothing. It removed a <b>shadowing key</b> from the module namespace; the builtins entry was never altered, and LEGB simply resumed reaching it.</td></tr>
+      <tr><td><b>4</b></td><td>The three traps: a <b>class body is not an enclosing scope</b> for its methods; a <b>comprehension has its own scope while a <code>for</code> loop does not</b>; and <code>except … as e</code> <b>unbinds <code>e</code></b> at block exit.</td></tr>
+      <tr><td><b>5</b></td><td><code>e</code> is unbound to break a reference cycle — exception → traceback → frame → <code>e</code> — which would otherwise keep the whole frame alive. A scoping rule motivated entirely by <b>object lifetime</b>, which is the next thing to study.</td></tr>
+      <tr><td><b>6</b></td><td><b>"Python is pass by reference" rewritten:</b> a call <b>binds</b> the argument's object to a new <b>name</b> in the function's local <b>namespace</b>. No copy is made and no variable is passed. Mutating that object is visible to every name bound to it; rebinding the local name is visible to none.</td></tr>
+    </tbody>
+  </table>
 
   <div class="life">
-    <span class="lbl">Item 6 is the real exit test</span>
-    Everything else is verification. Item 6 is the one that proves the model transferred, because it
-    cannot be answered by recall — it requires you to <mark>re-derive a well-known claim from the
-    mechanism</mark>. If you can write that paragraph cleanly, 1.2 is done and 1.3 (references,
-    aliasing, argument passing) is mostly a formality.
+    <span class="lbl">Item 6 is the real one</span>
+    Everything else is verification. Item 6 cannot be answered by recall — it requires
+    <mark>re-deriving a well-known claim from the mechanism</mark>. Hold that paragraph and 1.3
+    (references, aliasing, argument passing) is mostly a formality.
   </div>
 </section>
 
@@ -561,9 +573,8 @@ m.SOME_GLOBAL
 <button id="toTop" title="Back to top" aria-label="Back to top">↑</button>
 
 <footer>
-  Python Object Model · Stage 1, Drill 1.2 — namespaces and binding.
+  Python Object Model · Stage 1, Notes 1.2 — namespaces and binding.
   Companion code: <code>python-model/d12_namespaces.py</code>.
-  Self-contained HTML; checkpoint state is stored in this browser only.
 </footer>
 
 <script>
@@ -581,38 +592,6 @@ m.SOME_GLOBAL
     });
   }, {rootMargin:'-72px 0px -70% 0px', threshold:0});
   document.querySelectorAll('section').forEach(function(s){ obs.observe(s); });
-
-  var KEY = 'pyobj-12-checkpoint-v1';
-  var boxes = Array.prototype.slice.call(document.querySelectorAll('#checklist input'));
-  var counter = document.getElementById('chkCount');
-  var state = {};
-  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ state = {}; }
-
-  function paint(){
-    var n = 0;
-    boxes.forEach(function(b){
-      b.parentElement.classList.toggle('done', b.checked);
-      if(b.checked) n++;
-    });
-    counter.textContent = n + ' / ' + boxes.length + ' checkpoint items' +
-      (n === boxes.length ? ' — 1.3 opens.' : '');
-  }
-  boxes.forEach(function(b){
-    b.checked = !!state[b.dataset.k];
-    b.addEventListener('change', function(){
-      state[b.dataset.k] = b.checked;
-      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
-      paint();
-    });
-  });
-  paint();
-
-  document.getElementById('resetBtn').addEventListener('click', function(){
-    state = {};
-    try { localStorage.removeItem(KEY); } catch(e){}
-    boxes.forEach(function(b){ b.checked = false; });
-    paint();
-  });
 
   var bar = document.getElementById('bar');
   var top = document.getElementById('toTop');

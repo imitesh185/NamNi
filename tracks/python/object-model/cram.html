@@ -6,16 +6,14 @@
 <title>Object Model 1.1–1.3 · CRAM</title>
 <link rel="stylesheet" href="../../../assets/base.css" />
 <link rel="stylesheet" href="../../../assets/cram.css" />
+<script src="../../../assets/nav.js" defer></script>
 </head>
 <body>
 
 <header>
   <div class="hwrap">
     <div class="brand">Object Model 1.1–1.3 <span>·</span> CRAM</div>
-    <button class="btn" id="onlyBad">Shaky only</button>
-    <button class="btn" id="clearFlags">Clear flags</button>
     <button class="btn" onclick="window.print()">Print</button>
-    <span class="spacer" id="stat"></span>
   </div>
 </header>
 
@@ -36,7 +34,7 @@
 
 <!-- ================= C1 ================= -->
 <div class="concept" data-k="k1">
-  <div class="chead"><span class="cn">01</span><span class="ct">Object</span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">01</span><span class="ct">Object</span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p>Everything is an object: a thing with an <b>identity</b>, a <b>type</b> and a <b>value</b>.</p></div>
@@ -78,7 +76,7 @@ a = a + [<span class="n">4</span>];       <span class="f">id</span>(a)  <span cl
 
 <!-- ================= C2 ================= -->
 <div class="concept" data-k="k2">
-  <div class="chead"><span class="cn">02</span><span class="ct">Identity — <code>is</code> vs <code>==</code></span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">02</span><span class="ct">Identity — <code>is</code> vs <code>==</code></span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p><code>is</code> asks <b>“same object?”</b>. <code>==</code> asks <b>“same value?”</b> and runs the type's <code>__eq__</code>.</p></div>
@@ -134,7 +132,7 @@ a = a + [<span class="n">4</span>];       <span class="f">id</span>(a)  <span cl
 
 <!-- ================= C3 ================= -->
 <div class="concept" data-k="k3">
-  <div class="chead"><span class="cn">03</span><span class="ct">Name &amp; binding</span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">03</span><span class="ct">Name &amp; binding</span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p>A <b>name</b> is a key in a namespace mapping to an object reference. A <b>namespace</b> is that mapping.</p></div>
@@ -176,7 +174,7 @@ a = a + [<span class="n">4</span>];       <span class="f">id</span>(a)  <span cl
 
 <!-- ================= C4 ================= -->
 <div class="concept" data-k="k4">
-  <div class="chead"><span class="cn">04</span><span class="ct">LEGB &amp; shadowing</span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">04</span><span class="ct">LEGB &amp; shadowing</span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p>Name lookup searches <b>Local → Enclosing → Global → Builtins</b>. First hit wins; miss all four → <code>NameError</code>.</p></div>
@@ -223,7 +221,7 @@ a = a + [<span class="n">4</span>];       <span class="f">id</span>(a)  <span cl
 
 <!-- ================= C5 ================= -->
 <div class="concept" data-k="k5">
-  <div class="chead"><span class="cn">05</span><span class="ct">Container = array of references</span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">05</span><span class="ct">Container = array of references</span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p>A list does not contain objects. It contains <b>references</b> to objects — a contiguous array of pointers.</p></div>
@@ -266,7 +264,7 @@ r[<span class="n">0</span>].<span class="f">append</span>(<span class="s">'x'</s
 
 <!-- ================= C6 ================= -->
 <div class="concept" data-k="k6">
-  <div class="chead"><span class="cn">06</span><span class="ct">Aliasing</span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">06</span><span class="ct">Aliasing</span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p><b>Two or more references to one object</b> — regardless of where those references live.</p></div>
@@ -304,7 +302,7 @@ r[<span class="n">0</span>].<span class="f">append</span>(<span class="s">'x'</s
 
 <!-- ================= C7 ================= -->
 <div class="concept" data-k="k7">
-  <div class="chead"><span class="cn">07</span><span class="ct">Rebind vs Mutate <span style="font:700 11px var(--sans);color:var(--bad)">— THE ONE</span></span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">07</span><span class="ct">Rebind vs Mutate <span style="font:700 11px var(--sans);color:var(--bad)">— THE ONE</span></span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p><b>Rebinding</b> (<code>x = …</code>, <code>x[i] = …</code>) changes <i>which object a slot points to</i>.
@@ -363,7 +361,7 @@ r[<span class="n">0</span>].<span class="f">append</span>(<span class="s">'x'</s
 
 <!-- ================= C8 ================= -->
 <div class="concept" data-k="k8">
-  <div class="chead"><span class="cn">08</span><span class="ct">Copy depths</span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">08</span><span class="ct">Copy depths</span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p>Three depths only: <b>alias</b> (nothing new), <b>shallow</b> (new outer, shared inner), <b>deep</b> (new everything mutable).</p></div>
@@ -418,7 +416,7 @@ r[<span class="n">0</span>].<span class="f">append</span>(<span class="s">'x'</s
 
 <!-- ================= C9 ================= -->
 <div class="concept" data-k="k9">
-  <div class="chead"><span class="cn">09</span><span class="ct">deepcopy internals</span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">09</span><span class="ct">deepcopy internals</span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p>Deep copy rebuilds <b>everything that could be mutated</b>, and returns immutables unchanged.</p></div>
@@ -469,7 +467,7 @@ copy.<span class="f">deepcopy</span>(n) <span class="k">is</span> n   <span clas
 
 <!-- ================= C10 ================= -->
 <div class="concept" data-k="k10">
-  <div class="chead"><span class="cn">10</span><span class="ct">Arguments &amp; mutable defaults</span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">10</span><span class="ct">Arguments &amp; mutable defaults</span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p>Parameters are <b>bindings in the function's new namespace</b>. Not by-value, not by-reference — the same rule as everywhere else.</p></div>
@@ -518,7 +516,7 @@ copy.<span class="f">deepcopy</span>(n) <span class="k">is</span> n   <span clas
 
 <!-- ================= C11 ================= -->
 <div class="concept" data-k="k11">
-  <div class="chead"><span class="cn">11</span><span class="ct">The <code>+=</code> paradox</span><span class="flag">✗ shaky</span></div>
+  <div class="chead"><span class="cn">11</span><span class="ct">The <code>+=</code> paradox</span></div>
 
   <div class="blk d"><div class="bl">Definition</div>
     <p><code>x[i] += v</code> is <b>three</b> operations: load the slot, run the in-place op, store the result back.</p></div>
@@ -571,76 +569,35 @@ copy.<span class="f">deepcopy</span>(n) <span class="k">is</span> n   <span clas
   </div>
 </section>
 
-<!-- ================= EXIT TEST ================= -->
+<!-- ================= THE SIX ANSWERS ================= -->
 <section>
-  <h2>Sixty-second exit test</h2>
-  <p class="cap">Cold, out loud, no scrolling. Any stumble = not done.</p>
+  <h2>The six answers</h2>
+  <p class="cap">If any of these reads as new rather than familiar, the card above it is the one to re-read.</p>
   <ol class="test">
-    <li>Explain <code>[[]]*3</code> vs <code>[0]*3</code> <b>without using the word "immutable".</b></li>
-    <li>Name the three copy depths and the two booleans that tell them apart.</li>
-    <li>Why does <code>deepcopy</code> refuse to copy an <code>int</code>?</li>
-    <li>The <code>+=</code> paradox — which step commits, which step fails?</li>
-    <li>Why does a mutable default accumulate, and where is it stored?</li>
-    <li>Given a surprise in a container, what three questions do you ask, in order?</li>
+    <li><b><code>[[]]*3</code> vs <code>[0]*3</code></b> — both build three slots pointing at
+      <i>one</i> object. <code>rows[0].append("x")</code> <b>mutates</b> the shared object, so all
+      three show it. <code>nums[0] = 9</code> <b>rebinds one slot</b>, so only that slot changes.
+      Immutability never enters the explanation.</li>
+    <li><b>Three copy depths, two booleans</b> — alias (<i>same outer, same inner</i>), shallow
+      (<i>new outer, same inner</i>), deep (<i>new outer, new inner</i>). The two tests are
+      <code>c is orig</code> and <code>c[0] is orig[0]</code>; the second is the one that matters.</li>
+    <li><b>Why <code>deepcopy</code> won't copy an <code>int</code></b> — copying only means anything
+      for an object that can be mutated. An immutable object can be shared with no risk, so deepcopy
+      returns the original rather than wasting an allocation.</li>
+    <li><b>The <code>+=</code> paradox</b> — step 2 <b>commits</b> (<code>__iadd__</code> mutates the
+      inner list in place); step 3 <b>fails</b> (assigning the result back into the tuple slot). One
+      statement, an exception <i>and</i> a completed mutation.</li>
+    <li><b>Why a mutable default accumulates</b> — the default object is built <b>once, when
+      <code>def</code> executes</b>, and stored on the function object. You can see it in
+      <code>fn.__defaults__</code>.</li>
+    <li><b>The three questions, in order</b> — <b>which slot → rebind or mutate → is it shared?</b>
+      <span class="stamp">that is the whole stage</span></li>
   </ol>
-  <p style="margin-top:12px;font-size:13.5px;color:var(--tx2)">
-    Q6: <b>which slot → rebind or mutate → is it shared?</b>
-    <span class="stamp">that is the whole stage</span></p>
 </section>
 
 </main>
 
-<footer>Object Model · drills 1.1–1.3 · cram sheet. Flags stored in this browser only.</footer>
+<footer>Object Model · notes 1.1–1.3 · cram sheet.</footer>
 
-<script>
-(function () {
-  var KEY = 'om-cram-shaky-v1';
-  var cards = [].slice.call(document.querySelectorAll('.concept'));
-  var stat = document.getElementById('stat');
-  var flags = {};
-  try { flags = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { flags = {}; }
-
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(flags)); } catch (e) {} }
-
-  function paint() {
-    var n = 0;
-    cards.forEach(function (c) {
-      var bad = !!flags[c.dataset.k];
-      c.classList.toggle('shaky', bad);
-      if (bad) n++;
-    });
-    stat.textContent = n ? (n + ' of ' + cards.length + ' shaky') : 'nothing flagged';
-  }
-
-  cards.forEach(function (c) {
-    c.querySelector('.flag').addEventListener('click', function () {
-      var k = c.dataset.k;
-      if (flags[k]) { delete flags[k]; } else { flags[k] = 1; }
-      save();
-      paint();
-    });
-  });
-
-  var only = false;
-  document.getElementById('onlyBad').addEventListener('click', function () {
-    only = !only;
-    this.classList.toggle('on', only);
-    cards.forEach(function (c) {
-      c.classList.toggle('hidden', only && !flags[c.dataset.k]);
-    });
-  });
-
-  document.getElementById('clearFlags').addEventListener('click', function () {
-    flags = {};
-    save();
-    cards.forEach(function (c) { c.classList.remove('hidden'); });
-    only = false;
-    document.getElementById('onlyBad').classList.remove('on');
-    paint();
-  });
-
-  paint();
-})();
-</script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Python Data Model — Drill 2.1 · Special Methods as Protocol Hooks</title>
+<title>Python Data Model — 2.1 · Special Methods as Protocol Hooks</title>
 <link rel="stylesheet" href="../../../assets/base.css" />
 <script src="../../../assets/nav.js" defer></script>
 </head>
@@ -11,10 +11,9 @@
 
 <header>
   <div class="hwrap">
-    <div class="brand">Python Data Model <span>·</span> Drill 2.1</div>
-    <div class="tagline">Special methods · one exit checkpoint</div>
+    <div class="brand">Python Data Model <span>·</span> Notes 2.1</div>
+    <div class="tagline">Special methods · protocol hooks</div>
     <button class="btn" onclick="window.print()">Print / PDF</button>
-    <button class="btn" id="resetBtn">Reset checkpoint</button>
   </div>
   <div id="bar"></div>
 </header>
@@ -31,9 +30,9 @@
   <a href="#getitem">04 · One method, several powers</a>
   <a href="#truth">05 · Truthiness and its fallbacks</a>
   <a href="#ops">06 · Operators and NotImplemented</a>
-  <h4>Hands On</h4>
-  <a href="#drills">07 · Six drills</a>
-  <a href="#exit">08 · Exit checkpoint</a>
+  <h4>Worked</h4>
+  <a href="#drills">07 · Worked examples</a>
+  <a href="#exit">08 · What these settle</a>
   <h4>Reference</h4>
   <a href="#ledger">09 · Language vs CPython</a>
   <a href="#next">10 · What this unlocks</a>
@@ -42,7 +41,7 @@
 <main>
 
 <div class="hero">
-  <div class="kicker">Stage 2 · Data Model · Drill 2.1</div>
+  <div class="kicker">Stage 2 · Data Model · Notes 2.1</div>
   <h1>Special methods as protocol hooks</h1>
   <p class="dropcap">Stage 1 answered <em>what an object is</em> — identity, a type, a value, reached
   through references living in namespaces. Stage 2 answers the other half: <em>how the language
@@ -50,7 +49,7 @@
   behaviours that Python knows how to perform on your object. There is only a naming convention:
   the interpreter reaches for a method with a specific name, on the object's <b>type</b>, and calls it.</p>
   <div class="why">
-    <b>The whole drill in one sentence.</b> <mark>Syntax and builtins are sugar for calling a
+    <b>The whole page in one sentence.</b> <mark>Syntax and builtins are sugar for calling a
     named method on the type.</mark> <code>len(x)</code> is <code>type(x).__len__(x)</code>.
     Everything below is that sentence, applied until it stops being surprising.
   </div>
@@ -66,7 +65,7 @@
 <!-- ============================================================ 00 -->
 <section id="frame">
   <h2><span class="num">00</span> Where this sits</h2>
-  <p class="sub">You have already used one special method. This drill turns it into a system.</p>
+  <p class="sub">You have already used one special method. This page turns it into a system.</p>
 
   <div class="grid g2">
     <div class="card">
@@ -86,12 +85,6 @@
   <p>This is the payoff of Stage 1 being boring. Because you already accept that behaviour lives on
   the type and not on the instance, the data model needs no new machinery — it is an <b>index of
   method names</b> plus the rule for when each one is consulted.</p>
-
-  <div class="rule">
-    <span class="lbl">Protocol</span>
-    One checkpoint, §08, fixed list. No follow-up round. Say <b>"banked"</b> to skip anything in the
-    drill body and it will not be re-raised.
-  </div>
 </section>
 
 <!-- ============================================================ 01 -->
@@ -441,114 +434,176 @@ Money.__hash__            <span class="c"># None — not missing. Explicitly Non
 
 <!-- ============================================================ 07 -->
 <section id="drills">
-  <h2><span class="num">07</span> Six drills</h2>
-  <p class="sub">Companion code: <code>python-model/d21_data_model.py</code>.</p>
+  <h2><span class="num">07</span> Worked examples</h2>
+  <p class="sub">Code with what it actually produced. Companion: <code>python-model/d21_data_model.py</code>.</p>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D1</span><span class="dt">Make the dispatch audible</span><span class="dw">Syntax → method</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> Loud, protocol_map, show_bytecode
-x = <span class="f">Loud</span>()
+  <div class="card">
+    <h4>The dispatch, made audible</h4>
+    <p><code>Loud</code> defines four hooks and prints as each one fires.</p>
+<pre><code>x = <span class="f">Loud</span>()
 
-<span class="f">len</span>(x)
-x[<span class="n">1</span>]
-x + <span class="n">1</span>
-<span class="f">x</span>()
-<span class="k">for</span> v <span class="k">in</span> x: <span class="k">pass</span>       <span class="c"># which hook fires, and how many times?</span>
+<span class="f">len</span>(x)          <span class="c"># -> __len__            returns 3</span>
+x[<span class="n">1</span>]           <span class="c"># -> __getitem__(1)     returns 1</span>
+x + <span class="n">1</span>          <span class="c"># -> __add__(1)         returns 'added'</span>
+<span class="f">x</span>()            <span class="c"># -> __call__()         returns 'called'</span>
 
-<span class="f">protocol_map</span>(x)
-<span class="f">show_bytecode</span>()
+<span class="k">for</span> v <span class="k">in</span> x: <span class="k">pass</span>
+<span class="c"># -> __getitem__(0)</span>
+<span class="c"># -> __getitem__(1)</span>
+<span class="c"># -> __getitem__(2)</span>
+<span class="c"># -> __getitem__(3)   raises IndexError -> loop ends</span>
 </code></pre>
-      <p>In the <code>for</code> loop, count the calls and say where the loop stopped and why.</p>
+    <p><code>Loud</code> has no <code>__iter__</code>. The <code>for</code> loop still ran — four
+    calls, ascending from 0, terminated by <code>IndexError</code>. <code>dis</code> confirms there is
+    no magic underneath: the bytecode contains a generic opcode, and the <b>type</b> supplies the
+    behaviour.</p>
+  </div>
+
+  <div class="card">
+    <h4>Implicit lookup skips the instance entirely</h4>
+<pre><code>s = <span class="f">Sneaky</span>()            <span class="c"># its class defines __len__ returning 1</span>
+s.__len__ = <span class="k">lambda</span>: <span class="n">99</span>   <span class="c"># plant a fake on the INSTANCE</span>
+</code></pre>
+    <table class="nw">
+      <thead><tr><th>Expression</th><th>Result</th><th>Which mapping was searched</th></tr></thead>
+      <tbody>
+        <tr><td><code>len(s)</code></td><td><b>1</b></td><td>the type, and its MRO — instance skipped</td></tr>
+        <tr><td><code>s.__len__()</code></td><td><b>99</b></td><td>the instance dict, which wins for explicit access</td></tr>
+        <tr><td><code>type(s).__len__(s)</code></td><td><b>1</b></td><td>the type, spelled out</td></tr>
+        <tr><td><code>"__len__" in vars(s)</code></td><td><b>True</b></td><td>the fake really is there — and is really ignored</td></tr>
+      </tbody>
+    </table>
+    <div class="trap">
+      <span class="lbl">The consequence</span>
+      <mark>You cannot give <em>one object</em> a protocol.</mark> Monkey-patching a dunder onto an
+      instance is silently useless for every implicit invocation. Patch the class or nothing.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D2</span><span class="dt">Instance vs type lookup</span><span class="dw">Predict before running</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> instance_dunder_is_ignored
-<span class="f">instance_dunder_is_ignored</span>()
+  <div class="card">
+    <h4>The string fallback runs one way only</h4>
+<pre><code><span class="f">repr</span>(<span class="f">OnlyRepr</span>())     <span class="c"># 'OnlyRepr(unambiguous)'</span>
+<span class="f">str</span>(<span class="f">OnlyRepr</span>())      <span class="c"># 'OnlyRepr(unambiguous)'   &lt;- str fell back to repr</span>
+
+<span class="f">repr</span>(<span class="f">OnlyStr</span>())      <span class="c"># '&lt;OnlyStr object at 0x...&gt;'  &lt;- NO fallback</span>
+<span class="f">str</span>(<span class="f">OnlyStr</span>())       <span class="c"># 'OnlyStr(readable)'</span>
+
+<span class="f">print</span>(<span class="f">OnlyStr</span>())     <span class="c"># OnlyStr(readable)</span>
+<span class="f">print</span>([<span class="f">OnlyStr</span>()])   <span class="c"># [&lt;OnlyStr object at 0x...&gt;]  &lt;- containers use repr</span>
 </code></pre>
-      <p>Write down all four values first. Then explain to yourself why two of them disagree when
-      only one object is involved.</p>
+    <div class="life">
+      <span class="lbl">If you write only one, write <code>__repr__</code></span>
+      <code>str()</code> falls back to <code>__repr__</code>; <code>__repr__</code> never falls back
+      to <code>__str__</code>. So <code>__repr__</code> covers both, and it is the one that shows up
+      where you actually need it — <mark>the REPL, the debugger, tracebacks, and inside any
+      container</mark>, all of which use <code>repr</code> regardless of what <code>__str__</code>
+      says.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D3</span><span class="dt">repr vs str</span><span class="dw">The one-way fallback</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> OnlyRepr, OnlyStr, BothStrings, string_matrix
-<span class="f">string_matrix</span>(<span class="f">OnlyRepr</span>())
-<span class="f">string_matrix</span>(<span class="f">OnlyStr</span>())
-<span class="f">string_matrix</span>(<span class="f">BothStrings</span>())
+  <div class="card">
+    <h4>One method buys several powers</h4>
+    <p><code>Countdown</code> defines <code>__getitem__</code> and nothing else.</p>
+<pre><code>c = <span class="f">Countdown</span>(<span class="n">4</span>)
 
-<span class="f">print</span>(<span class="f">OnlyStr</span>())        <span class="c"># fine</span>
-<span class="f">print</span>([<span class="f">OnlyStr</span>()])      <span class="c"># and now?</span>
+<span class="f">list</span>(c)                          <span class="c"># [4, 3, 2, 1]</span>
+[v <span class="k">for</span> v <span class="k">in</span> c]                    <span class="c"># [4, 3, 2, 1]</span>
+first, second, *rest = c          <span class="c"># unpacking works too</span>
+<span class="n">2</span> <span class="k">in</span> c                           <span class="c"># True</span>
+
+<span class="f">hasattr</span>(<span class="f">type</span>(c), <span class="s">"__iter__"</span>)     <span class="c"># False</span>
+<span class="f">hasattr</span>(<span class="f">type</span>(c), <span class="s">"__contains__"</span>) <span class="c"># False</span>
+<span class="f">iter</span>(c)                          <span class="c"># &lt;iterator object&gt; — built by CPython on demand</span>
 </code></pre>
-      <p>Six cells differ across the three classes. Name the rule each difference demonstrates.</p>
+    <p>Iteration, <code>list()</code>, unpacking and <code>in</code> all arrived from one method, via
+    the <b>legacy sequence protocol</b>: call <code>__getitem__</code> with 0, 1, 2… until
+    <code>IndexError</code>.</p>
+    <div class="trap">
+      <span class="lbl">Two edges this creates</span>
+      <b>Cost:</b> <code>99 in c</code> answers <code>False</code> only after scanning every element
+      — a membership test that is silently a linear scan.<br>
+      <b>Fragility:</b> change the <code>IndexError</code> to <code>KeyError</code> and
+      <code>list(c)</code> stops working — <mark>the termination condition is that one specific
+      exception type</mark>, and any other propagates out of the loop instead of ending it.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D4</span><span class="dt">Free powers</span><span class="dw">Protocol &gt; inheritance</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> Countdown, free_powers
-<span class="f">free_powers</span>()
-
-c = <span class="f">Countdown</span>(<span class="n">4</span>)
-<span class="f">iter</span>(c)                  <span class="c"># what type is this? where did it come from?</span>
-<span class="n">99</span> <span class="k">in</span> c                  <span class="c"># explain the cost of this answer</span>
-</code></pre>
-      <p>Then break it: change <code>IndexError</code> to <code>KeyError</code> in the class and
-      re-run <code>list(c)</code>. Explain the result.</p>
+  <div class="card">
+    <h4>Truthiness tries three things in order</h4>
+    <p><code>bool(x)</code> asks <code>__bool__</code>, then <code>__len__</code>, then gives up and
+    says <code>True</code>.</p>
+    <table class="nw">
+      <thead><tr><th>Object</th><th><code>bool()</code></th><th>Which step answered</th></tr></thead>
+      <tbody>
+        <tr><td><code>NoHooks()</code></td><td><b>True</b></td><td>step 3 — the default, no hooks at all</td></tr>
+        <tr><td><code>HasLen(0)</code></td><td><b>False</b></td><td>step 2 — length zero</td></tr>
+        <tr><td><code>HasLen(5)</code></td><td><b>True</b></td><td>step 2 — non-zero length</td></tr>
+        <tr><td><code>HasBool(0)</code></td><td><b>True</b></td><td>step 1 — <code>__bool__</code> wins, <code>__len__</code> never consulted</td></tr>
+      </tbody>
+    </table>
+    <div class="trap">
+      <span class="lbl">The row that ships to production</span>
+      <code>HasBool(0)</code> is <b>empty and truthy at the same time</b> — <code>len(x) == 0</code>
+      while <code>if x:</code> passes. Any code that guards with <code>if x:</code> processes an empty
+      container. The fix is to make step 1 agree with step 2:
+      <code>def __bool__(self): return self.n &gt; 0</code> — or delete <code>__bool__</code> and let
+      <code>__len__</code> answer.<br>
+      Second-order trap: <mark><code>NoHooks()</code> shows that a plain custom object is always
+      truthy</mark>, so <code>if result:</code> never detects "empty" unless you made it able to.
     </div>
   </div>
 
-  <div class="drill">
-    <div class="dh"><span class="did">D5</span><span class="dt">Truthiness chain</span><span class="dw">Three steps</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> truth_table, NoHooks, HasLen, HasBool
-<span class="f">truth_table</span>()
-</code></pre>
-      <p>One row is the bug that ships to production. Identify it, then write the two-line fix.</p>
-    </div>
-  </div>
+  <div class="card">
+    <h4>Operators decline; equality and hash are coupled</h4>
+<pre><code>a, b = <span class="f">Money</span>(<span class="n">5</span>), <span class="f">Money</span>(<span class="n">5</span>)
 
-  <div class="drill">
-    <div class="dh"><span class="did">D6</span><span class="dt">eq, hash and NotImplemented</span><span class="dw">The sharpest edge</span></div>
-    <div class="db">
-<pre><code><span class="k">from</span> d21_data_model <span class="k">import</span> equality_and_hash, Money, Reflected
-<span class="f">equality_and_hash</span>()
+a == b                     <span class="c"># True   — value equality, as written</span>
+a <span class="k">is</span> b                     <span class="c"># False  — two distinct objects</span>
+a == <span class="n">5</span>                     <span class="c"># False  — but NO __eq__ produced this</span>
 
-<span class="n">1</span> + <span class="f">Reflected</span>()          <span class="c"># int.__add__ declined — then what?</span>
-<span class="f">Money</span>(<span class="n">5</span>) == <span class="s">"five"</span>      <span class="c"># __eq__ returned NotImplemented — who answered?</span>
+Money.__hash__             <span class="c"># None</span>
+<span class="f">hash</span>(a)                    <span class="c"># TypeError: unhashable type: 'Money'</span>
+
+<span class="f">hash</span>(<span class="f">HashableMoney</span>(<span class="n">5</span>)) == <span class="f">hash</span>(<span class="n">5</span>)     <span class="c"># True</span>
+<span class="f">len</span>({<span class="f">HashableMoney</span>(<span class="n">5</span>), <span class="f">HashableMoney</span>(<span class="n">5</span>)})  <span class="c"># 1 — the set dedupes</span>
+
+<span class="n">1</span> + <span class="f">Reflected</span>()             <span class="c"># 'radd saw 1'</span>
 </code></pre>
-      <p>For the last line: the expression returns <code>False</code>, but <em>no</em>
-      <code>__eq__</code> produced it. Say what did.</p>
+    <p><code>1 + Reflected()</code> works because <code>int.__add__</code> returned
+    <code>NotImplemented</code> and Python then tried the <b>reflected</b> method on the right
+    operand. That is why an operator should return <code>NotImplemented</code> rather than raise —
+    raising denies the other operand its turn.</p>
+    <div class="note">
+      <span class="lbl">Who answered <code>a == 5</code>?</span>
+      <code>Money.__eq__</code> returned <code>NotImplemented</code>. <code>int.__eq__</code> also
+      declined. With both sides refusing, <mark>the interpreter falls back to comparing identity</mark>
+      — and they are not the same object, so the answer is <code>False</code>. No
+      <code>__eq__</code> produced that value.
     </div>
   </div>
 </section>
 
 <!-- ============================================================ 08 -->
 <section id="exit">
-  <h2><span class="num">08</span> Exit checkpoint</h2>
-  <p class="sub">Five items. Fixed list. No second round.</p>
+  <h2><span class="num">08</span> What these settle</h2>
+  <p class="sub">The five conclusions worth carrying out of this page.</p>
 
-  <div id="checklist">
-    <label class="chk"><input type="checkbox" data-k="e1"><span class="q"><b>1</b> — D2: why does <code>len(s)</code> disagree with <code>s.__len__()</code> for the same object? Answer in terms of <em>which mapping is searched</em>, not "because dunders are special".</span></label>
-    <label class="chk"><input type="checkbox" data-k="e2"><span class="q"><b>2</b> — D3: you have one method's worth of effort. Which of <code>__repr__</code> / <code>__str__</code> do you write, and give the two places your choice pays off.</span></label>
-    <label class="chk"><input type="checkbox" data-k="e3"><span class="q"><b>3</b> — D4: <code>Countdown</code> has no <code>__iter__</code>, yet <code>for</code> works. Describe the fallback in three steps, including the termination condition.</span></label>
-    <label class="chk"><input type="checkbox" data-k="e4"><span class="q"><b>4</b> — D6: explain why defining <code>__eq__</code> sets <code>__hash__ = None</code>, in terms of the invariant being protected — and what would break in a <code>dict</code> if Python did not do it.</span></label>
-    <label class="chk"><input type="checkbox" data-k="e5"><span class="q"><b>5</b> — One paragraph: a colleague says "protocols are just interfaces without the boilerplate". Give one way that is right and one way it is misleading.</span></label>
-  </div>
-  <span id="chkCount"></span>
+  <table>
+    <thead><tr><th style="width:34px">#</th><th>Settled</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b></td><td><code>len(s)</code> and <code>s.__len__()</code> disagree because they search <b>different mappings</b>. Implicit invocation looks in the type and its MRO; explicit attribute access looks in the instance dict first. One object, two lookup paths — nothing about dunders being "special".</td></tr>
+      <tr><td><b>2</b></td><td>With one method's effort, write <b><code>__repr__</code></b>. It pays off twice: <code>str()</code> falls back to it (never the reverse), and it is what appears in the REPL, debugger, tracebacks and inside every container.</td></tr>
+      <tr><td><b>3</b></td><td>The <code>__getitem__</code> fallback in three steps: <b>(1)</b> <code>iter()</code> finds no <code>__iter__</code> and builds a sequence iterator; <b>(2)</b> it calls <code>__getitem__</code> with 0, 1, 2…; <b>(3)</b> it stops on <code>IndexError</code> — that exact exception and no other.</td></tr>
+      <tr><td><b>4</b></td><td>Defining <code>__eq__</code> sets <code>__hash__ = None</code> to protect the invariant <b>equal objects must hash equal</b>. Without it, a class with value equality would keep identity-based hashing: two equal objects would land in different buckets, so <code>d[Money(5)]</code> would miss a key stored under an equal <code>Money(5)</code>, and a set would fail to dedupe. Restore <code>__hash__</code> only when the hashed fields cannot change.</td></tr>
+      <tr><td><b>5</b></td><td>"Protocols are interfaces without boilerplate" — <b>right</b> that both name a set of operations a type must support. <b>Misleading</b> because there is no declaration, no registration and no check: membership is decided at call time by whether the lookup succeeds. So a type can satisfy a protocol <em>by accident</em> (<code>Countdown</code> became iterable without meaning to), and can satisfy <em>half</em> of one — both of which an interface exists to forbid.</td></tr>
+    </tbody>
+  </table>
 
   <div class="life">
     <span class="lbl">Item 4 is the real test</span>
-    It is the first question in this series whose answer <mark>requires both stages at once</mark> —
-    identity and mutability from Stage 1, dispatch and invariants from Stage 2. If you can answer it
-    cleanly you have the data model's central idea: special methods are not decoration, they are
-    <em>contracts the runtime relies on</em>.
+    It is the first conclusion here that <mark>requires both stages at once</mark> — identity and
+    mutability from Stage 1, dispatch and invariants from Stage 2. Special methods are not
+    decoration; they are <em>contracts the runtime relies on</em>.
   </div>
 </section>
 
@@ -607,12 +662,12 @@ c = <span class="f">Countdown</span>(<span class="n">4</span>)
 
   <div class="note">
     <span class="lbl">Where this shows up in real work</span>
-    Every library you rely on is an exercise in this drill. <code>pandas</code> overloads
+    Every library you rely on is an exercise in this idea. <code>pandas</code> overloads
     <code>__getitem__</code> so <code>df[...]</code> means four different things. PySpark's
     <code>Column</code> overloads <code>__eq__</code> to build an <em>expression tree</em> rather
     than compare — which is exactly why <code>if col == 5:</code> silently misbehaves and
     <code>df.filter(col == 5)</code> is correct. <mark>You cannot read that library's behaviour
-    without this drill.</mark>
+    without this page.</mark>
   </div>
 </section>
 
@@ -622,9 +677,8 @@ c = <span class="f">Countdown</span>(<span class="n">4</span>)
 <button id="toTop" title="Back to top" aria-label="Back to top">↑</button>
 
 <footer>
-  Python Data Model · Stage 2, Drill 2.1 — special methods as protocol hooks.
+  Python Data Model · Stage 2, Notes 2.1 — special methods as protocol hooks.
   Companion code: <code>python-model/d21_data_model.py</code>.
-  Self-contained HTML; checkpoint state is stored in this browser only.
 </footer>
 
 <script>
@@ -642,38 +696,6 @@ c = <span class="f">Countdown</span>(<span class="n">4</span>)
     });
   }, {rootMargin:'-72px 0px -70% 0px', threshold:0});
   document.querySelectorAll('section').forEach(function(s){ obs.observe(s); });
-
-  var KEY = 'pydata-21-checkpoint-v1';
-  var boxes = Array.prototype.slice.call(document.querySelectorAll('#checklist input'));
-  var counter = document.getElementById('chkCount');
-  var state = {};
-  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e){ state = {}; }
-
-  function paint(){
-    var n = 0;
-    boxes.forEach(function(b){
-      b.parentElement.classList.toggle('done', b.checked);
-      if(b.checked) n++;
-    });
-    counter.textContent = n + ' / ' + boxes.length + ' checkpoint items' +
-      (n === boxes.length ? ' — 2.2 opens.' : '');
-  }
-  boxes.forEach(function(b){
-    b.checked = !!state[b.dataset.k];
-    b.addEventListener('change', function(){
-      state[b.dataset.k] = b.checked;
-      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
-      paint();
-    });
-  });
-  paint();
-
-  document.getElementById('resetBtn').addEventListener('click', function(){
-    state = {};
-    try { localStorage.removeItem(KEY); } catch(e){}
-    boxes.forEach(function(b){ b.checked = false; });
-    paint();
-  });
 
   var bar = document.getElementById('bar');
   var top = document.getElementById('toTop');
