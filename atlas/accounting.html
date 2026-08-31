@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Accounting — Atlas domain 18</title>
+<meta name="description" content="Double entry, the three statements, and where judgment enters. The root node of Value &amp; Exchange." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this is the root</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Double entry</a>
+  <a href="#n2">2 · The balance sheet</a>
+  <a href="#n3">3 · The income statement</a>
+  <a href="#n4">4 · Cash flow</a>
+  <a href="#n5">5 · Accrual &amp; judgment</a>
+  <a href="#n6">6 · The three interlock</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Accounting</p>
+
+<div class="hero">
+  <div class="kicker">Domain 18 · Cluster C4 · root — needs only arithmetic</div>
+  <h1>Accounting</h1>
+  <p class="dropcap">This is the cheapest high-value node in the entire Atlas. A few days of genuine effort
+  buys you the ability to read any company's financial statements for the rest of your life — and almost
+  every engineer skips it, then spends years unable to read the primary documents that describe the
+  businesses they work inside.</p>
+  <div class="why">
+    <b>The single idea.</b> Accounting is <mark>a double-entry log of economic events</mark>, and the
+    financial statements are three different aggregations of that one log. It is the same insight as
+    <a href="data-engineering.html#n3">"a table is a summary of a log"</a> — arrived at four hundred years
+    earlier, by Venetian merchants, and never improved upon.
+  </div>
+  <div class="tags">
+    <span class="tag">#double-entry</span>
+    <span class="tag t2">#balance-sheet</span>
+    <span class="tag t3">#cash-flow</span>
+    <span class="tag">#accrual</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this is the root of Cluster C4</h2>
+  <p class="sub">The most common mis-ordering in self-directed learning, corrected.</p>
+
+  <p>People start with Finance because it sounds more interesting, or with Business because it sounds more
+  useful. Both are spoken <em>in</em> accounting. Valuation is arithmetic on accounting outputs; unit
+  economics is a rearrangement of an income statement; "burn" is a cash flow line.
+  <strong>Without this node the others are vocabulary without referents.</strong></p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td>Arithmetic. Genuinely nothing else.</td><td><a href="finance.html">Finance</a> · <a href="business.html">Business</a> · <a href="infrastructure-cloud.html#n7">Infrastructure N7</a> · <a href="economics.html">Economics</a> (measurement)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Depth setting</span>
+    <strong>Reader, not preparer.</strong> You are learning to interrogate statements, not to produce
+    them. Skip: IFRS versus Ind AS minutiae, consolidation mechanics, deferred tax computation, lease
+    accounting standards. <mark>Those are the preparer's craft and none of them helps you read.</mark>
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>ACCOUNTING
+│
+├── 1 · DOUBLE ENTRY ................. the log, and why it balances
+│   ├── The accounting equation
+│   ├── Debits and credits without mysticism
+│   ├── T-accounts and the journal
+│   └── Why balancing is an error-detecting code
+│
+├── 2 · THE BALANCE SHEET ............ stocks — what is owned and owed
+│   ├── Assets, liabilities, equity
+│   ├── Current vs non-current
+│   ├── Working capital
+│   └── Book value and its distance from reality
+│
+├── 3 · THE INCOME STATEMENT ......... flows — performance over a period
+│   ├── Revenue and recognition
+│   ├── COGS and gross profit
+│   ├── Operating expenses and operating income
+│   └── EBITDA, net income, and what each excludes
+│
+├── 4 · CASH FLOW .................... the statement that is hardest to fake
+│   ├── Operating, investing, financing
+│   ├── Reconciling profit to cash
+│   ├── Free cash flow
+│   └── Why profitable companies die
+│
+├── 5 · ACCRUAL &amp; JUDGMENT ........... where the numbers become opinions
+│   ├── Accrual vs cash basis
+│   ├── Depreciation and amortisation
+│   ├── Provisions, impairments, write-offs
+│   └── Revenue recognition timing
+│
+└── 6 · THE THREE INTERLOCK .......... one log, three views</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Double entry</h2>
+  <p class="sub">A 500-year-old data structure with an integrity check built in.</p>
+
+  <p><b>WHAT IT IS.</b> Every transaction is recorded twice — as a source and a use — so that
+  <em>assets = liabilities + equity</em> holds after every single entry.</p>
+
+  <p><b>WHY IT EXISTS.</b> Not for tradition. Because it is <strong>an error-detecting code</strong>: if the
+  two sides disagree, something is wrong, and you learn this immediately rather than at year end. It is a
+  checksum over economic events, invented long before anyone had the word.</p>
+
+  <p><b>DEPENDENCIES.</b> Arithmetic.</p>
+
+  <p><b>SUBTOPICS.</b> The accounting equation · debits and credits as left and right rather than good and
+  bad · journal and ledger · T-accounts · trial balance · why every transaction has exactly two sides.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course · <em>Title:</em> MIT OCW 15.501 <em>Corporate Financial Accounting</em>,
+    the first few sessions — free lecture notes and problem sets<br>
+    <em>Why this one:</em> free, and it is taught to people who will <em>use</em> financial statements
+    rather than prepare them, which is exactly your depth setting.
+    <br><br>
+    <b>DEEPER (optional)</b> — none needed. This node has a floor and you cross it in a day.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Run a real business for fifteen transactions, by hand</span>
+    Invent a small business — a tea stall, a freelance practice, a second-hand phone shop. Now record
+    fifteen genuine transactions in a two-column ledger, on paper or in a spreadsheet with no formulas:
+    put in ₹50,000 of your own money, buy equipment, buy stock on credit, sell for cash, sell on credit,
+    pay rent, pay a supplier, take a loan, pay interest, withdraw money for yourself.
+    <br><br>
+    <strong>Force the equation to balance after every single line.</strong> When it does not, find the
+    entry you recorded with only one side — it will always be that, and it will usually be a transaction
+    you thought had only one consequence.
+    <br><br>
+    The instructive ones are the pairs people get wrong: taking a loan increases both an asset and a
+    liability, so you are no richer. Buying equipment for cash changes the <em>composition</em> of assets
+    and nothing else. Withdrawing money for yourself reduces equity, not expenses — and confusing those two
+    is why owner-operated businesses so often misjudge their own profitability.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>the balance is not a convention, it is a constraint that makes
+    a whole class of errors impossible.</mark> You are writing an append-only log with an invariant, which
+    is a design pattern you already know from <a href="databases.html#n4">Databases N4</a>.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Data Engineering N3 (the log) · Databases N4 (invariants and integrity) ·
+  Mathematics N3 (an equation as a constraint) · Software Engineering (checksums).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> The balance sheet</h2>
+  <p class="sub">A photograph at an instant — the stock, in <a href="systems-thinking.html#n1">systems thinking</a> terms.</p>
+
+  <p><b>WHAT IT IS.</b> A statement of what a business owns, what it owes, and the residual belonging to
+  owners, at one moment in time.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because performance over a period tells you nothing about accumulated position.
+  A company can have a wonderful year and be insolvent, and only the balance sheet shows it.</p>
+
+  <p><b>DEPENDENCIES.</b> N1.</p>
+
+  <p><b>SUBTOPICS.</b> Assets, liabilities, equity · current versus non-current · inventory, receivables,
+  payables · working capital and the cash conversion cycle · goodwill and intangibles · book value versus
+  market value · off-balance-sheet items.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free primary document · <em>Title:</em> the annual report of an Indian company you
+    actually use — free on the company's investor relations page and on the BSE and NSE websites<br>
+    <em>Why this one:</em> free, real, and legally required to be accurate. Pick something whose business
+    you understand physically — a cement maker, a paint company, a retailer — so the numbers have
+    referents you can picture.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find the same business inside three different balance sheets</span>
+    Pull the balance sheets of three companies you know personally: a retailer (DMart), a software services
+    firm (Infosys or TCS), and a heavy manufacturer (Tata Steel or UltraTech). Put the three side by side
+    as percentages of total assets.
+    <br><br>
+    They look like three different species. The manufacturer is mostly plant and equipment. The software
+    firm is mostly cash and receivables with almost no fixed assets. The retailer has large inventory and
+    — the interesting one — <strong>often negative working capital</strong>, because it collects from
+    customers instantly and pays suppliers in 45 days.
+    <br><br>
+    That last observation is worth sitting with: <mark>the retailer's suppliers are financing its
+    growth, interest-free.</mark> Compute the cash conversion cycle for all three and rank them. You have
+    just discovered why retail can expand without raising capital and why manufacturing cannot.
+    <br><br>
+    Then find the line that is pure judgment: goodwill. Locate a company carrying large goodwill from an
+    acquisition, and read the impairment note. That number is somebody's opinion about the future,
+    presented among facts.
+    <br><br>
+    <em>The realisation to reach:</em> the shape of a balance sheet <em>is</em> the business model. You can
+    often identify what industry a company is in from percentages alone, without being told.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking N1 (this is the stock) · Business (working capital is a strategy)
+  · Finance (leverage lives here) · Economics (capital intensity).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> The income statement</h2>
+  <p class="sub">A film of a period — the flow.</p>
+
+  <p><b>WHAT IT IS.</b> Revenue earned during a period, minus the costs of earning it, arriving at profit
+  through several intermediate subtotals that each mean something different.</p>
+
+  <p><b>WHY IT EXISTS.</b> To answer "did the operations of this period create value?" — separately from
+  what the business owns.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2.</p>
+
+  <p><b>SUBTOPICS.</b> Revenue and recognition · cost of goods sold and gross profit · operating expenses ·
+  operating income · interest and tax · net income · EBITDA and precisely what it excludes · margin
+  analysis · one-off versus recurring items.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free primary documents · <em>Title:</em> Warren Buffett's annual letters to Berkshire
+    shareholders, free at berkshirehathaway.com — read three, from any years<br>
+    <em>Why this one:</em> free, and they are the best available demonstration of someone reading financial
+    statements <em>critically</em> — arguing with the numbers, explaining what a subtotal hides, and being
+    explicit about which figures he distrusts and why.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Walk down the statement and watch the story change</span>
+    Take one company's income statement and compute every margin as a percentage of revenue: gross,
+    operating, pre-tax, net. Do this for five consecutive years and plot the four lines.
+    <br><br>
+    Read the shape. A falling gross margin with stable operating margin means input costs rose and
+    overheads were cut to compensate — a story of pressure. Stable gross with falling operating means the
+    company is spending more to sell the same thing. <mark>The subtotals exist precisely so that the story
+    can be located.</mark>
+    <br><br>
+    Now interrogate EBITDA. Find a company that reports it prominently, and compute the gap between EBITDA
+    and net income. Then identify what fills the gap — interest, depreciation, or both. For a
+    capital-intensive business, depreciation is a <em>real</em> cost: those machines genuinely wear out and
+    genuinely must be replaced. <strong>EBITDA flatters exactly the businesses that can least afford to be
+    flattered</strong>, which is why it is beloved by leveraged and asset-heavy companies.
+    <br><br>
+    Then find a one-off: search the notes for "exceptional item" and check whether that same company had an
+    exceptional item in each of the last five years. Something exceptional every year is not exceptional.
+    <br><br>
+    <em>The realisation to reach:</em> profit is not one number. It is a sequence of numbers, and choosing
+    which one to headline is a rhetorical act.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Business (unit economics is this statement per customer) · Infrastructure N7
+  (cloud spend is COGS) · Systems Thinking N1 (this is the flow).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Cash flow</h2>
+  <p class="sub">The statement that is hardest to manipulate, and the one most people never read.</p>
+
+  <p><b>WHAT IT IS.</b> The movement of actual cash during a period, separated into operating, investing
+  and financing activities, and reconciled back to reported profit.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because profit is an opinion and cash is a fact. Profit contains judgments about
+  timing; cash either arrived or it did not. <strong>Companies do not fail because they are unprofitable;
+  they fail because they run out of cash</strong>, and those are different events that can happen years
+  apart.</p>
+
+  <p><b>DEPENDENCIES.</b> N2, N3.</p>
+
+  <p><b>SUBTOPICS.</b> The three sections · the indirect method and why it starts from profit · working
+  capital changes as a cash consumer · capital expenditure · free cash flow · why growth consumes cash ·
+  the cash conversion cycle.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free primary document · <em>Title:</em> the cash flow statement of any fast-growing
+    Indian company — free in its annual report — read alongside its income statement<br>
+    <em>Why this one:</em> free, and growth companies show the profit/cash divergence most dramatically.
+    The reconciliation section is a line-by-line explanation of every place accounting judgment differs
+    from reality.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Build a profitable company and bankrupt it</span>
+    Model a business that is profitable on every single sale. Each unit costs ₹70 and sells for ₹100 —
+    a healthy 30% margin. Now add real-world timing: you pay your supplier in 30 days, your customer pays
+    you in 90, and sales are growing 20% per month.
+    <br><br>
+    Build the month-by-month cash balance. <strong>It goes negative and keeps falling, while the income
+    statement shows rising profit every month.</strong> The faster you grow, the faster you die. Find the
+    month of death, then find the growth rate at which the business is sustainable without external funding.
+    <br><br>
+    Now fix it three ways and see the trade-off in each: collect faster (annoys customers), pay slower
+    (annoys suppliers), or raise financing (dilutes you). <mark>Every one of those is a real business
+    strategy, and every one has a non-financial cost.</mark>
+    <br><br>
+    Then go and find the same pattern in a real filing: pull a company with rising profits and negative
+    operating cash flow, and read the working capital line that explains it.
+    <br><br>
+    <em>The realisation to reach:</em> growth is not free. It consumes cash before it produces it, and the
+    gap is precisely the working capital cycle — which is why the fastest-growing businesses are the most
+    likely to need funding and the most fragile if it stops.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Business (burn, runway, default-alive) · Finance (working capital financing) ·
+  Systems Thinking N3 (this is a delay causing failure) · Distributed Systems N7 (a system killed by its
+  own growth).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Accrual and judgment</h2>
+  <p class="sub">Where the numbers stop being facts and become defensible opinions.</p>
+
+  <p><b>WHAT IT IS.</b> The principle of recording economic events when they occur rather than when cash
+  moves — and the set of estimates this requires.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because cash timing is arbitrary. A machine bought once serves for ten years, so
+  charging its whole cost to one year misrepresents every year. Accrual accounting fixes that
+  misrepresentation by introducing <em>estimates</em>, which is a genuine improvement that also creates
+  every accounting scandal in history.</p>
+
+  <p><b>DEPENDENCIES.</b> N3, N4.</p>
+
+  <p><b>SUBTOPICS.</b> Accrual versus cash basis · the matching principle · depreciation methods and useful
+  life · amortisation · provisions and reserves · impairment · revenue recognition timing · capitalising
+  versus expensing · earnings management and the boundary with fraud.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free primary documents · <em>Title:</em> the "Significant Accounting Policies" note in
+    any annual report — the section everyone skips<br>
+    <em>Why this one:</em> free, and it is where the company states its own judgment choices explicitly:
+    depreciation lives, revenue recognition points, provisioning policy. <mark>Two identical businesses
+    with different policies will report different profits, and this note is where you find out which one
+    you are reading.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Change one assumption and change the profit</span>
+    Take your model from N4. The business bought equipment for ₹10 lakh. Depreciate it over five years,
+    then over ten, then over three. Recompute profit for each. <strong>Nothing about the business changed
+    — profit changed by lakhs.</strong>
+    <br><br>
+    Now do the same with revenue recognition: a customer signs a three-year contract and pays upfront.
+    Recognise it all in year one, then spread it evenly. Year one profit differs enormously, and both
+    treatments have been used by real companies.
+    <br><br>
+    Then go find it in the wild. Compare the stated useful lives for similar assets across two competitors
+    in the same industry — the policies note gives you both. If one depreciates over 15 years and the other
+    over 8, the first reports higher profit for identical operations. Adjust one to the other's assumption
+    and see how much of the reported gap disappears.
+    <br><br>
+    Finally, read a summary of any major accounting fraud — Satyam in India, or Enron — and identify which
+    of these judgment levers was pulled. It is almost always revenue recognition timing or a provision that
+    was not taken.
+    <br><br>
+    <em>The realisation to reach:</em> accrual accounting is a <em>model</em> of economic reality with
+    parameters, and the parameters are chosen by the people being measured. This is not a scandal; it is
+    the design. The scandal is only when you forget it.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking N7 (all models have chosen parameters) · Psychology (incentives
+  and self-serving judgment) · Data Engineering N5 (what was believed at a point in time) · Finance
+  (adjusting reported figures before valuing).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> How the three interlock</h2>
+  <p class="sub">One log, three views — and the check that catches almost every error.</p>
+
+  <p><b>WHAT IT IS.</b> The mechanical relationships that tie the statements together: net income flows into
+  retained earnings; cash flow reconciles net income to the change in the cash balance; the balance sheet
+  must balance.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because they are three aggregations of one underlying ledger. They cannot
+  disagree, and any apparent disagreement is either an error or something being hidden.</p>
+
+  <p><b>DEPENDENCIES.</b> N2–N5.</p>
+
+  <p><b>SUBTOPICS.</b> Net income to retained earnings · closing cash as a balance sheet line · depreciation
+  appearing in two statements with opposite signs · why the three-statement model is the standard analytical
+  tool · using the linkages as a consistency check.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course materials · <em>Title:</em> MIT OCW 15.501, the sessions on statement
+    articulation, plus any company's full annual report to verify against<br>
+    <em>Why this one:</em> free, and verification against a real filing is the only way to be certain you
+    have the linkages right rather than approximately right.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Build all three from your own ledger, then break one on purpose</span>
+    Go back to your fifteen hand-written transactions from N1 and produce all three statements from them,
+    with no template. Then verify three linkages: net income appears in retained earnings; closing cash on
+    the cash flow statement equals cash on the balance sheet; the balance sheet balances.
+    <br><br>
+    Now deliberately introduce an error — record a purchase as an expense when it should have been an
+    asset. <strong>Watch which statements change and which check fails.</strong> Then try to construct an
+    error that leaves all three consistent. It is genuinely hard, and that difficulty is the entire value
+    of the system.
+    <br><br>
+    Then the analyst's move: take a real company and compute net income minus operating cash flow for five
+    years. Persistent, growing divergence in one direction is the single most useful red flag available to
+    an outsider — it means reported profit is increasingly made of estimates rather than cash.
+    <br><br>
+    <em>The realisation to reach:</em> the three statements are a <em>redundant encoding</em> of one log,
+    and the redundancy is what makes manipulation detectable. This is exactly the reasoning behind
+    checksums, replication and error-correcting codes — the same idea in a different century.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases N4 (invariants) · Distributed Systems N3 (redundancy detects corruption)
+  · Finance (three-statement models drive valuation) · Business.</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>An entry that will not balance</td><td>It is an error-detecting code</td></tr>
+      <tr><td>N2</td><td>Three balance sheets that look like three species</td><td>Shape is the business model</td></tr>
+      <tr><td>N3</td><td>An "exceptional item" that recurs every year</td><td>Subtotals are rhetoric</td></tr>
+      <tr><td>N4</td><td>A profitable company that runs out of cash while growing</td><td>Growth consumes cash first</td></tr>
+      <tr><td>N5</td><td>Changing depreciation life; profit moves by lakhs</td><td>The parameters are chosen</td></tr>
+      <tr><td>N6</td><td>An error that cannot hide in all three statements</td><td>Redundancy detects manipulation</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="finance.html">Finance</a></td><td>Every valuation is arithmetic on these three statements</td></tr>
+      <tr><td><a href="business.html">Business</a></td><td>Unit economics is the income statement divided by customers</td></tr>
+      <tr><td><a href="infrastructure-cloud.html#n7">Infrastructure N7</a></td><td>Cloud spend lands in COGS and determines gross margin</td></tr>
+      <tr><td>Economics</td><td>National accounts are the same idea at country scale</td></tr>
+      <tr><td><a href="data-engineering.html#n3">Data Engineering N3</a></td><td>Backwards — the ledger solved append-only history four centuries earlier</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 18 · Accounting · the root of Value &amp; Exchange</footer>
+
+</body>
+</html>

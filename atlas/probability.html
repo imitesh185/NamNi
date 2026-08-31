@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Probability &amp; Decision Making — Atlas lens</title>
+<meta name="description" content="The grammar of uncertainty. Simulate first, formula second — seven nodes, each with a phenomenon that breaks intuition." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this is a lens</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Sample spaces</a>
+  <a href="#n2">2 · Conditioning &amp; Bayes</a>
+  <a href="#n3">3 · Expectation</a>
+  <a href="#n4">4 · Distributions &amp; tails</a>
+  <a href="#n5">5 · LLN &amp; CLT</a>
+  <a href="#n6">6 · Processes &amp; Markov</a>
+  <a href="#n7">7 · Decisions</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Probability</p>
+
+<div class="hero">
+  <div class="kicker">Domain 21 · Lens · gated by combinatorics only</div>
+  <h1>Probability &amp; Decision Making</h1>
+  <p class="dropcap">This is one of two <em>lenses</em> in the Atlas — a domain with almost no
+  prerequisites that multiplies the value of every other one. Without it you cannot evaluate a medical
+  statistic, a benchmark, a forecast, a risk, a p99, or a claim about the future — and you will believe
+  wrong things with total confidence.</p>
+  <div class="why">
+    <b>The single idea.</b> Human intuition about uncertainty is not merely imperfect, it is
+    <mark>systematically and predictably wrong in specific directions</mark>. Probability is not a
+    refinement of intuition; it is a replacement for it. Every node below is organised around one place
+    where your intuition will produce a confident wrong answer.
+  </div>
+  <div class="tags">
+    <span class="tag">#simulate-first</span>
+    <span class="tag t2">#base-rates</span>
+    <span class="tag t3">#heavy-tails</span>
+    <span class="tag">#expected-value</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this is a lens, and how to learn it</h2>
+  <p class="sub">Starting from scratch is not a disadvantage here. Starting from formulas is.</p>
+
+  <p>Most probability instruction fails because it presents closed-form solutions to problems the learner
+  has never felt. The order that works is the reverse:</p>
+
+<pre>PHENOMENON  →  wrong intuition
+     ↓
+SIMULATION  →  10,000 trials, count the outcomes, believe the number
+     ↓
+FORMULA     →  now derive it, and check it matches your simulation
+     ↓
+TRANSFER    →  find the same structure in another domain</pre>
+
+  <div class="rule">
+    <span class="lbl">The rule for this entire domain</span>
+    <strong>If you cannot simulate it, you do not understand it yet.</strong> A simulation you wrote is
+    evidence. A formula you copied is not. This also means you need almost no mathematics to begin —
+    a loop and a counter is enough for the first four nodes.
+  </div>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td>Combinatorics (counting) · basic algebra</td><td>AI · Finance · Economics · Psychology (judgment) · Distributed Systems (tails) · Business · Geopolitics (risk)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>PROBABILITY &amp; DECISION MAKING
+│
+├── 1 · SAMPLE SPACES &amp; COUNTING ...... what could happen, and how many ways
+├── 2 · CONDITIONING &amp; BAYES  [DEPTH] . how evidence should change belief
+├── 3 · EXPECTATION &amp; VARIANCE ........ the average, and how wrong it is
+├── 4 · DISTRIBUTIONS &amp; TAILS  [DEPTH]  the shapes uncertainty takes
+├── 5 · LLN &amp; THE CENTRAL LIMIT ....... why averages behave, and when they don't
+├── 6 · PROCESSES &amp; MARKOV CHAINS ..... uncertainty that unfolds over time
+└── 7 · DECISIONS UNDER UNCERTAINTY ... turning probability into action</pre>
+
+  <div class="note">
+    <span class="lbl">Two nodes carry real weight</span>
+    <strong>N2 (Bayes)</strong> because it is the single highest-yield reasoning tool in this Atlas, and
+    <strong>N4 (tails)</strong> because it is where your professional domain and your understanding of
+    the world converge on the same mathematics.
+  </div>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Sample spaces and counting</h2>
+  <p class="sub">Enumerating what could happen — the boring node that prevents most errors.</p>
+
+  <p><b>WHAT IT IS.</b> The discipline of writing down the complete set of possible outcomes before
+  reasoning about any of them, and counting those outcomes correctly.</p>
+
+  <p><b>WHY IT EXISTS.</b> Almost every classic probability paradox dissolves the moment the sample space
+  is written out honestly. The paradoxes are not about probability — they are about people quietly using
+  the wrong sample space.</p>
+
+  <p><b>DEPENDENCIES.</b> None beyond arithmetic.</p>
+
+  <p><b>SUBTOPICS.</b> Outcomes and events · equally likely outcomes and when that assumption fails ·
+  permutations and combinations · complementary counting · inclusion–exclusion.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free interactive site · <em>Title:</em> Seeing Theory (Brown University), chapter 1<br>
+    <em>Why this one:</em> free, visual, and it shows outcome spaces as things you manipulate rather than
+    describe. Twenty minutes here saves a great deal of confusion later.
+    <br><br>
+    <b>DEEPER (optional)</b> — Harvard Stat 110 (Blitzstein), lectures 1–3, free on YouTube.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Monty Hall, and refusing to believe it</span>
+    Three doors, one prize. You pick one. The host — who knows where the prize is — opens a different door
+    revealing no prize, and offers you the switch. Should you?
+    <br><br>
+    <strong>Commit your answer in writing first.</strong> Then simulate it ten thousand times and count.
+    Switching wins two-thirds of the time. Most people, including mathematicians historically, refuse to
+    accept this until they see their own counter.
+    <br><br>
+    Then the part that actually teaches the node: change the rules so the host opens a door
+    <em>at random</em> and it happens to contain no prize. Simulate again. Now switching gains you
+    nothing. The visible situation is identical; only the host's knowledge differs.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>the probability was never in the doors. It was in the
+    procedure that generated the information.</mark> This is the most transferable idea in the domain —
+    it applies to survey design, medical testing, A/B tests, and every statistic you will ever be quoted.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Psychology (why the intuition fails) · Software Engineering (test case
+  enumeration) · Mathematics (combinatorics).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Conditioning and Bayes <span class="pill pL">depth</span></h2>
+  <p class="sub">How evidence should change belief — and the single most expensive error in human reasoning.</p>
+
+  <p><b>WHAT IT IS.</b> Conditional probability is the probability of something <em>given</em> that you
+  know something else. Bayes' theorem is the rule for updating a prior belief when evidence arrives.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because evidence is almost never conclusive, and the correct amount to update
+  depends on how common the thing was <em>before</em> you saw the evidence. Ignoring that prior — base
+  rate neglect — is the most consequential reasoning error there is, and it is committed daily by doctors,
+  journalists, hiring managers and engineers reading dashboards.</p>
+
+  <p><b>DEPENDENCIES.</b> N1.</p>
+
+  <p><b>SUBTOPICS.</b> Conditional probability · independence, and why it is rarer than assumed · the law
+  of total probability · Bayes' theorem · prior, likelihood, posterior · base rate neglect · the
+  prosecutor's fallacy · P(A|B) is not P(B|A).</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> <em>Think Bayes</em>, Allen Downey (free at Green Tea
+    Press), chapters 1–3<br>
+    <em>Why this one:</em> it teaches Bayes computationally — you write code that counts, and the theorem
+    emerges from the counting. This matches how you learn, and it means you never have to trust a formula
+    you cannot check.
+    <br><br>
+    <b>DEEPER (optional)</b> — 3Blue1Brown's Bayes theorem video for the geometric intuition, then Stat
+    110 lectures 4–6 for the formal treatment.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The test that is right 99% of the time and usually wrong</span>
+    A disease affects 1 in 10,000 people. A test correctly identifies 99% of those who have it, and gives
+    a false positive for only 1% of those who do not. You test positive.
+    <br><br>
+    <strong>Write down your estimate of the probability you have the disease before computing anything.</strong>
+    Most people say around 99%. Now simulate: generate a million people, assign the disease at the base
+    rate, run the test, and count how many positive results actually have it. The answer is under 1%.
+    <br><br>
+    The simulation makes the reason unavoidable: there are 100 true positives and roughly 10,000 false
+    ones, because the healthy group is enormous. Then vary the base rate upward and find the point where
+    a positive result becomes more likely true than false.
+    <br><br>
+    Then apply it to your own field: an alert that fires on 1% of healthy deploys, in a system where 1 in
+    500 deploys is genuinely bad. Compute the fraction of pages that are noise. <mark>This is why on-call
+    engineers stop trusting alerts — the mathematics guarantees it.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> accuracy is not a property of a test. It is a property of a test
+    <em>applied to a population</em>, and the population usually matters more than the test.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Psychology (base rate neglect as cognitive bias) · Distributed Systems (alerting
+  and failure detection) · AI (classifiers, precision and recall) · Business (screening and hiring) ·
+  World Philosophy (evidence and induction).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Expectation and variance</h2>
+  <p class="sub">The long-run average, and the far more important question of how far from it you land.</p>
+
+  <p><b>WHAT IT IS.</b> Expectation is the probability-weighted average outcome. Variance measures spread
+  around it. Together they are the minimum vocabulary for describing an uncertain quantity.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because decisions need a single number to compare — and because that single
+  number is dangerous on its own. An expectation without a spread is one of the most misleading objects
+  in quantitative reasoning.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2.</p>
+
+  <p><b>SUBTOPICS.</b> Random variables · expectation and its linearity · variance and standard deviation
+  · covariance and correlation · why linearity of expectation works even under dependence.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> <em>Think Stats</em>, Allen Downey (free at Green Tea
+    Press), chapters 1–4<br>
+    <em>Why this one:</em> it works from real datasets rather than urns and dice, so summary statistics
+    stay attached to something you can inspect and question.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The bet with infinite value that nobody wants</span>
+    A coin is flipped until it comes up heads. If that takes <em>n</em> flips, you are paid 2<sup>n</sup>
+    rupees. Compute the expected payout — it is infinite. Now ask yourself honestly what you would pay to
+    play. Almost nobody says more than a few hundred rupees.
+    <br><br>
+    Simulate a million games and look at the distribution of actual payouts. The median is tiny; the mean
+    is dragged upward by outcomes that essentially never occur. Then plot the running average across
+    increasing numbers of games — it does not settle. It jumps upward at unpredictable moments and drifts
+    down in between.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>an expected value is only a useful summary when the
+    distribution is well-behaved enough for it to be typical</mark> — and “typical” is exactly what the
+    mean stops being when the tail is heavy. This is the doorway into N4, and it is also, precisely, the
+    reason your p99 latency matters more than your average.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Finance (risk and return) · N4 · Distributed Systems (latency) · Economics
+  (utility, and why it was invented to solve this exact paradox).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Distributions and tails <span class="pill pL">depth</span></h2>
+  <p class="sub">The shapes uncertainty takes — and the one shape that breaks everything.</p>
+
+  <p><b>WHAT IT IS.</b> A distribution describes how probability is spread across possible values. A small
+  number of named shapes cover most real phenomena, and the differences between them determine which
+  summary statistics mean anything.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because “random” is not one behaviour. Waiting times, counts, sums, extremes
+  and multiplicative processes each produce a characteristic shape, and using the wrong mental default —
+  usually the bell curve — produces confident, catastrophic errors.</p>
+
+  <p><b>DEPENDENCIES.</b> N3.</p>
+
+  <p><b>SUBTOPICS.</b> Uniform · Bernoulli and binomial · Poisson and what it counts · exponential and
+  memorylessness · normal and where it legitimately arises · lognormal · power laws and Pareto ·
+  percentiles · heavy tails and infinite variance.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> <em>Think Stats</em>, chapters 5–6 (distributions and
+    analytic distributions)<br>
+    <em>Why this one:</em> it teaches you to <em>fit</em> and <em>test</em> a distribution against real
+    data rather than assume one, which is the actual working skill.
+    <br><br>
+    <b>DEEPER (optional)</b> — Taleb's technical notes on fat tails are free online; read them only after
+    the hands-on below, and treat the rhetoric as separable from the mathematics.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Two worlds, same mean, opposite consequences</span>
+    Generate two datasets of ten thousand values with the same mean: one normal, one lognormal with high
+    variance. Compute mean, median, p90, p99 and max for each.
+    <br><br>
+    In the normal world, all five numbers are close and the mean describes almost everyone. In the
+    lognormal world the mean sits above the 70th percentile, the p99 is many multiples of it, and the max
+    is absurd. <strong>Same mean. Completely different reality.</strong>
+    <br><br>
+    Now run the crucial experiment: take one sample of 1,000 from each, and compute the mean. Repeat a
+    hundred times. In the normal world your estimate is stable. In the heavy-tailed world it lurches —
+    because whether your sample happened to contain one extreme value dominates the answer. You have just
+    discovered why sample means from heavy-tailed data are nearly worthless.
+    <br><br>
+    Finally, connect it: pull the latency distribution from your own service, or income data from
+    <em>Our World in Data</em>, and identify which world you are in. Both are lognormal-ish. Both are
+    routinely reported as means.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>“average” is a claim that the distribution is well-behaved,
+    and that claim is usually false and never checked.</mark>
+  </div>
+
+  <p><b>CONNECTS TO.</b> Distributed Systems (p99 and tail latency) · Finance (fat tails, risk models
+  that failed in 2008) · Economics (income and wealth distribution) · Geopolitics (war and disaster
+  severity follow power laws) · Business (venture returns).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Law of large numbers and the central limit theorem</h2>
+  <p class="sub">Why averages become predictable — and the fine print that everyone omits.</p>
+
+  <p><b>WHAT IT IS.</b> Two results. The law of large numbers says sample averages converge to the true
+  mean. The central limit theorem says the <em>distribution</em> of those sample averages becomes normal,
+  regardless of what you sampled from.</p>
+
+  <p><b>WHY IT EXISTS.</b> These two theorems are why statistics is possible at all — why a poll of two
+  thousand people can describe a nation. They are also routinely applied where their conditions do not
+  hold, which is why so many confident statistical claims are wrong.</p>
+
+  <p><b>DEPENDENCIES.</b> N3, N4.</p>
+
+  <p><b>SUBTOPICS.</b> Convergence and its rate · the √n rule · standard error · confidence intervals ·
+  the conditions the CLT actually requires · why heavy tails break it · sampling bias, which no sample
+  size can fix.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free interactive site · <em>Title:</em> Seeing Theory, chapters 3–4<br>
+    <em>Why this one:</em> the CLT is one of the few things genuinely better understood by watching an
+    animation than by reading a proof. Then re-derive it by simulation yourself.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make the bell curve appear out of nothing</span>
+    Pick the least bell-shaped distribution you can construct — a coin flip, or a bimodal mixture with a
+    hole in the middle. Draw samples of size 30, take the mean, repeat ten thousand times, and plot the
+    histogram of those means. A bell curve appears, from a source that looks nothing like one.
+    <br><br>
+    Then break it. Do exactly the same thing sampling from a Pareto distribution with a heavy enough tail.
+    <strong>No bell curve appears.</strong> The histogram of sample means stays skewed no matter how large
+    the samples get, because the theorem's conditions are not met.
+    <br><br>
+    Third experiment, and the most practically useful: take a poll of 1,000 from a population where you
+    deliberately make responders differ from non-responders. Increase the sample size to 100,000. The
+    confidence interval shrinks beautifully around <em>the wrong answer</em>.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>sample size fixes noise; it does nothing whatsoever about
+    bias.</mark> A tight confidence interval is a statement about precision, never about correctness — and
+    conflating the two is how most published statistics mislead.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering (benchmark confidence intervals) · Psychology (the
+  replication crisis) · Economics (survey data) · Politics (polling) · World Philosophy (induction).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Processes and Markov chains</h2>
+  <p class="sub">Uncertainty that unfolds over time, where the next step depends on where you are now.</p>
+
+  <p><b>WHAT IT IS.</b> A stochastic process is a random quantity indexed by time. A Markov chain is the
+  most useful special case: the next state depends only on the current state, not on the path taken to
+  reach it.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because most real systems have memory of their <em>state</em> but not of their
+  <em>history</em>, and that assumption — memorylessness — makes otherwise intractable problems solvable
+  with arithmetic.</p>
+
+  <p><b>DEPENDENCIES.</b> N4 · a little linear algebra for steady states, though simulation avoids it
+  entirely.</p>
+
+  <p><b>SUBTOPICS.</b> Random walks · gambler's ruin · Markov property · transition matrices · steady
+  state · absorbing states · queues, arrivals and Little's Law · birth–death processes.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course · <em>Title:</em> Harvard Stat 110 (Blitzstein), the Markov chain lectures,
+    free on YouTube<br>
+    <em>Why this one:</em> Blitzstein builds the chain from a story rather than a matrix, which is what
+    makes steady state feel inevitable rather than algebraic.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The gambler who cannot win, and the queue that explodes</span>
+    First: simulate a fair coin-flip betting game where you start with ₹100, bet ₹1 per round, and stop at
+    zero or at ₹200. It is a completely fair game — expected value zero every round. Now run it against an
+    opponent with effectively unlimited money and no upper stopping point. You go broke with probability
+    approaching one. <em>Fairness at each step does not survive an asymmetry in reserves.</em>
+    <br><br>
+    Second, and directly relevant to your work: simulate a single-server queue. Jobs arrive randomly,
+    service takes a random time. Set utilisation to 50% and measure average wait. Then 70%, 80%, 90%, 95%,
+    99%. Plot it. The curve does not rise gently — it goes vertical.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>a queue at 99% utilisation is not 10% busier than one at
+    90% — it is a different regime.</mark> This single curve explains hospital waiting times, motorway
+    congestion, server latency and why running any system at full capacity is a decision to make it
+    unpredictable. It is also the reason capacity planning exists as a discipline.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Distributed Systems (queueing, backpressure, Little's Law) · Operating Systems
+  (scheduling) · Economics (business cycles) · Finance (random walks and option pricing) · AI
+  (reinforcement learning, diffusion models) · Cars &amp; Transportation (traffic flow).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> Decisions under uncertainty</h2>
+  <p class="sub">Converting a probability into an action — where mathematics stops and judgment starts.</p>
+
+  <p><b>WHAT IT IS.</b> The frameworks for choosing when outcomes are uncertain: expected value, expected
+  utility, risk of ruin, and the recognition that some decisions are reversible and some are not.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because maximising expected value is provably wrong for any decision you cannot
+  repeat, or any decision where one outcome ends the game. Most consequential decisions are exactly those.</p>
+
+  <p><b>DEPENDENCIES.</b> N3, N4, N6.</p>
+
+  <p><b>SUBTOPICS.</b> Expected value and its limits · utility and diminishing marginal value · risk of
+  ruin and ergodicity · repeated versus one-shot decisions · reversible versus irreversible · the value of
+  information · calibration.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> <em>Think Bayes</em>, the decision-analysis chapters<br>
+    <em>Why this one:</em> it connects posterior distributions to actual choices, which is the step almost
+    every probability resource omits — leaving people able to compute probabilities and unable to use them.
+    <br><br>
+    <b>DEEPER (optional)</b> — Kelly's original 1956 paper on optimal bet sizing, freely available and
+    surprisingly readable.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The favourable bet that bankrupts you</span>
+    You are offered a repeated bet with a genuine edge: 60% chance to win what you stake, 40% to lose it.
+    Positive expected value on every single round. Simulate a thousand players who each bet their entire
+    bankroll every time, for a hundred rounds.
+    <br><br>
+    Almost all of them end with nothing. The <em>average</em> across players is enormous, carried by a
+    handful of survivors — but the <em>median</em> player is ruined. Now simulate again with players
+    betting a fixed fraction, and sweep that fraction from 1% to 100% to find where median wealth peaks.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>the average outcome across many parallel players is not the
+    outcome you should expect from playing many times yourself.</mark> When losses compound and zero is
+    absorbing, expected value is the wrong objective — and this single distinction separates people who
+    survive volatility from people who are eventually destroyed by it, in markets, in careers, and in
+    engineering risk.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Finance (position sizing, leverage, ruin) · Business (bet sizing, optionality) ·
+  Psychology (loss aversion, prospect theory) · Geopolitics (escalation and deterrence) · Systems
+  Thinking (irreversibility as a leverage point).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+  <p class="sub">Seven simulations. Every one of them contradicts a confident intuition.</p>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>The intuition it breaks</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Monty Hall, then a random-opening host</td><td>Probability lives in the object, not the procedure</td></tr>
+      <tr><td>N2</td><td>A 99% accurate test that is usually wrong</td><td>Accuracy is a property of the test alone</td></tr>
+      <tr><td>N3</td><td>Infinite expected value, tiny median</td><td>The mean is typical</td></tr>
+      <tr><td>N4</td><td>Same mean, two different worlds</td><td>Averages summarise anything</td></tr>
+      <tr><td>N5</td><td>A tight interval around the wrong answer</td><td>More data fixes error</td></tr>
+      <tr><td>N6</td><td>Wait time going vertical near full utilisation</td><td>Load and delay scale together</td></tr>
+      <tr><td>N7</td><td>A positive-edge bet that ruins almost everyone</td><td>Maximise expected value</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">Why simulation is non-negotiable here</span>
+    In every one of these, the correct answer is <em>unbelievable</em> until you have counted it yourself.
+    Reading the result produces agreement without conviction — and agreement without conviction does not
+    survive contact with a real decision made under pressure.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits from here</th></tr></thead>
+    <tbody>
+      <tr><td>Distributed Systems</td><td>N4 is tail latency; N6 is queueing and backpressure; N2 is failure detection</td></tr>
+      <tr><td><a href="artificial-intelligence.html">AI</a></td><td>N2 is the foundation of learning; N4 and N5 govern evaluation</td></tr>
+      <tr><td>Finance</td><td>N4 fat tails, N6 random walks, N7 ruin and position sizing</td></tr>
+      <tr><td>Economics</td><td>N7 utility was invented to resolve the N3 paradox</td></tr>
+      <tr><td>Psychology</td><td>N2 base rate neglect is the central finding of the judgment literature</td></tr>
+      <tr><td>Business</td><td>N7 decisions, N4 venture-style return distributions</td></tr>
+      <tr><td>World Philosophy</td><td>N5 is the problem of induction, in mathematical form</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 21 · Probability &amp; Decision Making · a lens</footer>
+
+</body>
+</html>

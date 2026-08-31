@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Artificial Intelligence — Atlas domain 15</title>
+<meta name="description" content="Learning as optimisation, backpropagation, embeddings, attention, and the economics and failure modes of models." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Learning as optimisation</a>
+  <a href="#n2">2 · Classical ML</a>
+  <a href="#n3">3 · Neural networks</a>
+  <a href="#n4">4 · Representations</a>
+  <a href="#n5">5 · Attention</a>
+  <a href="#n6">6 · Economics</a>
+  <a href="#n7">7 · Evaluation</a>
+  <a href="#n8">8 · Limits</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Artificial Intelligence</p>
+
+<div class="hero">
+  <div class="kicker">Domain 15 · Cluster C3 · gated by Linear algebra + Probability + Data Engineering</div>
+  <h1>Artificial Intelligence</h1>
+  <p class="dropcap">Strip away the vocabulary and this domain contains one idea repeated at increasing
+  scale: <em>define a measure of wrongness, then adjust a very large number of parameters to reduce it.</em>
+  Everything else — architectures, attention, scaling laws — is engineering around that single loop.</p>
+  <div class="why">
+    <b>The single idea.</b> A model does not learn facts. It <mark>fits a function to data by descending a
+    gradient</mark>, and every capability and every failure follows from that. It has no notion of truth,
+    only of loss — which is why it can be fluent and wrong at the same time without any internal signal
+    that anything is amiss.
+  </div>
+  <div class="tags">
+    <span class="tag">#optimisation</span>
+    <span class="tag t2">#backprop</span>
+    <span class="tag t3">#embeddings</span>
+    <span class="tag">#attention</span>
+    <span class="tag t2">#evaluation</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists, and the honest depth setting</h2>
+  <p class="sub">Commander-level here means you can evaluate claims — not that you can train a frontier model.</p>
+
+  <p>This is the domain with the widest gap between public discourse and mechanism. The goal here is
+  that you can hear a claim about AI and know which of four things it is: a genuine capability, a
+  benchmark artefact, an economic argument, or marketing. That requires mechanism, not familiarity.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="mathematics.html#n4">Mathematics</a> N4–N5 · <a href="probability.html">Probability</a> N2–N5 · <a href="data-engineering.html">Data Engineering</a></td><td>Geopolitics (compute) · Business (AI economics) · Psychology (comparisons to cognition)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The prerequisite people skip and then suffer for</span>
+    <a href="data-engineering.html">Data Engineering</a>. Model quality is bounded by data quality, and
+    the overwhelming majority of real AI work is pipelines, labels and evaluation sets.
+    <mark>Studying architectures before data is how people end up able to describe a transformer and
+    unable to build anything that works.</mark>
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>ARTIFICIAL INTELLIGENCE
+│
+├── 1 · LEARNING AS OPTIMISATION ..... the whole domain in one loop
+│   ├── Loss functions
+│   ├── Gradient descent
+│   ├── Learning rate, batches, epochs
+│   └── Convexity and why it usually does not hold
+│
+├── 2 · CLASSICAL ML ................. the ideas that predate deep learning
+│   ├── Linear and logistic regression
+│   ├── Decision trees and ensembles
+│   ├── Clustering and unsupervised learning
+│   ├── Overfitting, generalisation, regularisation
+│   └── Feature engineering
+│
+├── 3 · NEURAL NETWORKS  [DEPTH] ..... composition and the chain rule
+│   ├── Neurons, layers, activations
+│   ├── Backpropagation
+│   ├── Why depth helps
+│   └── Training pathologies
+│
+├── 4 · REPRESENTATIONS .............. meaning as geometry
+│   ├── Embeddings
+│   ├── Distributional semantics
+│   ├── Transfer learning &amp; fine-tuning
+│   └── Vector search
+│
+├── 5 · ATTENTION &amp; TRANSFORMERS ..... the current architecture
+│   ├── Sequence modelling before attention
+│   ├── Scaled dot-product attention
+│   ├── Multi-head attention and positional encoding
+│   └── Autoregressive generation
+│
+├── 6 · ECONOMICS .................... FLOPs, memory, and the bill
+│   ├── Training vs inference cost
+│   ├── Scaling laws
+│   ├── Quantisation and distillation
+│   └── Why inference dominates in production
+│
+├── 7 · EVALUATION ................... the part that decides everything
+│   ├── Train/validation/test discipline
+│   ├── Precision, recall, and imbalanced classes
+│   ├── Benchmark contamination
+│   └── Calibration
+│
+└── 8 · LIMITS ....................... what these systems cannot do
+    ├── Hallucination as a structural property
+    ├── Distribution shift
+    ├── Bias and its sources
+    └── Interpretability</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Learning as optimisation</h2>
+  <p class="sub">One loop. If you understand this node, the rest is elaboration.</p>
+
+  <p><b>WHAT IT IS.</b> Define a function with adjustable parameters, define a loss measuring how wrong its
+  outputs are, compute the gradient of that loss with respect to each parameter, and step in the opposite
+  direction. Repeat.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because for most interesting problems nobody knows the rule, but everybody has
+  examples. Optimisation converts "I cannot write the rule" into "I can measure being wrong", which is a
+  problem computers can attack.</p>
+
+  <p><b>DEPENDENCIES.</b> Mathematics N5 (derivatives), N4 (vectors).</p>
+
+  <p><b>SUBTOPICS.</b> Parameters and hypothesis space · loss functions and what each one rewards ·
+  gradient descent, stochastic and mini-batch · learning rate · epochs · local minima and saddle points ·
+  why non-convexity turned out to matter less than expected.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free video + code · <em>Title:</em> Andrej Karpathy, <em>Neural Networks: Zero to Hero</em>,
+    episode 1 ("The spelled-out intro to backpropagation") — free on YouTube with free code<br>
+    <em>Why this one:</em> free, and it builds the entire mechanism from scratch in Python with no
+    framework. <strong>You end the episode having written an autograd engine</strong>, which means gradient
+    descent stops being a metaphor.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Fit a line with no library, then destroy it</span>
+    Generate points along a noisy line. Now fit it with gradient descent written by hand — two parameters,
+    a squared-error loss, derivatives you derive yourself, a loop. Print the loss each step and watch it
+    fall.
+    <br><br>
+    Now break it three ways and understand each. <strong>Raise the learning rate</strong> until the loss
+    increases instead of decreasing, then keeps increasing, then becomes <code>NaN</code> — you have made
+    the steps larger than the valley is wide. <strong>Lower it</strong> until convergence would take a
+    million steps. <strong>Remove feature scaling</strong> by making one input a thousand times larger, and
+    watch the loss surface become a narrow ravine that gradient descent bounces across instead of
+    descending.
+    <br><br>
+    Then plot the loss surface itself for your two parameters as a contour map and trace the path your
+    optimiser took across it. <mark>The abstract idea "descend the gradient" becomes a picture of a ball
+    rolling down a valley, and every hyperparameter becomes a physical property of that valley.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> training is not mysterious and it is not intelligent. It is a ball
+    rolling downhill in a space with a great many dimensions, and most practical difficulty is about the
+    shape of the hill.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mathematics N5 · Economics (constrained optimisation) · Systems Thinking (a
+  feedback loop converging on a set point).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Classical machine learning</h2>
+  <p class="sub">Where the concepts that still govern everything were established — and often the right tool.</p>
+
+  <p><b>WHAT IT IS.</b> The family of methods predating deep learning: regression, decision trees and
+  ensembles, clustering — together with the conceptual apparatus of generalisation that all of AI still
+  uses.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because for tabular data with modest sample sizes — which describes most real
+  business problems — a gradient-boosted tree still beats a neural network, trains in seconds, and can be
+  explained to a regulator.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Mathematics N6 · Probability N3.</p>
+
+  <p><b>SUBTOPICS.</b> Supervised, unsupervised, reinforcement · linear and logistic regression · decision
+  trees, random forests, gradient boosting · k-means and hierarchical clustering · overfitting and
+  underfitting · the bias-variance trade-off · regularisation · cross-validation · feature engineering.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation and user guide · <em>Title:</em> the scikit-learn User Guide<br>
+    <em>Why this one:</em> free, and unusually good — it is a genuine textbook disguised as documentation,
+    with the assumptions and failure modes of each method stated plainly next to runnable code.
+    <br><br>
+    <b>DEEPER (optional)</b> — <em>An Introduction to Statistical Learning</em> (James et al.), free PDF
+    from the authors, for the statistical reasoning underneath.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Achieve 100% accuracy and learn nothing</span>
+    Take a small real dataset. Split it into train and test. Fit a decision tree with unlimited depth.
+    Training accuracy: <strong>100%.</strong> Test accuracy: considerably worse.
+    <br><br>
+    Now plot both against tree depth, from 1 to 30, on the same axes. Training accuracy climbs
+    monotonically to perfection. Test accuracy climbs, peaks, and then <em>falls</em>. The gap between the
+    curves is overfitting made visible, and the peak is the depth you should have chosen.
+    <br><br>
+    Then run the experiment that reframes the whole domain: shuffle your labels at random, destroying any
+    real relationship, and train the same unlimited-depth tree. <strong>It still achieves 100% training
+    accuracy.</strong> A model can perfectly memorise pure noise. <mark>Fitting the training data proves
+    nothing whatsoever.</mark>
+    <br><br>
+    Finally, hold out a test set, then tune twenty hyperparameters against it, then report the test score.
+    Then get a genuinely fresh test set and watch the score drop. You have just leaked information through
+    your own decisions — the same mechanism as multiple comparisons in
+    <a href="mathematics.html#n6">Mathematics N6</a>.
+    <br><br>
+    <em>The realisation to reach:</em> every number a model reports about itself is optimistic, and the
+    discipline of holding data back is the only defence.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mathematics N6 · Probability N5 (generalisation is a sampling question) ·
+  Psychology (the replication crisis is overfitting in another field).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Neural networks and backpropagation <span class="pill pL">depth</span></h2>
+  <p class="sub">Composition plus the chain rule. That is the entire innovation.</p>
+
+  <p><b>WHAT IT IS.</b> Functions built by composing many simple parameterised transformations with
+  nonlinearities between them, trained by propagating the gradient backwards through the composition using
+  the chain rule.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because feature engineering does not scale. Classical methods need a human to
+  decide what to measure; a deep network learns the intermediate representations itself, given enough data
+  and compute.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Mathematics N4–N5.</p>
+
+  <p><b>SUBTOPICS.</b> Neurons and layers · activation functions and why nonlinearity is essential ·
+  the forward pass · backpropagation as the chain rule applied in reverse · why depth beats width ·
+  vanishing and exploding gradients · normalisation · residual connections · dropout.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free video series + code · <em>Title:</em> Karpathy, <em>Neural Networks: Zero to Hero</em>,
+    episodes 1–4<br>
+    <em>Why this one:</em> free, and it is the single best resource in this Atlas for its subject. You build
+    micrograd — a working automatic differentiation engine — in about a hundred lines, and afterwards
+    PyTorch contains no mysteries because you have written the part that seemed magical.
+    <br><br>
+    <b>DEEPER (optional)</b> — 3Blue1Brown's neural network series (free) for geometric intuition, and
+    <em>Dive into Deep Learning</em> (d2l.ai, free) for breadth of architectures.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Remove the nonlinearity and watch depth become useless</span>
+    Build a two-layer network by hand and train it on a problem that is not linearly separable — XOR is the
+    classic and takes four data points. It works.
+    <br><br>
+    Now delete the activation functions, leaving pure linear layers, and retrain. It fails completely, and
+    the reason is worth deriving yourself: <strong>a composition of linear transformations is itself a
+    single linear transformation.</strong> Ten layers without nonlinearity have exactly the expressive
+    power of one. Verify it by multiplying the weight matrices together and confirming you get an
+    equivalent single matrix — which is <a href="mathematics.html#n4">Mathematics N4</a> arriving with
+    consequences.
+    <br><br>
+    Then induce a vanishing gradient deliberately: stack twenty layers with sigmoid activations and print
+    the gradient magnitude at each layer. It shrinks geometrically towards the input, so early layers stop
+    learning. Swap to ReLU and add residual connections, and watch the gradients survive.
+    <mark>You have just re-derived two of the innovations that made deep learning possible.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> the architecture choices that look arbitrary in a paper are almost
+    all fixes for specific, observable training pathologies — and you can observe every one of them on a
+    laptop.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mathematics N4–N5 · Computing N4 (training is memory-bandwidth bound) · Biology
+  (the analogy to neurons is loose and worth knowing the limits of).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Representations and embeddings</h2>
+  <p class="sub">Turning meaning into geometry — and the idea that makes modern search and retrieval work.</p>
+
+  <p><b>WHAT IT IS.</b> Mapping discrete things — words, images, users, products — into vectors positioned
+  so that similar things are close together, learned rather than designed.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because models operate on numbers, and one-hot encoding destroys all
+  relationships. An embedding preserves them, so that similarity becomes distance and the geometry carries
+  the semantics.</p>
+
+  <p><b>DEPENDENCIES.</b> N3 · Mathematics N4 (dot product as similarity).</p>
+
+  <p><b>SUBTOPICS.</b> One-hot encoding and its poverty · learned embeddings · the distributional
+  hypothesis · cosine similarity · analogical structure · transfer learning and fine-tuning · vector
+  databases and approximate nearest neighbour · retrieval-augmented generation.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free video + free paper · <em>Title:</em> 3Blue1Brown's "Word embeddings" explanation,
+    followed by the original word2vec paper<br>
+    <em>Why this one:</em> both free. The video gives the geometric picture and the paper shows how
+    astonishingly simple the training objective was — predict a word from its neighbours — which makes
+    the emergent structure more striking, not less.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Do arithmetic on meaning, then find where it breaks</span>
+    Load a set of pretrained word embeddings. Compute
+    <em>king − man + woman</em> and find the nearest vector. You get <em>queen</em>, and it is genuinely
+    startling the first time — arithmetic on meaning.
+    <br><br>
+    Now hunt for failures, which is the more educational half. Try analogies across domains, with rare
+    words, with words having several senses. <em>Bank</em> collapses river and finance into one point
+    because the model saw one string. Try <em>doctor − man + woman</em> and observe what the training
+    corpus believed about the world. <mark>The bias is not a bug in the algorithm; it is a faithful
+    measurement of the text it was trained on.</mark>
+    <br><br>
+    Then build something real and small: embed a few hundred of your own documents, implement cosine
+    similarity by hand, and build a search that finds documents by meaning rather than keyword. Compare it
+    against simple keyword search on ten queries and find the cases where each wins. Neither dominates,
+    and knowing why is the practical skill.
+    <br><br>
+    <em>The realisation to reach:</em> these models learn the structure of their corpus, faithfully,
+    including everything in it you would rather they had not learned.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mathematics N4 · Databases (vector indexes) · Human Behavior (bias in text is bias
+  in society, measured) · Communication (meaning is contextual).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Attention and transformers</h2>
+  <p class="sub">The current architecture, and the specific problem it solved.</p>
+
+  <p><b>WHAT IT IS.</b> A mechanism that lets every position in a sequence look directly at every other
+  position, weighting them by learned relevance — removing the sequential bottleneck of earlier models.</p>
+
+  <p><b>WHY IT EXISTS.</b> Recurrent models processed sequences one step at a time, which made them slow to
+  train and poor at long-range dependencies. Attention is parallelisable across the sequence, which is what
+  allowed training to scale to the datasets that produced current capabilities.</p>
+
+  <p><b>DEPENDENCIES.</b> N3, N4 · Mathematics N4.</p>
+
+  <p><b>SUBTOPICS.</b> The sequence problem · queries, keys and values · scaled dot-product attention ·
+  why the scaling factor exists · multi-head attention · positional encoding, since attention is
+  order-blind · encoder and decoder stacks · autoregressive generation · context length and its quadratic
+  cost · KV caching.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free video + code · <em>Title:</em> Karpathy, "Let's build GPT: from scratch, in code,
+    spelled out" — free, with free code<br>
+    <em>Why this one:</em> free, and you build a working transformer in a couple of hundred lines and train
+    it on a small text file on a laptop. <strong>Attention stops being a diagram the moment you have
+    written the matrix multiply.</strong>
+    <br><br>
+    <b>DEEPER (optional)</b> — "Attention Is All You Need" (free), readable directly once you have built
+    the thing it describes.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Compute one attention matrix by hand, then remove position</span>
+    Take five tokens. Assign each a small random embedding. Compute queries, keys and values with three
+    small matrices, then compute the attention matrix yourself — dot products, scale, softmax. Print it as
+    a 5×5 grid and read off which token attended to which.
+    <br><br>
+    Now remove the scaling factor and recompute with larger embedding dimensions. The softmax saturates,
+    attention collapses onto a single token, and gradients vanish. <mark>That innocuous √d in the formula
+    is preventing a specific numerical failure</mark>, and you have just reproduced it.
+    <br><br>
+    Then the most revealing experiment: delete positional encoding and train a small model. It produces
+    text with plausible vocabulary and no grammar, because <strong>attention is a set operation — it has no
+    inherent notion of order.</strong> Word order, in a transformer, is entirely an additive hack.
+    <br><br>
+    Finally, measure the quadratic cost: time a forward pass at context lengths 128, 256, 512, 1024. Plot
+    it. The curve is quadratic, and you have just explained why context windows are expensive and why every
+    long-context technique exists.
+    <br><br>
+    <em>The realisation to reach:</em> a transformer is a stack of matrix multiplications with a clever
+    weighting scheme. It is not reasoning, and knowing precisely what it <em>is</em> makes claims about it
+    far easier to evaluate.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mathematics N4 · Computing N4 (memory bandwidth and KV cache) · Infrastructure
+  (GPU scheduling) · Geopolitics (the compute buildout).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> The economics of models</h2>
+  <p class="sub">Where this domain meets <a href="index.html#c4">Value &amp; Exchange</a>, and where most strategy discussions actually live.</p>
+
+  <p><b>WHAT IT IS.</b> The cost structure of training and running models: FLOPs, memory bandwidth, the
+  scaling relationship between compute, data and performance, and the techniques that reduce inference
+  cost.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because capability is now purchased with compute, which makes AI strategy a
+  capital allocation question. It is also the node that explains why inference — not training — dominates
+  the bill for anyone actually operating a product.</p>
+
+  <p><b>DEPENDENCIES.</b> N3, N5 · Computing N4 · Infrastructure N7.</p>
+
+  <p><b>SUBTOPICS.</b> FLOPs as the unit of training cost · memory bandwidth as the real inference
+  bottleneck · scaling laws · compute-optimal training · quantisation · distillation · batching and
+  throughput versus latency · cost per token · why inference dominates at scale.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> "Training Compute-Optimal Large Language Models" (the
+    Chinchilla paper), freely available<br>
+    <em>Why this one:</em> free, and it is the clearest demonstration that these systems obey measurable
+    economic relationships rather than magic. It also corrected a widely held wrong belief about model size
+    versus data, which is a useful lesson in itself.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Compute the cost of a sentence</span>
+    For a model with N parameters, a forward pass costs roughly 2N floating point operations per token.
+    Take a 7-billion-parameter model and compute the FLOPs to generate 500 tokens. Now look up the
+    throughput of a GPU you could actually rent, and its hourly price. Compute the cost per thousand tokens.
+    <br><br>
+    Compare your figure to published API pricing. You will usually land within an order of magnitude, and
+    the difference tells you something real about batching efficiency and margin.
+    <br><br>
+    Then find the bottleneck, which is not what most people assume. For single-request inference the GPU is
+    mostly <em>idle</em>, waiting on memory — every parameter must be read for every token.
+    <mark>Inference is memory-bandwidth bound, not compute bound</mark>, which is
+    <a href="computing.html#n4">Computing N4</a> determining the economics of an entire industry. Verify by
+    increasing batch size and watching throughput rise dramatically while latency barely changes.
+    <br><br>
+    Finally, quantise a small model from 16-bit to 8-bit or 4-bit. Measure memory, speed and quality.
+    You will typically find memory falls by half or three-quarters with barely measurable quality loss —
+    and you now understand why every deployment does this.
+    <br><br>
+    <em>The realisation to reach:</em> the constraints on AI are physical and financial, not mystical, and
+    they can be estimated on the back of an envelope by anyone willing to do the arithmetic.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Computing N4 · Infrastructure N7 · Business (gross margin of an AI product) ·
+  Geopolitics (chips, fabs, export controls) · Economics (capital intensity).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> Evaluation</h2>
+  <p class="sub">The node that decides whether anything else was real.</p>
+
+  <p><b>WHAT IT IS.</b> Measuring whether a model works — choosing metrics that match the actual objective,
+  holding out data honestly, and recognising when a benchmark has stopped measuring anything.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a model always produces an output, and outputs look like answers. Without
+  disciplined evaluation there is no signal at all distinguishing a useful system from a confident one.</p>
+
+  <p><b>DEPENDENCIES.</b> N2 · <a href="probability.html#n2">Probability N2</a>, N5 · Mathematics N6.</p>
+
+  <p><b>SUBTOPICS.</b> Train, validation and test splits · leakage · precision, recall, F1 · the
+  precision-recall trade-off · ROC and AUC · accuracy's uselessness under class imbalance · confusion
+  matrices · calibration · benchmark contamination · offline metrics versus online outcomes.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> the scikit-learn model evaluation guide<br>
+    <em>Why this one:</em> free, and it explains what each metric optimises for and when it misleads —
+    which is the part omitted from almost every tutorial, and the only part that matters.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Build a 99% accurate model that is completely useless</span>
+    Take a problem where 1% of cases are positive — fraud, disease, defects. Write a "model" that always
+    predicts negative. Compute its accuracy: <strong>99%.</strong> It has never once identified the thing
+    you built it to find.
+    <br><br>
+    Now compute precision, recall, and the confusion matrix, and watch them expose it immediately. Then
+    train a real classifier and sweep its decision threshold from 0 to 1, plotting precision against recall.
+    You cannot maximise both, and choosing a point on that curve is a <em>business</em> decision about the
+    relative cost of a false positive and a false negative — not a technical one.
+    <br><br>
+    Then connect it to <a href="probability.html#n2">Probability N2</a>, which you have already done: at
+    1% prevalence, even a highly accurate classifier produces mostly false positives among its alerts.
+    Compute how many. <mark>The base rate defeats the classifier, and no amount of model improvement
+    changes that arithmetic.</mark>
+    <br><br>
+    Finally, test calibration: bucket predictions by confidence and check whether the ones predicted at 70%
+    confidence are actually right 70% of the time. Most models are badly overconfident, and knowing that
+    changes how you should treat any probability a model reports.
+    <br><br>
+    <em>The realisation to reach:</em> the metric <em>is</em> the objective. A model optimises exactly what
+    you measured, including all the ways your measurement differed from what you wanted.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N2 · Infrastructure N5 (alert precision) · Business (choosing the
+  threshold is choosing a cost trade-off) · Psychology (overconfidence in humans too).</p>
+</section>
+
+<section id="n8">
+  <h2><span class="num">N8</span> Limits</h2>
+  <p class="sub">What these systems structurally cannot do — the node that makes you useful in an argument.</p>
+
+  <p><b>WHAT IT IS.</b> The failure modes that follow from the mechanism rather than from insufficient
+  engineering: fabrication, distribution shift, inherited bias, and opacity.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a model trained to produce likely continuations has no representation of
+  truth. Fluency and accuracy are separate properties, and the system has no internal signal distinguishing
+  them. <strong>Hallucination is not a defect layered on top of the mechanism; it is the mechanism, viewed
+  from a case where it failed.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> N5, N7.</p>
+
+  <p><b>SUBTOPICS.</b> Fabrication as a structural property · distribution shift and silent degradation ·
+  bias from data, labels and objectives · interpretability and its current limits · adversarial examples ·
+  prompt injection as a security boundary problem · anthropomorphism as a reasoning error.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> "On the Dangers of Stochastic Parrots" (Bender et al.), plus
+    the free model cards published for major models<br>
+    <em>Why this one:</em> both free. The paper is the most cited critical treatment and is worth reading
+    as an argument you evaluate rather than accept — which is itself the skill this Atlas is for. Model
+    cards give the vendors' own account of limitations, which is often more candid than their marketing.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Get a confident, specific, entirely fabricated answer</span>
+    Ask a language model for citations on a narrow topic you know well. Then verify every one. Some will be
+    real, some will have real authors attached to papers that do not exist, and some will be complete
+    inventions with plausible titles, journals and years.
+    <br><br>
+    The important observation is not that it was wrong. It is that <strong>the fabricated citations are
+    indistinguishable in tone and confidence from the real ones.</strong> There is no signal, because
+    internally there is no difference — both are likely continuations.
+    <br><br>
+    Then measure variance: send the identical prompt twenty times and compare. Then measure stated
+    confidence against actual correctness on twenty questions with checkable answers, and plot the
+    calibration curve from N7.
+    <br><br>
+    Finally, test the security boundary: put an instruction inside a document and ask a model to summarise
+    it. If it follows the embedded instruction, you have demonstrated prompt injection —
+    <mark>data and instructions travel in the same channel, which is the same class of flaw as SQL
+    injection and buffer overflows.</mark> It is not currently solved.
+    <br><br>
+    <em>The realisation to reach:</em> the failure modes are predictable from the mechanism. Once you know
+    what the system is optimising, you can anticipate where it will fail — which is exactly what lets you
+    use it well rather than either over-trusting or dismissing it.
+  </div>
+
+  <p><b>CONNECTS TO.</b> World Philosophy (truth, justification, what a claim is) · Psychology (fluency
+  mistaken for competence, in machines and people) · Human Behavior (automation bias) · Security.</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Raise the learning rate until loss becomes NaN</td><td>It is a ball on a hill</td></tr>
+      <tr><td>N2</td><td>100% training accuracy on randomly shuffled labels</td><td>Fitting proves nothing</td></tr>
+      <tr><td>N3</td><td>Remove activations; ten layers collapse into one</td><td>Nonlinearity is the point</td></tr>
+      <tr><td>N4</td><td>king − man + woman, then the analogies that fail</td><td>It learned the corpus faithfully</td></tr>
+      <tr><td>N5</td><td>Delete positional encoding; grammar disappears</td><td>Attention is order-blind</td></tr>
+      <tr><td>N6</td><td>Cost per 1,000 tokens, computed from FLOPs</td><td>Memory-bandwidth bound</td></tr>
+      <tr><td>N7</td><td>99% accuracy, zero positives ever found</td><td>The metric is the objective</td></tr>
+      <tr><td>N8</td><td>Fabricated citations indistinguishable from real</td><td>No internal truth signal</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td>Geopolitics</td><td>N6 — compute, fabs and export controls are downstream of the cost structure</td></tr>
+      <tr><td>Business</td><td>N6 and N7 — AI product margins and the threshold-as-business-decision</td></tr>
+      <tr><td>Psychology</td><td>N8 — the comparison to human cognition, and where it misleads</td></tr>
+      <tr><td>World Philosophy</td><td>N8 — what understanding is, and whether this is any of it</td></tr>
+      <tr><td><a href="data-engineering.html">Data Engineering</a></td><td>Backwards: data quality bounds everything above</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 15 · Artificial Intelligence</footer>
+
+</body>
+</html>

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Infrastructure &amp; Cloud — Atlas domain 11</title>
+<meta name="description" content="Containers, orchestration, infrastructure as code, observability, reliability and cost — the operational half of the stack." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Images &amp; containers</a>
+  <a href="#n2">2 · Orchestration</a>
+  <a href="#n3">3 · Infrastructure as code</a>
+  <a href="#n4">4 · Cloud networking</a>
+  <a href="#n5">5 · Observability</a>
+  <a href="#n6">6 · Reliability</a>
+  <a href="#n7">7 · Cost</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Infrastructure &amp; Cloud</p>
+
+<div class="hero">
+  <div class="kicker">Domain 11 · Cluster C3 · gated by OS + Networking + Distributed Systems</div>
+  <h1>Infrastructure &amp; Cloud</h1>
+  <p class="dropcap">This domain is where software stops being a program and becomes a <em>service</em> —
+  something that must exist continuously, survive the failure of its parts, be changed without being
+  stopped, and cost a defensible amount of money. It is the only technical domain in the Atlas where the
+  finance and the engineering are inseparable.</p>
+  <div class="why">
+    <b>The single idea.</b> Infrastructure is the practice of <mark>describing a desired state and letting
+    a control loop maintain it</mark>. Almost everything here — orchestration, infrastructure as code,
+    autoscaling, reconciliation — is the same feedback loop from
+    <a href="../tracks/systems-thinking/overview.html">Systems Thinking</a>, implemented in different
+    layers by different tools.
+  </div>
+  <div class="tags">
+    <span class="tag">#containers</span>
+    <span class="tag t2">#reconciliation</span>
+    <span class="tag t3">#observability</span>
+    <span class="tag">#slo</span>
+    <span class="tag t2">#cost</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">Because "it works on my machine" is not a system, and someone is paying by the hour.</p>
+
+  <p>The gap between a program and a service contains everything in this domain: how it gets onto a
+  machine, which machine, what happens when that machine dies, how you know it is healthy, how you change
+  it without downtime, and what it costs per request.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="operating-systems.html">OS</a> N6 · <a href="networking.html">Networking</a> · <a href="distributed-systems.html">Distributed Systems</a> N5, N7</td><td>Data Engineering · AI (training infrastructure) · Business (unit economics of a software company)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The trap in this domain</span>
+    It is the most product-driven domain in the Atlas, and therefore the easiest to learn as a set of
+    commands and vendor names that expire. <mark>Learn the control loop, not the CLI.</mark> Every tool
+    here is a specific implementation of about six ideas, and the ideas outlive the tools by decades.
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>INFRASTRUCTURE &amp; CLOUD
+│
+├── 1 · IMAGES &amp; CONTAINERS .......... the unit of deployment
+├── 2 · ORCHESTRATION  [DEPTH] ....... declared state and reconciliation
+├── 3 · INFRASTRUCTURE AS CODE ....... the environment as a reviewable artefact
+├── 4 · CLOUD NETWORKING ............. VPCs, load balancers, ingress, service discovery
+├── 5 · OBSERVABILITY  [DEPTH] ....... logs, metrics, traces, and what each cannot tell you
+├── 6 · RELIABILITY .................. SLOs, error budgets, incidents, failure as normal
+└── 7 · COST ......................... the only engineering domain with a price tag attached</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Images and containers</h2>
+  <p class="sub">Packaging a program together with everything it assumed.</p>
+
+  <p><b>WHAT IT IS.</b> An image is a layered, content-addressed filesystem snapshot plus metadata. A
+  container is a process started from that snapshot with a restricted view of the kernel — as established
+  in <a href="operating-systems.html#n6">OS N6</a>.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the hardest part of deployment was never the binary — it was the
+  hundred implicit assumptions about what else was installed. An image makes those assumptions explicit
+  and shippable.</p>
+
+  <p><b>DEPENDENCIES.</b> OS N6.</p>
+
+  <p><b>SUBTOPICS.</b> Layers and the union filesystem · content addressing and caching · build context ·
+  multi-stage builds · base image choice and attack surface · why layer order determines rebuild time ·
+  registries · reproducibility and why "latest" is a bug.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free specification · <em>Title:</em> The OCI Image Specification, read alongside the
+    Docker build documentation<br>
+    <em>Why this one:</em> the spec is short and reveals that an image is just a tar archive plus a JSON
+    manifest — which permanently demystifies the tooling. Vendor tutorials teach commands; the spec
+    teaches the object.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make the build slow, then make it fast, by moving two lines</span>
+    Write a Dockerfile that copies your whole source tree and then installs dependencies. Build it. Change
+    one character in a source file and rebuild — <strong>every dependency reinstalls.</strong> Time it.
+    <br><br>
+    Now swap the order: copy only the dependency manifest, install, then copy the source. Rebuild after the
+    same one-character change. It is nearly instant. You moved two lines and changed build time by an order
+    of magnitude, because layers are cached by content and invalidated in order.
+    <br><br>
+    Then look inside: export the image with <code>docker save</code> and untar it. It is layers of tar
+    files and a JSON document. Nothing else. Count the size of each layer and find the one that is
+    unexpectedly enormous — usually a build tool that was never needed at runtime. Fix it with a
+    multi-stage build and measure the reduction.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>an image is a cache-keyed pipeline, not a package.</mark>
+    Understanding the cache key is the entire skill, and it is the same content-addressing idea that
+    underlies git.
+  </div>
+
+  <p><b>CONNECTS TO.</b> OS N6 · Software Engineering N9 (dependency boundaries) · Security (supply chain).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Orchestration <span class="pill pL">depth</span></h2>
+  <p class="sub">You stop issuing commands and start declaring a desired state.</p>
+
+  <p><b>WHAT IT IS.</b> A control system that continuously compares the actual state of a cluster with a
+  declared desired state and takes action to close the gap.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because imperative deployment does not survive failure. If you <em>ran</em> a
+  process and the machine died, nothing runs it again. If you <em>declared</em> that three copies should
+  exist, something notices there are two and acts. <strong>This shift from imperative to declarative is
+  the single most important idea in the domain.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Distributed Systems N5 (the cluster state store is a consensus system) ·
+  Systems Thinking (feedback loops).</p>
+
+  <p><b>SUBTOPICS.</b> Desired versus actual state · the reconciliation loop · controllers and operators ·
+  the scheduler and bin packing · health checks — liveness versus readiness · rolling updates and
+  disruption budgets · why the cluster state lives in etcd · declarative configuration as data.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> Kubernetes documentation, the "Concepts" section —
+    specifically the controller and scheduler pages<br>
+    <em>Why this one:</em> free, and the concepts pages are unusually good at explaining the control-loop
+    model. Skip the tutorials until you understand reconciliation, or you will learn commands instead of
+    the idea.
+    <br><br>
+    <b>DEEPER (optional)</b> — the Borg paper (Google, free), which is the honest account of what was
+    learned before Kubernetes existed.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Fight the control loop and lose</span>
+    Run a local cluster — <code>kind</code> or <code>k3s</code>, both free. Declare that three replicas of
+    a service should exist. Now delete one by hand. Watch a replacement appear within seconds. Delete two.
+    Same result.
+    <br><br>
+    Now try to win: delete a replica in a tight loop, as fast as you can. You cannot get below the declared
+    count for long, and you have just experienced a negative feedback loop resisting a disturbance —
+    exactly the structure from your Systems Thinking note, running on your laptop.
+    <br><br>
+    Then break it instructively. Configure a liveness probe that always fails. The container is killed,
+    restarted, killed, restarted — <strong>a control loop with a bad sensor destroys the thing it is
+    protecting.</strong> Then configure a readiness probe that never passes and watch traffic never arrive
+    while the pod stays "healthy". The distinction between the two probes is now permanent knowledge.
+    <br><br>
+    Finally, perform a rolling update with a deliberately broken image and watch the rollout stall rather
+    than complete — the control loop refusing to destroy a working state to reach a broken declared one.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>you are no longer operating the system; you are tuning a
+    controller.</mark> Most operational incidents in this world are control-loop pathologies — bad sensors,
+    wrong set points, oscillation — not software bugs.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking (this is a textbook servo loop) · Distributed Systems N5 ·
+  Mechanical/Electrical (control theory is the same mathematics) · Economics (central bank policy is a
+  control loop with a long delay).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Infrastructure as code</h2>
+  <p class="sub">Making the environment a reviewable, versioned artefact rather than an oral tradition.</p>
+
+  <p><b>WHAT IT IS.</b> Declaring infrastructure in files that are version-controlled, reviewed and applied
+  by a tool that computes the difference between the declaration and reality.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because manually configured environments diverge, and the divergence is
+  invisible until an incident. IaC makes the environment diffable, which makes it reviewable, which makes
+  it reproducible.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2.</p>
+
+  <p><b>SUBTOPICS.</b> Declarative versus imperative provisioning · state files and why they exist · drift
+  detection · plan and apply · immutable infrastructure and cattle-not-pets · idempotency of provisioning ·
+  secrets management · environment parity.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> OpenTofu / Terraform documentation, the "State"
+    and "Plan" concept pages<br>
+    <em>Why this one:</em> free, and state is the concept people get wrong. Understanding <em>why</em> the
+    tool needs a state file — and what breaks when reality and state disagree — is most of the domain.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Create drift on purpose and watch it get detected</span>
+    Define something small in code — a container, a network, a local resource. Apply it. Now change it
+    <strong>by hand</strong>, outside the tool, exactly as a stressed engineer would during an incident.
+    <br><br>
+    Run <code>plan</code> again. The tool reports a difference and offers to revert your change. You have
+    just seen the central tension of this node: the code is the source of truth, and any manual fix is a
+    time bomb that will be silently reverted at the next deploy.
+    <br><br>
+    Then create the harder failure: delete the resource by hand and run <code>plan</code>. The tool now
+    believes something exists that does not. Repair the state and notice how much of operations is
+    reconciling a model with a reality that changed behind your back — the same problem as
+    <a href="databases.html#n3">stale query planner statistics</a> and
+    <a href="networking.html#n5">stale DNS caches</a>.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>infrastructure as code does not describe your infrastructure;
+    it describes what you believe about it</mark>, and every outage in this space lives in the gap between
+    those two things.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering N8 (review and testing) · Databases N3 (models of reality
+  going stale) · Business (audit and compliance).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Cloud networking</h2>
+  <p class="sub">Networking N1–N8, re-implemented in software, with a bill attached.</p>
+
+  <p><b>WHAT IT IS.</b> Virtual networks, load balancers, ingress, service discovery and the policy layer
+  that decides which service may talk to which — all software abstractions over the physical network.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because multi-tenant machines need isolated networks, and services that move
+  between machines need stable identities. Everything here re-solves a physical networking problem in
+  software, with the addition that traffic now costs money in one direction.</p>
+
+  <p><b>DEPENDENCIES.</b> Networking N2–N7 · N2.</p>
+
+  <p><b>SUBTOPICS.</b> VPCs, subnets, routing tables and security groups · L4 versus L7 load balancing ·
+  ingress and reverse proxies · service discovery and DNS-based routing · NAT gateways · availability
+  zones versus regions · why egress is charged and ingress is not · private connectivity.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> Your chosen cloud's VPC concepts documentation,
+    read with the <a href="networking.html">Networking</a> page open beside it<br>
+    <em>Why this one:</em> the value here is in the mapping. Every cloud construct is a familiar physical
+    concept renamed, and reading them side by side collapses a large vocabulary into a small one.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Trace a packet through three layers of indirection</span>
+    Deploy a service behind a load balancer in a local cluster. Now answer, with evidence rather than
+    belief: from a client request to the process handling it, how many network hops, address translations
+    and proxies are involved? Capture at each layer and count.
+    <br><br>
+    You will typically find three or four hops that did not exist in your mental model — the ingress
+    controller, the cluster's virtual IP, the node's routing rules, the container's namespace. Each adds
+    latency; measure it and compare against the physical baseline from
+    <a href="networking.html#n8">Networking N8</a>.
+    <br><br>
+    Then break it on purpose: apply a network policy that denies traffic between two services, and observe
+    the failure mode. It does not produce a clean "denied" — it produces a timeout, which is
+    <a href="distributed-systems.html#n1">Distributed Systems N1</a> arriving in your operational life.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>every layer of network indirection you add is latency you
+    cannot see and a failure mode that looks like slowness.</mark>
+  </div>
+
+  <p><b>CONNECTS TO.</b> Networking · Distributed Systems N1 · Cost (egress is the line item that surprises
+  everyone) · Geopolitics (data residency determines region choice).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Observability <span class="pill pL">depth</span></h2>
+  <p class="sub">Three instruments, three different questions, and one that most teams never build.</p>
+
+  <p><b>WHAT IT IS.</b> The property of a system that lets you answer questions about its internal state
+  from its external outputs — implemented through logs, metrics and traces, each with different costs and
+  blind spots.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because in a distributed system, no single machine has the story. The request
+  that failed touched eight services, and none of them knows it failed. Observability is the reconstruction
+  of a narrative from fragments.</p>
+
+  <p><b>DEPENDENCIES.</b> Distributed Systems N1 · Software Engineering N8.</p>
+
+  <p><b>SUBTOPICS.</b> Logs, metrics and traces and what each is bad at · structured logging · cardinality
+  and why it dominates cost · counters, gauges, histograms · percentiles and why averages are useless here
+  · distributed tracing, spans and context propagation · sampling · monitoring versus observability ·
+  the difference between known and unknown unknowns.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> Google's <em>Site Reliability Engineering</em>, chapter 6
+    ("Monitoring Distributed Systems") — free in full at sre.google<br>
+    <em>Why this one:</em> free, and it is opinionated about what <em>not</em> to monitor, which is far
+    more useful than a list of things you could measure. The four golden signals will structure your
+    thinking permanently.
+    <br><br>
+    <b>DEEPER (optional)</b> — the OpenTelemetry documentation for the concrete model of spans and context
+    propagation.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find the slow service without knowing which one it is</span>
+    Build three small services that call each other in a chain, and inject 200 ms of latency into the
+    middle one. Now try to find it using only <strong>logs</strong>. You will have three log streams with
+    no shared identifier, and correlating them by timestamp will be miserable and unreliable — which is
+    exactly the lesson.
+    <br><br>
+    Now add a request ID, propagated through every call and included in every log line. Suddenly you can
+    reconstruct one request's journey. Then add real distributed tracing with spans, and the answer becomes
+    a picture you read in two seconds.
+    <br><br>
+    Next, the metrics lesson: record average latency and confirm it looks fine. Record p99 and watch the
+    problem appear. This is <a href="probability.html#n4">Probability N4</a> in production, and it is why
+    dashboards showing averages hide outages.
+    <br><br>
+    Finally, the cost lesson: add a metric label containing user ID. Watch your time-series count explode
+    combinatorially. <mark>Cardinality, not volume, is what makes observability expensive</mark> — and this
+    single mistake has produced monitoring bills larger than the infrastructure being monitored.
+    <br><br>
+    <em>The realisation to reach:</em> logs answer "what happened to this one thing", metrics answer "what
+    is the shape of everything", traces answer "where did the time go". Choosing the wrong instrument makes
+    an easy question unanswerable.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N4 (percentiles) · Software Engineering N8 · Distributed Systems N1
+  (you are inferring state you cannot observe directly) · Psychology (incident diagnosis under bias).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Reliability</h2>
+  <p class="sub">Treating failure as a budget rather than a moral failing.</p>
+
+  <p><b>WHAT IT IS.</b> The practice of setting explicit reliability targets, measuring against them,
+  spending the remainder deliberately on change, and learning from incidents without assigning blame.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because "make it never fail" is not an engineering objective — it has infinite
+  cost. Reliability engineering replaces that with a number, which converts an emotional argument between
+  product and operations into an arithmetic one.</p>
+
+  <p><b>DEPENDENCIES.</b> N5 · Probability N4 · Distributed Systems N7.</p>
+
+  <p><b>SUBTOPICS.</b> SLI, SLO, SLA and the differences · error budgets · the cost curve of additional
+  nines · blameless postmortems · toil and its elimination · graceful degradation · chaos engineering ·
+  on-call as a system with human components.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> Google's <em>Site Reliability Engineering</em> and
+    <em>The SRE Workbook</em>, both free in full at sre.google — the SLO and error budget chapters<br>
+    <em>Why this one:</em> free, and it is the origin of the error-budget idea. The workbook is the more
+    practical of the two and contains worked examples you can copy.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Compute your own error budget and spend it</span>
+    Take any service you can measure — even a personal project or a public API you poll. Define one SLI
+    precisely: <em>the proportion of requests returning success within 300 ms.</em> Collect a week of real
+    data.
+    <br><br>
+    Now set an SLO of 99.9% and compute the error budget: 0.1% of a week is about <strong>ten
+    minutes.</strong> Look at your actual data and determine whether you already spent it. Most people are
+    shocked by how small the budget is and how much of it a single bad deploy consumes.
+    <br><br>
+    Then do the arithmetic that changes how you argue: compute the budget for 99%, 99.9%, 99.99% and
+    99.999%. The last is five minutes <em>per year</em> — which is less time than it takes a human to
+    notice, wake up and log in. <mark>Past a certain point, more nines is not an engineering problem but
+    a staffing and architecture problem</mark>, and its cost rises far faster than its benefit.
+    <br><br>
+    Finally, write a postmortem for a real failure you caused, using the free SRE workbook template, with
+    the discipline of naming no person and identifying at least three contributing causes.
+    <br><br>
+    <em>The realisation to reach:</em> the target is never 100%, and choosing a number less than 100%
+    on purpose is what makes shipping possible at all.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N7 (decisions under uncertainty) · Business (SLAs are contractual and
+  have penalties) · Psychology (blame, hindsight bias, just culture) · Systems Thinking (incidents are
+  emergent, not caused by one thing).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> Cost</h2>
+  <p class="sub">The node that connects this entire cluster to <a href="index.html#c4">Value &amp; Exchange</a>.</p>
+
+  <p><b>WHAT IT IS.</b> Understanding what infrastructure actually costs, how pricing models create
+  incentives, and how to express a technical architecture as a unit economic statement.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because in a software business, infrastructure is the main component of cost of
+  goods sold — so architecture decisions <em>are</em> gross margin decisions. An engineer who can connect
+  those two things is disproportionately valuable and disproportionately rare.</p>
+
+  <p><b>DEPENDENCIES.</b> N1–N4 · Accounting (gross margin) · Business (unit economics).</p>
+
+  <p><b>SUBTOPICS.</b> Compute, storage, network and managed-service pricing · why egress is asymmetrically
+  priced and what that is designed to achieve · reserved and spot capacity · the buy-versus-build
+  calculation · cost per request as an engineering metric · the real economics of leaving the cloud ·
+  how infrastructure cost shows up in a company's gross margin.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free primary documents · <em>Title:</em> Cloud providers' public pricing pages, read
+    alongside the cost-of-revenue section of a real infrastructure company's annual report on SEC EDGAR<br>
+    <em>Why this one:</em> both are free, and the pairing is the whole point — the pricing page tells you
+    what you pay, and the filing tells you what that does to a business at scale. No secondary source
+    connects these two as well as reading them together.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Price one real workload three ways, then find the trap</span>
+    Take a concrete workload: 100 GB of data, 10 million requests a month, 500 GB of egress. Price it
+    three ways using public pricing — a managed service, containers on rented VMs, and a single large
+    dedicated server.
+    <br><br>
+    Build the spreadsheet honestly. You will usually find the managed option is several times more
+    expensive and that <strong>egress alone dominates in at least one scenario</strong>. Now find why:
+    inbound traffic is free and outbound is charged, which is a deliberate incentive to keep data where it
+    lands. That single asymmetry explains data gravity, multi-cloud difficulty, and a large part of the
+    industry's structure.
+    <br><br>
+    Then convert it into the language of <a href="index.html#c4">Cluster C4</a>: if you charge ₹100 per
+    customer per month and this workload serves 1,000 customers, what is your gross margin under each
+    option? Now double the traffic and recompute — and notice which option's margin improves with scale
+    and which does not.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>an architecture diagram is a cost structure in disguise</mark>,
+    and the choice between managed and self-operated is a choice about where your money goes — vendor
+    margin or engineer salary — not a purely technical one.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Accounting (COGS and gross margin) · Business (unit economics, buy vs build) ·
+  Economics (pricing as incentive design) · Geopolitics (cloud concentration and sovereignty).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Moving two Dockerfile lines changes build time 10×</td><td>Images are cache-keyed pipelines</td></tr>
+      <tr><td>N2</td><td>Trying and failing to delete a replica</td><td>Declarative reconciliation</td></tr>
+      <tr><td>N3</td><td>A manual fix silently reverted by the next apply</td><td>Code describes belief, not reality</td></tr>
+      <tr><td>N4</td><td>Counting hops you did not know existed</td><td>Indirection is invisible latency</td></tr>
+      <tr><td>N5</td><td>One user-ID label explodes your time-series count</td><td>Cardinality is the cost driver</td></tr>
+      <tr><td>N6</td><td>99.9% is ten minutes a week</td><td>Reliability is a budget</td></tr>
+      <tr><td>N7</td><td>Egress dominating the bill</td><td>Architecture is cost structure</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="data-engineering.html">Data Engineering</a></td><td>N2 orchestration, N5 observability of pipelines, N7 storage and compute cost</td></tr>
+      <tr><td>AI</td><td>Training infrastructure, GPU scheduling, and inference cost per token</td></tr>
+      <tr><td><a href="business.html">Business</a></td><td>N7 is the bridge — infrastructure cost is cost of goods sold</td></tr>
+      <tr><td><a href="systems-thinking.html">Systems Thinking</a></td><td>N2 and N6 are control loops with sensors, set points and delays</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 11 · Infrastructure &amp; Cloud</footer>
+
+</body>
+</html>

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Physics &amp; the Physical World — Atlas domain 02</title>
+<meta name="description" content="Mechanics, thermodynamics, waves, electromagnetism — measured with a phone and a few cheap components." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · The method</a>
+  <a href="#n2">2 · Mechanics</a>
+  <a href="#n3">3 · Thermodynamics</a>
+  <a href="#n4">4 · Waves &amp; optics</a>
+  <a href="#n5">5 · Electromagnetism</a>
+  <a href="#n6">6 · Modern physics</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Physics</p>
+
+<div class="hero">
+  <div class="kicker">Domain 02 · Cluster C2 · gated by Calculus (lightly)</div>
+  <h1>Physics &amp; the Physical World</h1>
+  <p class="dropcap">Physics is the domain that tells you what is <em>possible</em>. Every engineering
+  constraint in this Atlas — why batteries are hard, why chips get hot, why latency has a floor, why an
+  engine cannot exceed a certain efficiency — is a physics fact wearing an engineering costume.</p>
+  <div class="why">
+    <b>The single idea.</b> A small number of quantities are <mark>conserved</mark> — energy, momentum,
+    charge — and a smaller number of things always increase. Almost every physical prediction is
+    bookkeeping on conserved quantities, which is why the subject is far more unified than school
+    physics makes it appear.
+  </div>
+  <div class="tags">
+    <span class="tag">#conservation</span>
+    <span class="tag t2">#energy</span>
+    <span class="tag t3">#fields</span>
+    <span class="tag">#measurement</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists, and the depth setting</h2>
+  <p class="sub">Understanding constraints, not solving problem sets.</p>
+
+  <p>School physics is a sequence of problems with clean numbers. That is not this. The commander-level
+  goal is to know <em>which quantity is binding</em> in any physical situation — energy, heat, materials or
+  information — so you can reason about a device you have never seen.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="mathematics.html#n5">Mathematics N5</a> (concept only) · N1 fluency</td><td>Mechanical · Electrical &amp; Electronics · Everyday Technology · Cars · Biology · Geography (climate)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">Skip entirely</span>
+    Lagrangian and Hamiltonian formulations · tensor notation · full quantum mechanics · relativity beyond
+    the two ideas that matter for GPS. <mark>These are the physics of physicists.</mark>
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>PHYSICS
+│
+├── 1 · THE METHOD ................... how physicists actually reason
+│   ├── Units and dimensional analysis
+│   ├── Orders of magnitude
+│   ├── Conservation as a constraint
+│   └── Symmetry and invariance
+│
+├── 2 · MECHANICS .................... motion, force, energy
+│   ├── Newton's laws
+│   ├── Momentum and collisions
+│   ├── Work, energy, power
+│   └── Rotation and angular momentum
+│
+├── 3 · THERMODYNAMICS ............... heat, work, and the arrow of time
+│   ├── Temperature vs heat
+│   ├── The first law
+│   ├── The second law and entropy
+│   ├── Heat engines and Carnot efficiency
+│   └── Heat transfer: conduction, convection, radiation
+│
+├── 4 · WAVES &amp; OPTICS ............... how energy travels without matter
+│   ├── Frequency, wavelength, speed
+│   ├── Superposition and interference
+│   ├── Resonance
+│   ├── Reflection, refraction, lenses
+│   └── The electromagnetic spectrum
+│
+├── 5 · ELECTROMAGNETISM ............. the force that runs everything
+│   ├── Charge and fields
+│   ├── Current and circuits
+│   ├── Magnetism from moving charge
+│   ├── Induction
+│   └── Light as an EM wave
+│
+└── 6 · MODERN PHYSICS ............... where intuition stops
+    ├── Photons and quantisation
+    ├── Atomic structure and bands
+    ├── Semiconductors
+    ├── Nuclear energy
+    └── Relativity, only where it matters</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> The method</h2>
+  <p class="sub">The transferable part — worth more than any individual law.</p>
+
+  <p><b>WHAT IT IS.</b> Three habits: checking units, estimating orders of magnitude before computing, and
+  looking for the conserved quantity before looking for a formula.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because these three catch most errors and solve most problems approximately,
+  which is usually enough. They also transfer to every other domain in the Atlas.</p>
+
+  <p><b>DEPENDENCIES.</b> Mathematics N1.</p>
+
+  <p><b>SUBTOPICS.</b> SI units and derived units · dimensional analysis as an error check · Fermi estimation
+  · conservation laws as constraints · symmetry · significant figures and honest precision.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>The Feynman Lectures on Physics</em>, Volume I
+    chapters 1–4 — free in full at feynmanlectures.caltech.edu<br>
+    <em>Why this one:</em> free, and Feynman opens by explaining what conservation <em>means</em> before any
+    mathematics. Chapter 4 on energy is the single best thing written about the subject.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Derive a formula you have forgotten, from units alone</span>
+    You have forgotten the formula for the period of a pendulum. Recover it without looking: the period can
+    only depend on length, gravity and mass. Work out which combination of those gives units of seconds.
+    Mass cannot appear — no combination works. You get period ∝ √(L/g), which is correct up to a constant.
+    <br><br>
+    <mark>You just derived physics from bookkeeping.</mark> Then verify by timing a real pendulum — a phone
+    on a string works — and solve for the missing constant. You will get something near 2π.
+    <br><br>
+    Then apply the method defensively: take three formulas from any domain and check their units. Then take
+    a claim from a news article involving physical quantities and check whether it is dimensionally
+    possible.
+    <br><br>
+    <em>The realisation to reach:</em> units are not bookkeeping overhead, they are a constraint strong
+    enough to reconstruct lost knowledge and to kill wrong answers before you compute them.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mathematics N1 · Every engineering domain · Infrastructure N7 (estimation).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Mechanics</h2>
+  <p class="sub">Force, motion and energy — the part with the strongest everyday intuition, and several wrong ones.</p>
+
+  <p><b>WHAT IT IS.</b> How forces change motion, and the conserved quantities — momentum and energy — that
+  let you predict outcomes without tracking every force.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because it is the foundation of every mechanical device, and because human
+  intuition about motion is systematically wrong in ways that were only corrected in the 17th century.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Mathematics N5.</p>
+
+  <p><b>SUBTOPICS.</b> Newton's three laws · why objects in motion do not need a force · momentum and its
+  conservation · impulse · work, kinetic and potential energy · power · friction · rotation, torque and
+  angular momentum · centre of mass.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course · <em>Title:</em> MIT OCW 8.01 <em>Classical Mechanics</em> (Walter Lewin's
+    lecture videos and problem sets are free)<br>
+    <em>Why this one:</em> free, and the lectures are built around live demonstrations — you watch the
+    prediction get tested in the room, which is the correct order.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Measure gravity with a phone, then find where energy went</span>
+    Use your phone's accelerometer — free apps expose it — to measure g by dropping it onto something soft,
+    or by timing a pendulum from N1. You should get within a few percent of 9.8 m/s².
+    <br><br>
+    Now the energy exercise. Roll a ball down a ramp of known height and measure its speed at the bottom
+    (film it, count frames). Compute the kinetic energy you got, and the potential energy you started with.
+    <strong>They will not match.</strong> The difference went into friction, rotation and sound.
+    <br><br>
+    Then quantify one of them: a rolling ball stores a predictable fraction of its energy in rotation, so
+    it always arrives slower than a sliding one. Predict the ratio, then test with a ball and a sliding
+    block on the same ramp. <mark>The energy you cannot see is still exactly accounted for</mark> — which
+    is what conservation actually means in practice.
+    <br><br>
+    <em>The realisation to reach:</em> "energy was lost" is never true. It moved somewhere you were not
+    measuring, and finding where is the whole method.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mechanical Engineering · Cars (braking, crash safety) · Biology (locomotion) ·
+  Systems Thinking (momentum as a stock).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Thermodynamics</h2>
+  <p class="sub">The domain's hardest constraint, and the one that limits every engine and every chip.</p>
+
+  <p><b>WHAT IT IS.</b> The relationship between heat, work and energy, and the law stating that some
+  conversions are permanently one-way.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because it sets absolute limits nothing can engineer around. No engine can exceed
+  Carnot efficiency, no computation can be free of heat, and no process can decrease total entropy. These
+  are not current limitations — they are permanent.</p>
+
+  <p><b>DEPENDENCIES.</b> N2.</p>
+
+  <p><b>SUBTOPICS.</b> Temperature versus heat versus internal energy · specific heat · the first law · the
+  second law and entropy · reversibility · heat engines and Carnot efficiency · refrigeration and heat
+  pumps · conduction, convection, radiation · thermal resistance.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>The Feynman Lectures</em>, Volume I chapters
+    44–46 (heat engines, the second law, ratchets)<br>
+    <em>Why this one:</em> free, and the ratchet-and-pawl chapter is the clearest demonstration anywhere of
+    <em>why</em> you cannot cheat the second law — Feynman builds a machine that appears to and then shows
+    exactly where it fails.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Measure the efficiency of your own kettle, then your room</span>
+    Boil a known mass of water from a known starting temperature. Time it, and get the kettle's power
+    rating from its label. Compute the energy that <em>should</em> have been needed — mass × specific heat ×
+    temperature rise — and compare it to the energy actually consumed. The ratio is your kettle's
+    efficiency, and it will be high because resistive heating is nearly perfect.
+    <br><br>
+    Then do the same for something that must obey Carnot: look up an air conditioner's rated coefficient of
+    performance and compare it against the theoretical maximum for the temperatures involved. It will be a
+    fraction of it. <mark>A heater can be 100% efficient; an engine or a cooler can never be.</mark> That
+    asymmetry <em>is</em> the second law, and it is why waste heat is unavoidable.
+    <br><br>
+    Then measure your room's thermal behaviour: record temperature every ten minutes after switching off
+    cooling, and fit the curve. You will get exponential decay towards ambient — the same shape as an RC
+    circuit discharging, because it is the same differential equation. Compute the time constant, and you
+    have measured your room's insulation.
+    <br><br>
+    <em>The realisation to reach:</em> heat is energy that has become disordered, and disorder is why
+    the universe has a direction. Every efficiency number you will ever see is a distance from a limit set
+    by two temperatures.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mechanical (engines) · Computing N4 (chips are thermally limited) · Cars ·
+  Biology (metabolism) · Geography (climate) · Systems Thinking (entropy as decay).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Waves and optics</h2>
+  <p class="sub">How energy and information travel without anything moving from A to B.</p>
+
+  <p><b>WHAT IT IS.</b> Oscillations that propagate — sound, light, radio, water — and the behaviours common
+  to all of them regardless of medium.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because every communication technology is a wave, every display is optics, and
+  resonance explains everything from musical instruments to bridges collapsing to why your microwave uses
+  the frequency it does.</p>
+
+  <p><b>DEPENDENCIES.</b> N2.</p>
+
+  <p><b>SUBTOPICS.</b> Frequency, wavelength, amplitude, phase · wave speed and the medium · superposition
+  and interference · standing waves and resonance · the Doppler effect · reflection and refraction ·
+  lenses and focal length · diffraction · polarisation · the electromagnetic spectrum as one continuum.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free simulations · <em>Title:</em> PhET Interactive Simulations (University of Colorado)
+    — "Wave Interference", "Bending Light", "Sound Waves", all free<br>
+    <em>Why this one:</em> free, and waves are one of the few subjects where a manipulable simulation beats
+    both text and real apparatus, because you can change one variable at a time and see the whole field.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Measure the speed of sound in your corridor</span>
+    Use a phone to record a sharp clap in a long corridor or against a distant wall. Open the recording in
+    free audio software and measure the gap between the clap and its echo. Multiply by the distance and
+    you have the speed of sound, typically within a few percent of 343 m/s.
+    <br><br>
+    Then do resonance: fill a glass with varying amounts of water and find the pitch each produces. Plot
+    pitch against air column length. You have just measured a standing wave relationship, and you can now
+    predict the note before you tap.
+    <br><br>
+    Then the one that explains screens and sunglasses: take two polarising filters — cheap, or salvage them
+    from an old LCD panel — and rotate one against the other. Light disappears completely at 90°. Then look
+    at your phone screen through one filter and rotate it: <mark>the screen goes black, because LCD output
+    is already polarised.</mark> You have just discovered a fundamental property of how every display you
+    own works, using a piece of plastic.
+    <br><br>
+    <em>The realisation to reach:</em> sound, light, radio and Wi-Fi differ only in frequency and medium.
+    Everything you learn about one transfers exactly to the others.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Electronics (signals, antennas) · Networking N2 (the physical layer) · Everyday
+  Technology (displays, microwaves, remotes) · Biology (hearing, vision).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Electromagnetism</h2>
+  <p class="sub">The force responsible for essentially everything you interact with.</p>
+
+  <p><b>WHAT IT IS.</b> The behaviour of electric charge — the fields it creates, the forces it exerts, the
+  magnetism produced by its motion, and the induction that links the two.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because every chemical bond, every material property, every circuit, every motor
+  and every wireless signal is electromagnetic. Gravity holds the planets; electromagnetism does
+  everything else you encounter.</p>
+
+  <p><b>DEPENDENCIES.</b> N2, N4.</p>
+
+  <p><b>SUBTOPICS.</b> Charge, Coulomb's law, fields · potential and voltage · current · resistance and Ohm's
+  law · magnetic fields from currents · the motor effect · electromagnetic induction and Faraday's law ·
+  transformers · why light is an electromagnetic wave · why AC won for distribution.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free video series · <em>Title:</em> Ben Eater's electronics and signals videos, alongside
+    PhET's "Faraday's Law" and "Circuit Construction Kit" simulations — all free<br>
+    <em>Why this one:</em> free, and Eater builds real circuits on breadboards while explaining the field
+    behaviour. The pairing of simulation and physical construction is what makes this node stick.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make electricity from a magnet, then make motion from electricity</span>
+    Wind a hundred turns of thin enamelled wire around a pen and connect the ends to a multimeter on its
+    most sensitive voltage range. Move a small magnet in and out. <strong>Voltage appears.</strong> Move it
+    faster and the voltage rises; hold it still inside the coil and the voltage is zero.
+    <br><br>
+    <mark>Change is what generates, not presence.</mark> That single observation is Faraday's law, it is the
+    principle of every generator producing the electricity in your wall, and you just demonstrated it with
+    two rupees of wire.
+    <br><br>
+    Now run it backwards: pass current through the same coil near a compass and watch the needle deflect.
+    Electricity makes magnetism; changing magnetism makes electricity. That symmetry is the whole of
+    generators, motors, transformers and induction cooktops.
+    <br><br>
+    Then find it in your home: open a phone charger's specifications and identify the transformer stage.
+    Ask why it must run at high frequency to be small — and derive the answer from Faraday's law, since
+    faster change means more voltage per turn, which means fewer turns and less iron.
+    <br><br>
+    <em>The realisation to reach:</em> electricity and magnetism are not two subjects. They are one field
+    observed from two reference frames, and every electrical machine exploits the coupling.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Electrical &amp; Electronics (this is its foundation) · Cars (motors, alternators)
+  · Everyday Technology · Networking (radio) · Biology (nerve conduction).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Modern physics</h2>
+  <p class="sub">Where intuition stops — take only what the rest of the Atlas needs.</p>
+
+  <p><b>WHAT IT IS.</b> Quantisation, atomic structure, band theory, nuclear energy, and the two relativistic
+  effects that have practical consequences.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because semiconductors, lasers, LEDs, solar cells, nuclear power and GPS all
+  depend on it. You need the mechanism, not the mathematics.</p>
+
+  <p><b>DEPENDENCIES.</b> N4, N5.</p>
+
+  <p><b>SUBTOPICS.</b> Photons and the photoelectric effect · atomic energy levels · energy bands and the
+  band gap · conductors, insulators, semiconductors · doping and the p-n junction · LEDs and photovoltaics ·
+  fission and fusion, binding energy, enrichment · special relativity's time dilation and general
+  relativity's gravitational shift, and why GPS needs both.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>The Feynman Lectures</em>, Volume III chapter 1
+    ("Quantum Behavior") — free<br>
+    <em>Why this one:</em> free, and it presents the double-slit experiment as the single phenomenon
+    containing the entire mystery. Feynman is explicit that nobody's intuition survives it, which is more
+    useful than a treatment that pretends otherwise.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Measure Planck's constant with a handful of LEDs</span>
+    Get LEDs of several colours — red, yellow, green, blue — a variable power supply or a potentiometer, and
+    a multimeter. For each LED, slowly raise the voltage and record the exact voltage at which it first
+    emits light.
+    <br><br>
+    Red lights up at the lowest voltage, blue at the highest. Now plot turn-on voltage against the light's
+    frequency (colour wavelength is printed on the datasheet, or look it up). <strong>You get a straight
+    line, and its slope is Planck's constant divided by the electron charge.</strong>
+    <br><br>
+    Compute it. You will land within perhaps 10% of the real value. <mark>You have measured a fundamental
+    constant of the universe on a breadboard for the price of a snack</mark>, and simultaneously
+    demonstrated that light comes in discrete packets whose energy depends on frequency — which is the
+    entire quantum revolution in one afternoon.
+    <br><br>
+    Then reason about consequences: why a solar cell has a maximum theoretical efficiency, why infrared
+    cannot cause sunburn regardless of intensity, and why a blue LED was a Nobel-winning problem when red
+    ones were easy.
+    <br><br>
+    <em>The realisation to reach:</em> quantisation is not philosophy. It is a measurable property with a
+    slope you can determine yourself, and everything about semiconductors follows from it.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Electronics (semiconductors are this node) · AI/Computing (the transistor) ·
+  Everyday Technology (LEDs, solar, screens) · Geopolitics (nuclear, enrichment) · Networking (GPS).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Recovering a forgotten formula from units alone</td><td>Units are a constraint</td></tr>
+      <tr><td>N2</td><td>Energy missing at the bottom of a ramp</td><td>It moved, it did not vanish</td></tr>
+      <tr><td>N3</td><td>A heater at 100%, a cooler that never can be</td><td>The second law, felt</td></tr>
+      <tr><td>N4</td><td>Your phone screen going black through a filter</td><td>Displays emit polarised light</td></tr>
+      <tr><td>N5</td><td>Voltage only when the magnet moves</td><td>Change generates, not presence</td></tr>
+      <tr><td>N6</td><td>Planck's constant from four LEDs</td><td>Quantisation is measurable</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="mechanical-engineering.html">Mechanical Engineering</a></td><td>N2 and N3 directly — statics, machines, engines</td></tr>
+      <tr><td><a href="electrical-electronics.html">Electrical &amp; Electronics</a></td><td>N5 and N6 — circuits and semiconductors</td></tr>
+      <tr><td><a href="everyday-technology.html">Everyday Technology</a></td><td>All six, arriving together in every device</td></tr>
+      <tr><td><a href="biology.html">Biology</a></td><td>N3 metabolism, N5 nerve conduction, N4 vision and hearing</td></tr>
+      <tr><td>World Geography</td><td>N3 and N4 — climate is a heat engine</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 02 · Physics &amp; the Physical World</footer>
+
+</body>
+</html>

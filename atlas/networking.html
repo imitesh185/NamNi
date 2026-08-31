@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Networking — Atlas domain 10</title>
+<meta name="description" content="Layers, IP, TCP, DNS, TLS and HTTP — learned by watching real packets and measuring the speed of light." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Layering</a>
+  <a href="#n2">2 · Link &amp; local delivery</a>
+  <a href="#n3">3 · IP &amp; routing</a>
+  <a href="#n4">4 · TCP &amp; UDP</a>
+  <a href="#n5">5 · DNS</a>
+  <a href="#n6">6 · TLS</a>
+  <a href="#n7">7 · HTTP</a>
+  <a href="#n8">8 · Latency &amp; physics</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Networking</p>
+
+<div class="hero">
+  <div class="kicker">Domain 10 · Cluster C3 · gated by Computing + Operating Systems</div>
+  <h1>Networking</h1>
+  <p class="dropcap">The internet is not a network. It is an agreement between hundreds of thousands of
+  independently owned networks, none of which trusts the others, to forward packets on a best-effort
+  basis with no promises whatsoever. <em>Every reliable thing you have ever used was built on top of that
+  unreliability by software.</em></p>
+  <div class="why">
+    <b>The single idea.</b> Networking is the study of <mark>what you can build on a channel that may
+    lose, duplicate, reorder or delay anything you send</mark>, and that is controlled by parties with
+    their own interests. Reliability, ordering, identity and privacy are all constructed — none are given.
+  </div>
+  <div class="tags">
+    <span class="tag">#layering</span>
+    <span class="tag t2">#tcp</span>
+    <span class="tag t3">#dns</span>
+    <span class="tag">#tls</span>
+    <span class="tag t2">#latency</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">And why it is the domain most often "known" and least often understood.</p>
+
+  <p>Most engineers can name the layers and could not explain why a page loads slowly, why a connection
+  hangs rather than failing, or why moving a server to another continent destroys throughput even though
+  bandwidth is unchanged. Those three questions are the real content of this domain.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="computing.html">Computing</a> · <a href="operating-systems.html">OS</a> N5 (sockets are file descriptors) · Electronics (signals)</td><td>Distributed Systems · Infrastructure &amp; Cloud · Everyday Technology · Security</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>NETWORKING
+│
+├── 1 · LAYERING ..................... why the stack is shaped like this
+├── 2 · LINK &amp; LOCAL DELIVERY ........ getting a frame to the next hop
+├── 3 · IP &amp; ROUTING ................. getting a packet across the world
+├── 4 · TCP &amp; UDP  [DEPTH] ........... building reliability on unreliability
+├── 5 · DNS .......................... turning names into addresses
+├── 6 · TLS .......................... privacy and identity on a hostile wire
+├── 7 · HTTP ......................... the application layer everything uses
+└── 8 · LATENCY &amp; PHYSICS ............ the limits nothing can engineer away</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Layering</h2>
+  <p class="sub">The organising idea, and the honest account of where it leaks.</p>
+
+  <p><b>WHAT IT IS.</b> The decomposition of communication into levels, each providing a service to the
+  one above and using the one below, with each layer's data becoming opaque payload for the layer beneath.</p>
+
+  <p><b>WHY IT EXISTS.</b> So that Ethernet does not need to know about video calls and video calls do not
+  need to know about copper. It is the same information-hiding argument as
+  <a href="software-engineering.html#n9">software design</a>, applied to an industry rather than a codebase.</p>
+
+  <p><b>DEPENDENCIES.</b> None beyond Computing N1.</p>
+
+  <p><b>SUBTOPICS.</b> The OSI model as vocabulary and the TCP/IP model as reality · encapsulation ·
+  headers and payloads · MTU and fragmentation · where layering leaks — NAT, deep packet inspection,
+  QUIC deliberately collapsing layers.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> <em>Computer Networks: A Systems Approach</em>
+    (Peterson &amp; Davie), chapter 1 — free at systemsapproach.org<br>
+    <em>Why this one:</em> the authors released it free, it is the standard text, and it teaches layering
+    as a set of engineering choices with costs rather than as a diagram to memorise.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Peel one packet apart</span>
+    Install Wireshark, capture traffic, and load a single small page. Find one packet and expand every
+    layer in the tree view. You will see your HTTP request wrapped in TLS, wrapped in TCP, wrapped in IP,
+    wrapped in Ethernet — each with its own header, each unaware of the others' meaning.
+    <br><br>
+    Now count the bytes. For a tiny request, the headers can exceed the payload. Compute the overhead
+    ratio, then repeat with a large download and watch the ratio collapse.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>every layer charges rent in bytes</mark>, and the design of
+    every protocol above is shaped by trying to avoid paying it repeatedly.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering N7 (serialization) · Software Engineering N9 (abstraction
+  boundaries and their leaks).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Link layer and local delivery</h2>
+  <p class="sub">How a frame reaches the machine next to you, and how machines find each other with no help.</p>
+
+  <p><b>WHAT IT IS.</b> Getting bits between two directly connected devices: framing, addressing by MAC,
+  contention for a shared medium, and switching.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because everything above assumes a "next hop" exists and works. This is where
+  the abstraction of a link is manufactured out of a physical signal.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Electronics (signals and modulation).</p>
+
+  <p><b>SUBTOPICS.</b> MAC addresses · Ethernet framing · collision domains and why switches replaced
+  hubs · ARP · VLANs · Wi-Fi as a shared, lossy medium and why it behaves differently from cable.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> <em>Computer Networks: A Systems Approach</em>,
+    chapter 2<br>
+    <em>Why this one:</em> it derives Ethernet from the problem of sharing one wire, which makes collision
+    detection and backoff feel inevitable rather than arbitrary.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Watch two machines introduce themselves</span>
+    Clear your ARP cache, then ping a device on your local network while capturing in Wireshark. Before
+    any ping appears you will see an ARP broadcast — <em>"who has this IP address?"</em> — shouted to
+    every device on the segment, and one reply.
+    <br><br>
+    Now notice the security consequence without being told it: <strong>anyone on the segment could have
+    answered.</strong> Nothing in the protocol verifies the claim. Look up ARP spoofing and see that the
+    attack is simply using the protocol as designed.
+    <br><br>
+    Then compare Wi-Fi to Ethernet: ping continuously over both and plot the round-trip times. Cable is
+    tight and boring; Wi-Fi has a long tail — the same heavy-tail shape from
+    <a href="probability.html#n4">Probability N4</a>, arriving from contention for a shared medium.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>protocols designed for a trusted local wire became the
+    foundation of a hostile global network</mark>, and most network security work is retrofitting trust
+    onto designs that assumed it.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Electrical &amp; Electronics · Probability N4 (Wi-Fi latency tails) · Security.</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> IP and routing</h2>
+  <p class="sub">How a packet crosses networks owned by people who have never met.</p>
+
+  <p><b>WHAT IT IS.</b> A universal addressing scheme plus a best-effort forwarding service, in which each
+  router makes an independent local decision about where to send a packet next.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a single global network under one authority was never politically or
+  technically possible. IP is the minimum agreement that lets independent networks interconnect — it
+  promises almost nothing, which is exactly why everyone could accept it.</p>
+
+  <p><b>DEPENDENCIES.</b> N2.</p>
+
+  <p><b>SUBTOPICS.</b> IPv4 and IPv6 addressing · subnets and CIDR · routing tables and longest-prefix
+  match · interior routing versus BGP between organisations · NAT and what it broke · TTL · ICMP ·
+  why the internet has no central map.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> <em>Computer Networks: A Systems Approach</em>,
+    chapters 3–4<br>
+    <em>Why this one:</em> its treatment of BGP explains the internet as a <em>political</em> system with
+    economic incentives, which is the part that makes outages and route leaks comprehensible.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Map the path, then find the lie</span>
+    Run <code>traceroute</code> (or <code>tracert</code>) to a server on another continent. You get a list
+    of hops with round-trip times. Look up who owns each hop — you will cross several companies, and the
+    path is a commercial arrangement as much as a technical one.
+    <br><br>
+    Now find something odd: some hops show <em>lower</em> latency than earlier ones, or no response at
+    all. Work out why — a router that deprioritises replies to itself is still forwarding your traffic
+    perfectly. <mark>Traceroute measures how routers treat traceroute, not how they treat your data.</mark>
+    <br><br>
+    Then trace to the same destination from a phone on mobile data and compare paths. Different network,
+    different commercial relationships, different route — same destination.
+    <br><br>
+    <em>The realisation to reach:</em> there is no route. There is only a sequence of independent local
+    decisions, any of which can change mid-conversation, made by parties optimising for their own costs.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Geopolitics (submarine cables, routing sovereignty, national shutdowns) ·
+  Distributed Systems (partial connectivity) · Economics (peering and transit as a market).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> TCP and UDP <span class="pill pL">depth</span></h2>
+  <p class="sub">Constructing an ordered, reliable stream on a service that guarantees none of those things.</p>
+
+  <p><b>WHAT IT IS.</b> Two transport protocols. UDP adds almost nothing to IP — ports and a checksum.
+  TCP adds connection setup, retransmission, ordering, flow control and congestion control, and is one of
+  the most consequential pieces of engineering in the world.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because applications want a pipe and the network provides a lottery. TCP is
+  the translation, and its congestion control is additionally responsible for the fact that the internet
+  does not collapse under its own load.</p>
+
+  <p><b>DEPENDENCIES.</b> N3 · <a href="probability.html">Probability</a> N6 (queueing).</p>
+
+  <p><b>SUBTOPICS.</b> Ports and sockets · the three-way handshake · sequence numbers and
+  acknowledgements · retransmission and timeouts · flow control versus congestion control · slow start and
+  congestion avoidance · bufferbloat · head-of-line blocking · why QUIC was built over UDP.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>High Performance Browser Networking</em> (Ilya
+    Grigorik), free in full at hpbn.co — chapters 1–2<br>
+    <em>Why this one:</em> it is free, and it is the only widely available treatment that connects TCP's
+    mechanisms to <em>observable application slowness</em>, which is how you will actually encounter this
+    domain professionally.
+    <br><br>
+    <b>DEEPER (optional)</b> — Beej's Guide to Network Programming (free) to implement it, then the QUIC
+    design documents for how the trade-offs were revisited after thirty years.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Add 100 ms and watch throughput die</span>
+    Download a large file from a server and record the throughput. Now add artificial latency — on Linux,
+    <code>tc qdisc add dev eth0 root netem delay 100ms</code> — and download the same file again.
+    <strong>Bandwidth has not changed at all.</strong> Throughput collapses anyway.
+    <br><br>
+    Work out why from a Wireshark capture: TCP will not send more than a window's worth of unacknowledged
+    data, so throughput is bounded by <em>window ÷ round-trip time</em>. Compute that number and check it
+    against your measurement. You have just derived the bandwidth-delay product from an experiment.
+    <br><br>
+    Then add 1% packet loss instead of latency, and watch throughput collapse far more violently than 1%
+    would suggest. Look at the congestion window in the capture — it halves on every loss and climbs back
+    slowly. <mark>TCP interprets loss as congestion, so a lossy wireless link is treated as a busy
+    network.</mark>
+    <br><br>
+    Finally, open a second and third parallel connection and watch total throughput rise — which is
+    exactly why browsers and download managers do it, and why the fairness story is more complicated than
+    it first appears.
+    <br><br>
+    <em>The realisation to reach:</em> latency and bandwidth are not interchangeable, and
+    <em>you cannot buy your way out of distance.</em> This single experiment explains CDNs, edge
+    computing, and why your database should be near your application.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Distributed Systems (timeouts, backpressure — TCP is a feedback control system) ·
+  Systems Thinking (congestion control is a textbook negative feedback loop) · Infrastructure (CDNs
+  exist because of this node).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> DNS</h2>
+  <p class="sub">A globally distributed, hierarchical, cached database that almost nobody thinks about until it fails.</p>
+
+  <p><b>WHAT IT IS.</b> The system that turns human-readable names into addresses, by delegating authority
+  down a tree and caching aggressively at every level.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because addresses change and humans cannot remember numbers — but more
+  importantly because it provides a layer of <em>indirection</em> that makes load balancing, failover and
+  migration possible at all.</p>
+
+  <p><b>DEPENDENCIES.</b> N3, N4.</p>
+
+  <p><b>SUBTOPICS.</b> The name hierarchy and delegation · root, TLD and authoritative servers · resolvers
+  and recursion · record types · TTL and cache behaviour · why DNS changes "take time" · DNS as a load
+  balancing and failover mechanism · DNS over HTTPS and the privacy argument.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free tool plus documentation · <em>Title:</em> <code>dig</code> with the
+    <code>+trace</code> option, alongside the DNS chapter of <em>Computer Networks: A Systems Approach</em><br>
+    <em>Why this one:</em> <code>dig +trace</code> shows you the entire delegation chain in one command.
+    Watching resolution happen live teaches the hierarchy in two minutes.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Walk the tree from the root</span>
+    Run <code>dig +trace www.google.com</code>. Read the output as a story: your resolver asks a root
+    server, which says <em>"I do not know, ask the .com servers"</em>; those say <em>"ask Google's
+    servers"</em>; those finally answer. Three delegations, no central database.
+    <br><br>
+    Now query the same name repeatedly and watch the TTL count down in the cached answer. Then query an
+    authoritative server directly and see the TTL reset. You have just observed the caching layer that
+    makes the whole system survivable.
+    <br><br>
+    Then do the experiment that explains a class of production incidents: find a domain with a very low
+    TTL and one with a very high TTL, and reason about what happens to each during a failover.
+    <mark>A long TTL is a cheap system that fails slowly; a short TTL is an expensive system that fails
+    fast.</mark> There is no third option.
+    <br><br>
+    <em>The realisation to reach:</em> DNS is not a lookup service, it is a <em>cache coherence problem
+    spanning the entire planet</em> — and every "it works for me but not for you" incident is a cache in a
+    state you cannot see.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Distributed Systems (caching, eventual consistency, TTL as a consistency knob) ·
+  Infrastructure (service discovery, blue-green deploys) · Geopolitics (name seizure and censorship).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> TLS</h2>
+  <p class="sub">Privacy and identity on a wire you must assume is hostile.</p>
+
+  <p><b>WHAT IT IS.</b> A protocol layer that provides confidentiality, integrity and — most importantly —
+  <em>authentication of the other party</em>, using asymmetric cryptography to establish a shared symmetric
+  key.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because every packet crosses machines owned by strangers. Encryption alone is
+  insufficient: without identity you may have a perfectly private conversation with an attacker.</p>
+
+  <p><b>DEPENDENCIES.</b> N4 · basic number theory intuition, not the mathematics.</p>
+
+  <p><b>SUBTOPICS.</b> Symmetric versus asymmetric cryptography and why both are needed · the handshake ·
+  certificates and chains of trust · certificate authorities as a political structure · revocation ·
+  forward secrecy · why self-signed certificates fail · TLS 1.3's round-trip reduction.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>High Performance Browser Networking</em>,
+    chapter 4 (Transport Layer Security), free at hpbn.co<br>
+    <em>Why this one:</em> free, current, and it explains the handshake in terms of round trips and cost,
+    which connects cryptography to the latency node rather than leaving it as a separate subject.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Watch a stranger prove who they are</span>
+    Capture a TLS handshake in Wireshark. Before any encrypted data flows, you can read the certificate in
+    plaintext — including the chain up to a root authority your machine already trusts.
+    <br><br>
+    Now inspect your own machine's trust store and count the root authorities. There will be more than a
+    hundred, from many countries. <strong>Any one of them can issue a certificate for any domain.</strong>
+    Sit with that: your security model depends on all of them behaving, and some have historically not.
+    <br><br>
+    Then generate a self-signed certificate, serve a page with it, and watch the browser refuse. The
+    encryption is identical — what is missing is a chain to something you already trusted. Then add your
+    own certificate to the trust store and watch the warning vanish, which demonstrates exactly what the
+    warning was ever about.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>encryption is easy; trust is the hard part, and it is
+    outsourced to a list of companies you never chose.</mark>
+  </div>
+
+  <p><b>CONNECTS TO.</b> Geopolitics (certificate authorities and state interception) · Mathematics
+  (number theory) · Business (the CA industry) · Human Behavior (trust as delegated verification).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> HTTP</h2>
+  <p class="sub">The application protocol that ate every other application protocol.</p>
+
+  <p><b>WHAT IT IS.</b> A request/response protocol for transferring representations of resources — plus,
+  by historical accident, the substrate on which nearly all networked applications are now built.</p>
+
+  <p><b>WHY IT EXISTS.</b> It was designed for documents. It became universal because it passes through
+  firewalls, is text-debuggable, and has a caching model good enough to build the web on.</p>
+
+  <p><b>DEPENDENCIES.</b> N4, N6.</p>
+
+  <p><b>SUBTOPICS.</b> Methods, status codes, headers · statelessness and how cookies work around it ·
+  caching, ETags, conditional requests · content negotiation · HTTP/1.1 head-of-line blocking · HTTP/2
+  multiplexing · HTTP/3 over QUIC · REST as a set of constraints, and how loosely the term is used.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>High Performance Browser Networking</em>,
+    chapters 9–12<br>
+    <em>Why this one:</em> it treats HTTP versions as responses to measured problems, so the reason for
+    each redesign is visible rather than asserted.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Speak HTTP with your own hands, then stop believing in caching</span>
+    Open a raw TCP connection with <code>nc</code> or <code>openssl s_client</code> and type an HTTP
+    request by hand. A page comes back. The protocol you have used every day for years turns out to be
+    something you can type.
+    <br><br>
+    Then investigate caching properly: request a resource twice with Wireshark open. Look for the
+    conditional request and the <code>304 Not Modified</code> — the body was not re-sent. Now change the
+    cache headers on your own small server and find combinations that produce genuinely wrong behaviour,
+    such as a stale response after a deploy.
+    <br><br>
+    Finally, load a page with 50 small images over HTTP/1.1 and over HTTP/2 with 200 ms of added latency.
+    The difference is dramatic, and the reason is head-of-line blocking — a queueing problem, not a
+    bandwidth one.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>most web performance work is latency and queueing work
+    wearing different clothes</mark>, which is why <a href="probability.html#n6">Probability N6</a> keeps
+    reappearing in this domain.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering N7 · Infrastructure (load balancers, CDNs, caching tiers) ·
+  Data Engineering (REST and streaming APIs for ingestion).</p>
+</section>
+
+<section id="n8">
+  <h2><span class="num">N8</span> Latency and physics</h2>
+  <p class="sub">The one constraint in this Atlas that no amount of engineering will ever remove.</p>
+
+  <p><b>WHAT IT IS.</b> The recognition that distance costs time, that this cost is bounded below by the
+  speed of light in glass, and that this floor shapes the architecture of every global system.</p>
+
+  <p><b>WHY IT EXISTS.</b> Bandwidth can be bought — lay more fibre. Latency cannot. This asymmetry is the
+  most important economic fact in distributed computing.</p>
+
+  <p><b>DEPENDENCIES.</b> N4 · Physics (speed of light, refractive index).</p>
+
+  <p><b>SUBTOPICS.</b> Propagation, transmission, queueing and processing delay · the bandwidth-delay
+  product · why round trips matter more than payload size · CDNs and edge placement · the latency numbers
+  every engineer should know · why the network is simply the slowest tier of Computing N4's hierarchy.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>High Performance Browser Networking</em>,
+    chapter 1 ("Primer on Latency and Bandwidth")<br>
+    <em>Why this one:</em> short, free, and it establishes the numbers you will reason with for the rest
+    of your career in about twenty minutes.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Measure the speed of light with ping</span>
+    Ping servers at increasing distances — same city, same country, another continent. Record round-trip
+    times. Now look up the great-circle distance to each, and compute the theoretical minimum round trip:
+    distance × 2 ÷ (speed of light in fibre, roughly 200,000 km/s).
+    <br><br>
+    Plot measured against theoretical. You will find you are typically within a factor of two or three of
+    a fundamental physical limit — and that no amount of money, hardware or optimisation could close that
+    gap.
+    <br><br>
+    Then apply it: compute the minimum possible round trip between Mumbai and Virginia. Now count how many
+    sequential round trips a naive page load makes — DNS, TCP handshake, TLS handshake, HTTP request — and
+    multiply. <mark>You have just explained why a "fast" application feels slow overseas, and why every
+    protocol redesign of the last decade has been an attempt to delete a round trip.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> the correct unit for network design is not megabits per second but
+    <em>round trips</em>, because one is purchasable and the other is governed by physics.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Physics · Computing N4 (the same hierarchy, one level further out) · Distributed
+  Systems (why synchronous cross-region calls are a design error) · Geopolitics (submarine cable routes
+  determine national latency) · Finance (co-location in trading).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Headers larger than the payload</td><td>Layering charges rent</td></tr>
+      <tr><td>N2</td><td>ARP: anyone on the segment could answer</td><td>Local protocols assumed trust</td></tr>
+      <tr><td>N3</td><td>Traceroute hops that get faster</td><td>There is no route, only decisions</td></tr>
+      <tr><td>N4</td><td>+100 ms destroys throughput at unchanged bandwidth</td><td>Bandwidth-delay product</td></tr>
+      <tr><td>N5</td><td>Walking the delegation chain from the root</td><td>Planet-scale cache coherence</td></tr>
+      <tr><td>N6</td><td>Counting the CAs your machine already trusts</td><td>Trust is outsourced</td></tr>
+      <tr><td>N7</td><td>Typing HTTP by hand into a socket</td><td>The protocol is just text</td></tr>
+      <tr><td>N8</td><td>Ping vs the speed of light in fibre</td><td>Round trips are the real unit</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="distributed-systems.html">Distributed Systems</a></td><td>N4 timeouts and N8 latency are the root of every consistency trade-off</td></tr>
+      <tr><td><a href="infrastructure-cloud.html">Infrastructure &amp; Cloud</a></td><td>N5 service discovery, N7 load balancing, N8 region placement</td></tr>
+      <tr><td>Everyday Technology</td><td>The phone-to-TV signal path passes straight through N2 and N7</td></tr>
+      <tr><td>Geopolitics</td><td>N3 and N8 — cables, routing and sovereignty are physical facts</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 10 · Networking</footer>
+
+</body>
+</html>

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Databases — Atlas domain 12</title>
+<meta name="description" content="The relational model, indexes, query planning, transactions and isolation — learned by breaking a real database on purpose." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · The relational model</a>
+  <a href="#n2">2 · Storage &amp; indexes</a>
+  <a href="#n3">3 · Query planning</a>
+  <a href="#n4">4 · Transactions</a>
+  <a href="#n5">5 · Isolation</a>
+  <a href="#n6">6 · Modelling</a>
+  <a href="#n7">7 · The NoSQL families</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Databases</p>
+
+<div class="hero">
+  <div class="kicker">Domain 12 · Cluster C3 · gated by Operating Systems + Software Engineering</div>
+  <h1>Databases</h1>
+  <p class="dropcap">A database is what you get when you take every hard problem in this Atlas —
+  <a href="computing.html#n4">the memory hierarchy</a>, <a href="operating-systems.html#n4">durability</a>,
+  <a href="software-engineering.html#n6">concurrency</a>, <a href="software-engineering.html#n3">data
+  structures</a> — and solve all of them at once, correctly, for hostile concurrent users, without losing
+  anything. <em>It is the most concentrated engineering artefact you will study.</em></p>
+  <div class="why">
+    <b>The single idea.</b> A database exists to let you say <mark>what you want without saying how to get
+    it</mark>, while guaranteeing that concurrent users and sudden power loss cannot corrupt the result.
+    Everything below is either part of the "how" it works out for you, or part of the machinery that keeps
+    those guarantees true.
+  </div>
+  <div class="tags">
+    <span class="tag">#relational</span>
+    <span class="tag t2">#indexes</span>
+    <span class="tag t3">#transactions</span>
+    <span class="tag">#isolation</span>
+    <span class="tag t2">#modelling</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">Every serious system eventually contains a database, or accidentally rewrites one badly.</p>
+
+  <p>You could keep data in files. People did. The database was invented because files force every
+  application to solve the same six problems independently — finding records quickly, changing several
+  things atomically, letting many users write at once, surviving crashes, evolving the format, and
+  answering questions nobody anticipated.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="operating-systems.html">OS</a> N3–N4 · <a href="software-engineering.html">Software Engineering</a> N1, N3, N6 · <a href="computing.html">Computing</a> N4</td><td>Distributed Systems · Data Engineering · AI (feature stores) · Business (analytics)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Environment for this domain</span>
+    Use <strong>SQLite</strong> for everything except the concurrency node — it is a single file, needs no
+    server, and its internals are unusually well documented. For
+    <a href="#n5">N5 (isolation)</a> you need <strong>PostgreSQL</strong>, because SQLite's concurrency
+    model is too simple to demonstrate the anomalies. Both are free.
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>DATABASES
+│
+├── 1 · THE RELATIONAL MODEL &amp; SQL ... declaring what, not how
+│   ├── Relations, tuples, keys
+│   ├── Relational algebra behind SQL
+│   ├── Joins and what they actually do
+│   └── NULL and three-valued logic
+│
+├── 2 · STORAGE &amp; INDEXES  [DEPTH] .. finding a row without reading them all
+│   ├── Pages, heaps, row layout
+│   ├── B-trees and why they are shallow
+│   ├── LSM trees and the write-optimised alternative
+│   ├── Clustered vs secondary indexes
+│   └── Columnar storage
+│
+├── 3 · QUERY PLANNING ............... automated algorithm selection
+│   ├── Parse, plan, execute
+│   ├── Cost models and statistics
+│   ├── Join algorithms and ordering
+│   └── Why the planner gets it wrong
+│
+├── 4 · TRANSACTIONS ................. all-or-nothing under crash
+│   ├── ACID, term by term
+│   ├── Write-ahead logging
+│   ├── Recovery
+│   └── Why durability is expensive
+│
+├── 5 · CONCURRENCY &amp; ISOLATION  [DEPTH]  many writers, one truth
+│   ├── The four anomalies
+│   ├── Isolation levels
+│   ├── Locking vs MVCC
+│   └── Deadlock and serialization failure
+│
+├── 6 · MODELLING .................... deciding the shape of the truth
+│   ├── Normalisation and its purpose
+│   ├── Denormalisation as a deliberate trade
+│   ├── Star schemas for analytics
+│   └── Schema evolution
+│
+└── 7 · THE NoSQL FAMILIES ........... what was given up, and for what
+    ├── Key-value, document, wide-column, graph
+    ├── What each optimises
+    └── Why "SQL vs NoSQL" is the wrong question</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> The relational model and SQL</h2>
+  <p class="sub">A sixty-year-old mathematical idea that refuses to be replaced.</p>
+
+  <p><b>WHAT IT IS.</b> Data as sets of tuples, with operations — selection, projection, join, union —
+  that take relations and produce relations. SQL is a language that approximates this algebra.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because before it, programs navigated data structures by hand, and every schema
+  change broke every program. Codd's insight was that if you describe <em>what</em> you want, the system
+  is free to change <em>how</em> it gets it — which is the same decoupling argument as
+  <a href="software-engineering.html#n9">design</a>, applied to data access.</p>
+
+  <p><b>DEPENDENCIES.</b> Mathematics (sets and relations) · Software Engineering N1 (keys are identity).</p>
+
+  <p><b>SUBTOPICS.</b> Relations, tuples, attributes · primary and foreign keys · relational algebra ·
+  inner, outer, cross joins · aggregation and grouping · NULL and three-valued logic · declarative versus
+  imperative thinking.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course · <em>Title:</em> CMU 15-445 <em>Database Systems</em> (Andy Pavlo),
+    lectures 1–2 — full lecture videos and notes are free online<br>
+    <em>Why this one:</em> it is the best free database course in existence, taught by someone who builds
+    them, and it treats the relational model as an engineering decision with alternatives rather than as
+    the natural order of things.
+    <br><br>
+    <b>DEEPER (optional)</b> — Codd's 1970 paper "A Relational Model of Data for Large Shared Data Banks",
+    free and remarkably readable.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Ask a question nobody designed for</span>
+    Load a genuinely large real dataset into SQLite — Indian census data, a government open-data release,
+    or your own browser history file, which is already SQLite. Do not design anything; just load it.
+    <br><br>
+    Now answer five questions that the original creators never anticipated, using only SQL. Then try to
+    answer the same five questions by writing Python that reads the raw file. Count the lines of code and
+    the time taken for each.
+    <br><br>
+    Then find the NULL trap on purpose: write a query with <code>WHERE column != 'x'</code> on a column
+    containing NULLs, and notice that rows you expected are missing. Work out why from three-valued logic.
+    <mark>NULL is not a value; it is the absence of one, and it propagates through comparisons in a way
+    that surprises everyone exactly once.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> the power is not the syntax. It is that you described a result and
+    something else decided the algorithm — and that this is why the query still works after the data grows
+    a thousandfold.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mathematics (set theory, logic) · Data Engineering (SQL is the lingua franca) ·
+  Software Engineering N9 (declarative interfaces).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Storage and indexes <span class="pill pL">depth</span></h2>
+  <p class="sub">This node is <a href="computing.html#n4">Computing N4</a> played out at disk scale, and it is the heart of the domain.</p>
+
+  <p><b>WHAT IT IS.</b> How rows are laid out in fixed-size pages, and the auxiliary structures that let
+  the system find a specific row without reading every page.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a full scan of a large table costs a number of disk reads proportional
+  to its size, and disks are the slowest tier of the hierarchy. An index trades write cost and space for
+  read cost — and that trade is the single most consequential decision in database performance.</p>
+
+  <p><b>DEPENDENCIES.</b> Computing N4 · OS N3–N4 · Software Engineering N3 (trees).</p>
+
+  <p><b>SUBTOPICS.</b> Pages and the buffer pool · row-oriented layout · B+ trees and why they are wide
+  and shallow · clustered versus secondary indexes · covering indexes · LSM trees, memtables and
+  compaction · write amplification · columnar layout and why analytics uses it · index selectivity.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>Use The Index, Luke!</em> (Markus Winand), free
+    at use-the-index-luke.com<br>
+    <em>Why this one:</em> free, and it is organised around the question you will actually have — <em>"why
+    is this query slow?"</em> — rather than around index theory. It teaches you to read execution plans,
+    which is the transferable skill.
+    <br><br>
+    <b>DEEPER (optional)</b> — CMU 15-445 lectures on storage and tree indexes, and the SQLite file format
+    documentation, which is one of the clearest specifications of a real on-disk format available for free.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find the index that makes things slower</span>
+    Take a table with a million rows. Time a query filtering on an unindexed column. Add the index. Time
+    it again — orders of magnitude faster, exactly as promised.
+    <br><br>
+    Now break the promise, three ways. First: filter on a low-selectivity column, such as a boolean where
+    half the rows match. Add an index and watch the planner <em>refuse to use it</em> — because reading
+    half the table via random index lookups is slower than reading all of it sequentially. Find the
+    selectivity threshold where the planner changes its mind.
+    <br><br>
+    Second: time a bulk insert of 100,000 rows with no indexes, then with five indexes. Every index must
+    be updated on every write, and the cost is very visible. <mark>An index is a read optimisation paid
+    for on every write, forever.</mark>
+    <br><br>
+    Third: build a multi-column index and discover that column <em>order</em> decides which queries it can
+    serve. An index on (a, b) helps a query filtering on a, and does nothing for one filtering only on b.
+    Work out why from the tree structure.
+    <br><br>
+    <em>The realisation to reach:</em> sequential access beats random access by so much that
+    <em>reading everything is often faster than looking things up</em> — which is exactly the stride-cliff
+    result from Computing N4, one storage tier further down.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Computing N4 · Data Engineering (Parquet is columnar storage, and this node
+  explains why it wins) · Distributed Systems (LSM trees underpin most distributed stores) · your own
+  storage-engine work.</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Query planning</h2>
+  <p class="sub">Automated algorithm selection — and why it sometimes chooses catastrophically.</p>
+
+  <p><b>WHAT IT IS.</b> The component that turns a declarative query into an execution plan by estimating
+  the cost of alternatives using statistics about the data.</p>
+
+  <p><b>WHY IT EXISTS.</b> It is the price of N1's promise. If you do not say how, something must decide —
+  and the decision depends on data the developer cannot know at write time.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2.</p>
+
+  <p><b>SUBTOPICS.</b> Parse, rewrite, plan, execute · cardinality estimation · histograms and statistics ·
+  nested loop, hash and merge joins · join ordering as a search problem · why estimation errors compound
+  through a plan · reading an EXPLAIN output.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation used as a tool · <em>Title:</em> PostgreSQL's
+    <code>EXPLAIN ANALYZE</code> documentation, plus SQLite's <code>EXPLAIN QUERY PLAN</code><br>
+    <em>Why this one:</em> the plan of a query you wrote thirty seconds ago teaches more than any general
+    account of optimisation. This is the single most valuable database skill to hold.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make the planner guess wrong</span>
+    Write a three-table join and run <code>EXPLAIN ANALYZE</code>. Compare the <em>estimated</em> row count
+    at each step with the <em>actual</em> one. On a healthy query they are close.
+    <br><br>
+    Now break it deliberately. Load a table, run a query, then insert a million rows <strong>without
+    updating statistics</strong>. Run the query again. The planner is now reasoning about a table that no
+    longer exists, and may choose a nested loop join over a hash join — turning milliseconds into minutes.
+    Then run <code>ANALYZE</code> and watch it recover instantly.
+    <br><br>
+    Then create correlated columns — say, city and postcode — and filter on both. The planner assumes
+    independence and multiplies the selectivities, so it estimates far fewer rows than exist.
+    <mark>The error compounds at every join above it in the plan.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> the optimiser is a <em>predictive model of your data</em>, and like
+    every model it fails when its assumptions are violated. Most inexplicable production slowdowns are
+    this — a plan that changed because the statistics did.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability (cardinality estimation is statistical inference) · Computing N7
+  (this is automated complexity analysis) · Data Engineering (query engines do the same thing at scale).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Transactions</h2>
+  <p class="sub">All-or-nothing, in the presence of a power cut.</p>
+
+  <p><b>WHAT IT IS.</b> A grouping of operations that either all take effect or none do, survives a crash
+  once acknowledged, and leaves the database internally consistent.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a transfer between two accounts is two writes, and a machine can die
+  between them. Without transactions, every application must implement its own crash recovery — and every
+  one of them will get it wrong.</p>
+
+  <p><b>DEPENDENCIES.</b> OS N4 (fsync, the write path, atomic rename) · N2.</p>
+
+  <p><b>SUBTOPICS.</b> Atomicity, consistency, isolation, durability — each meaning something specific ·
+  write-ahead logging · why the log is written before the data · checkpoints · crash recovery, redo and
+  undo · group commit · the cost of durability.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course · <em>Title:</em> CMU 15-445, logging and recovery lectures<br>
+    <em>Why this one:</em> free, and it derives write-ahead logging from the crash-consistency problem you
+    already met in <a href="operating-systems.html#n4">OS N4</a> and in your own crash-survival project —
+    so it lands as a solution to something you have personally suffered.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Kill the database mid-transfer</span>
+    Write a script that transfers money between two rows inside a transaction, with a deliberate pause
+    between the debit and the credit. Run it, and kill the database process during the pause — hard, with
+    SIGKILL, not a clean shutdown.
+    <br><br>
+    Restart and check the balances. The money is not missing and it has not been duplicated. Now remove
+    the transaction wrapper and repeat. Money vanishes. You have demonstrated atomicity by destroying it.
+    <br><br>
+    Then measure what it costs. Insert 10,000 rows one transaction per row, then all in a single
+    transaction. The difference is enormous, and the reason is one <code>fsync</code> per commit — the
+    same number you measured in OS N4. Then look at the WAL file directly and watch it grow, then
+    checkpoint and watch it truncate.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>durability costs one disk sync, and everything about database
+    performance tuning is an attempt to amortise that sync across more work.</mark> Group commit, batching
+    and async commit are all the same idea.
+  </div>
+
+  <p><b>CONNECTS TO.</b> OS N4 · Distributed Systems (two-phase commit, and why it is unsatisfying) ·
+  Data Engineering (exactly-once processing) · Finance (why ledgers are append-only).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Concurrency and isolation <span class="pill pL">depth</span></h2>
+  <p class="sub">Many writers, one truth — and the four ways it goes wrong.</p>
+
+  <p><b>WHAT IT IS.</b> The mechanisms and the spectrum of guarantees governing what one transaction can
+  observe of another's incomplete work.</p>
+
+  <p><b>WHY IT EXISTS.</b> Perfect isolation — behaving exactly as if transactions ran one at a time — is
+  achievable but slow. Every database therefore offers weaker levels that are faster and permit specific
+  anomalies. <strong>Almost every database ships with a default that is not fully isolated, and most
+  developers do not know which one they are using.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> N4 · Software Engineering N6 (races and locks).</p>
+
+  <p><b>SUBTOPICS.</b> Dirty read, non-repeatable read, phantom read, lost update · read uncommitted,
+  read committed, repeatable read, serializable · two-phase locking · multiversion concurrency control ·
+  snapshot isolation and write skew · deadlock detection · optimistic versus pessimistic control.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> "A Critique of ANSI SQL Isolation Levels" (Berenson et al.,
+    free from Microsoft Research)<br>
+    <em>Why this one:</em> it demonstrates that the standard's definitions are ambiguous and that
+    real databases interpret them differently — which is the fact that actually matters in production, and
+    is omitted from almost every tutorial.
+    <br><br>
+    <b>DEEPER (optional)</b> — CMU 15-445 concurrency control lectures for the mechanisms, and the
+    Jepsen analyses (free at jepsen.io) for what real systems actually deliver versus what they claim.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Reproduce all four anomalies deliberately</span>
+    Open two PostgreSQL sessions side by side. This exercise only works with two real terminals, and that
+    is the point — concurrency is invisible in a single session.
+    <br><br>
+    Set isolation to <code>READ COMMITTED</code>. In session A, begin a transaction and read a row. In
+    session B, update and commit that row. Read it again in A — <strong>the value changed inside a single
+    transaction.</strong> That is a non-repeatable read, at the default isolation level of most databases
+    in production.
+    <br><br>
+    Now reproduce the lost update: both sessions read a counter, both increment it in application code,
+    both write it back. One increment silently disappears — the identical failure to the two-thread
+    counter in <a href="software-engineering.html#n6">Software Engineering N6</a>, now across processes and
+    machines. Fix it with <code>SELECT FOR UPDATE</code>, then again with an atomic
+    <code>UPDATE ... SET x = x + 1</code>, and compare.
+    <br><br>
+    Then the subtle one that catches experienced engineers: <em>write skew</em> under snapshot isolation.
+    Two doctors are on call; a rule says at least one must remain. Both check the rule simultaneously, both
+    see two doctors on call, both sign off. Neither transaction conflicts on any row, both commit, and the
+    invariant is now violated with no error anywhere.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>your database's default isolation level permits anomalies your
+    application logic assumes cannot happen.</mark> Write skew in particular cannot be prevented by careful
+    application code — it requires either serializable isolation or an explicit lock, and knowing that
+    distinction is genuinely rare.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering N6 · Distributed Systems (consistency models are this node
+  spread across machines) · Human Behavior (coordination failures) · Finance (double-spend).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Modelling</h2>
+  <p class="sub">Deciding the shape of the truth — the decision that is hardest to reverse.</p>
+
+  <p><b>WHAT IT IS.</b> Choosing tables, columns, keys and relationships to represent a domain, and
+  deciding deliberately where to duplicate data.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the schema outlives the application. Code is rewritten every few years;
+  data structures persist for decades, and every consumer downstream depends on them.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · genuine experience of N2–N5.</p>
+
+  <p><b>SUBTOPICS.</b> Functional dependencies · normal forms and what each eliminates · denormalisation as
+  a read optimisation · star and snowflake schemas · slowly changing dimensions · surrogate versus natural
+  keys · schema evolution and migrations · soft deletes and their consequences.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course lectures · <em>Title:</em> CMU 15-445 on the relational model, combined with
+    the freely available chapters and articles from Kimball's dimensional modelling work for the analytics
+    side<br>
+    <em>Why this one:</em> the operational and analytical traditions disagree productively, and seeing both
+    prevents you from applying warehouse patterns to transactional systems or the reverse.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Model it badly on purpose, then change the requirement</span>
+    Model something you know well — a cricket league, a family tree, or your own bookshelf. Deliberately
+    build the naive version first: one wide table, repeated values, no foreign keys.
+    <br><br>
+    Now apply four requirement changes, one at a time, and count what each costs. <em>A team renames
+    itself.</em> <em>A player transfers mid-season and history must remain correct.</em> <em>A match is
+    replayed and the old result must be preserved.</em> <em>You must report on a date that has since
+    changed.</em>
+    <br><br>
+    The first change alone will force an update across thousands of rows and reveal an inconsistency where
+    one row was missed. That inconsistency <strong>is</strong> the argument for normalisation, discovered
+    rather than asserted. The third and fourth push you into temporal modelling and slowly changing
+    dimensions, which is where most real schemas are wrong.
+    <br><br>
+    Then redesign properly and re-run the same four changes to see which became free.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>normalisation is not tidiness, it is the elimination of any
+    fact stored in more than one place</mark> — because two copies of a fact will eventually disagree, and
+    then no query can tell you which is true.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Data Engineering (dimensional modelling, data contracts) · Software Engineering N9
+  (coupling) · Accounting (a ledger is an append-only schema, chosen deliberately).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> The NoSQL families</h2>
+  <p class="sub">Not alternatives to SQL. Different things given up, for different reasons.</p>
+
+  <p><b>WHAT IT IS.</b> A set of storage systems that relax one or more relational guarantees — joins,
+  schema, or strong consistency — in exchange for scale, flexibility or write throughput.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because some workloads genuinely do not need what a relational database
+  provides, and the guarantees are not free. The failure mode of this node is adopting a system for
+  fashion rather than for the specific guarantee you are willing to lose.</p>
+
+  <p><b>DEPENDENCIES.</b> N1–N6. This node is only comprehensible <em>after</em> you know what is being
+  given up.</p>
+
+  <p><b>SUBTOPICS.</b> Key-value stores · document stores and embedded aggregates · wide-column stores ·
+  graph databases and when traversal beats joins · search indexes · time-series stores · the
+  aggregate-boundary idea · why "schemaless" means the schema lives in your application instead.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> Amazon's Dynamo paper (2007), freely available<br>
+    <em>Why this one:</em> it is the origin of most of this family, and it states its trade-offs with
+    unusual honesty — what was abandoned, why, and what the application must then handle itself.
+    <br><br>
+    <b>DEEPER (optional)</b> — the Bigtable paper for wide-column, and Jepsen's analyses for what these
+    systems actually guarantee under partition.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · One workload, three shapes</span>
+    Take a single realistic workload — say, a social feed with users, posts and follows. Implement it three
+    times: relational in PostgreSQL, document-shaped in SQLite with JSON columns, and as a pure key-value
+    store using only get and put.
+    <br><br>
+    Then ask each one the same four questions. <em>Show one user's feed</em> is easy everywhere.
+    <em>Show the ten most-followed users</em> is trivial relationally and painful in key-value.
+    <em>Change a username</em> is one update relationally and a fan-out rewrite in the denormalised
+    document version. <em>Find friends-of-friends three levels deep</em> is where relational joins start
+    to hurt and a graph model would win.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>you do not choose a database, you choose which queries will be
+    cheap and which will be expensive</mark> — and you are making that choice permanently, at modelling
+    time, for questions you have not been asked yet. That is why N6 is the hardest node in this domain.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Distributed Systems (CAP, replication, quorums) · Data Engineering (polyglot
+  persistence) · Business (operational cost of each choice).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Five unanticipated questions, in SQL vs in Python</td><td>Declarative decoupling</td></tr>
+      <tr><td>N2</td><td>An index the planner refuses to use</td><td>Sequential beats random</td></tr>
+      <tr><td>N3</td><td>Stale statistics turn milliseconds into minutes</td><td>The planner is a model</td></tr>
+      <tr><td>N4</td><td>SIGKILL mid-transfer; money is intact</td><td>Atomicity costs one fsync</td></tr>
+      <tr><td>N5</td><td>Write skew: both commit, invariant broken, no error</td><td>Defaults are not serializable</td></tr>
+      <tr><td>N6</td><td>A rename that misses one row</td><td>Two copies eventually disagree</td></tr>
+      <tr><td>N7</td><td>One workload, three stores, four questions</td><td>You choose which queries hurt</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="distributed-systems.html">Distributed Systems</a></td><td>N5 isolation becomes consistency models; N4 becomes consensus and commit protocols</td></tr>
+      <tr><td><a href="data-engineering.html">Data Engineering</a></td><td>N2 columnar storage, N3 query engines, N6 dimensional modelling</td></tr>
+      <tr><td><a href="infrastructure-cloud.html">Infrastructure &amp; Cloud</a></td><td>Managed databases, replicas, backup and restore as operations</td></tr>
+      <tr><td>Business</td><td>N6 — the schema encodes what the business believes about itself</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 12 · Databases</footer>
+
+</body>
+</html>

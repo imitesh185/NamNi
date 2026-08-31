@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cars &amp; Transportation — Atlas domain 06</title>
+<meta name="description" content="Powertrain, drivetrain, dynamics, vehicle electronics and transport networks — mechanical engineering assembled." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Powertrain</a>
+  <a href="#n2">2 · Drivetrain</a>
+  <a href="#n3">3 · Dynamics</a>
+  <a href="#n4">4 · Vehicle electronics</a>
+  <a href="#n5">5 · Safety</a>
+  <a href="#n6">6 · Transport networks</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Cars &amp; Transportation</p>
+
+<div class="hero">
+  <div class="kicker">Domain 06 · Cluster C2 · gated by Mechanical + Electrical</div>
+  <h1>Cars &amp; Transportation</h1>
+  <p class="dropcap">A car is <a href="mechanical-engineering.html">mechanical engineering</a> assembled
+  into one object, and a modern one is also a small distributed computer network on wheels. It is the
+  largest complex machine most people can inspect closely, which makes it an unusually good teacher.</p>
+  <div class="why">
+    <b>The single idea.</b> Everything a vehicle does is <mark>managing a limited amount of grip and a
+    limited amount of energy.</mark> Acceleration, braking and cornering all draw from the same friction
+    budget at the four contact patches, and every efficiency question is about where the fuel energy goes.
+  </div>
+  <div class="tags">
+    <span class="tag">#powertrain</span>
+    <span class="tag t2">#grip</span>
+    <span class="tag t3">#can-bus</span>
+    <span class="tag">#logistics</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">And what it is good for beyond cars.</p>
+
+  <p>Beyond the object itself, this domain teaches control systems, energy accounting, real-time networks
+  and safety engineering in a setting where the consequences are physical and immediate. It also connects
+  directly to <a href="economics.html">economics</a> and <a href="index.html#c6">geography</a> through
+  logistics, which is how most goods you own reached you.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="mechanical-engineering.html">Mechanical</a> N3–N5 · <a href="electrical-electronics.html">Electronics</a> N4, N6</td><td>Indian Geography (corridors) · Economics (logistics cost) · Geopolitics (oil, EV supply chains)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>CARS &amp; TRANSPORTATION
+│
+├── 1 · POWERTRAIN .................. making torque
+│   ├── Internal combustion revisited
+│   ├── Electric motors and controllers
+│   ├── Batteries: chemistry, density, thermal management
+│   └── Hybrids and why they exist
+│
+├── 2 · DRIVETRAIN .................. delivering torque to the road
+│   ├── Clutch and torque converter
+│   ├── Gearboxes: manual, automatic, CVT, single-speed EV
+│   ├── Differential and why it is necessary
+│   └── Drive layouts
+│
+├── 3 · DYNAMICS .................... grip, and the friction budget
+│   ├── The contact patch
+│   ├── Weight transfer
+│   ├── Suspension: springs, dampers, geometry
+│   ├── Steering and understeer/oversteer
+│   └── Braking and deceleration limits
+│
+├── 4 · VEHICLE ELECTRONICS ......... the network on wheels
+│   ├── ECUs and sensors
+│   ├── CAN bus as a real-time protocol
+│   ├── OBD-II diagnostics
+│   └── ADAS and sensor fusion
+│
+├── 5 · SAFETY ...................... managing energy in a crash
+│   ├── Crumple zones and energy absorption
+│   ├── Restraints and the ride-down
+│   ├── Active vs passive safety
+│   └── Crash testing and rating systems
+│
+└── 6 · TRANSPORT NETWORKS .......... movement at national scale
+    ├── Road hierarchy and design
+    ├── Rail, freight and modal share
+    ├── Traffic flow and induced demand
+    └── India's corridors and logistics cost</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Powertrain</h2>
+  <p class="sub">Where energy becomes torque, and why the EV transition is a physics story.</p>
+
+  <p><b>WHAT IT IS.</b> The system producing motive force — an engine, an electric motor, or both — plus the
+  energy store feeding it.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the trade-offs between energy density, efficiency, refuelling time and
+  emissions differ enormously between chemical fuel and batteries, and the entire industry transition is a
+  consequence of those numbers moving.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="mechanical-engineering.html#n4">Mechanical N4</a> ·
+  <a href="electrical-electronics.html#n4">Electronics N4</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Torque and power curves and their difference · why engines need gearboxes and EVs
+  mostly do not · electric motor types and controllers · regenerative braking · lithium-ion chemistry ·
+  energy density by mass and volume · charge rate and thermal limits · hybrid architectures.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free videos · <em>Title:</em> Engineering Explained's powertrain and EV series, free on
+    YouTube<br>
+    <em>Why this one:</em> free, and it consistently works from first principles with real numbers rather
+    than from marketing claims — including honest treatment of where EVs are and are not better.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Compare a tank of petrol to a battery, by the numbers</span>
+    Compute energy density both ways. Petrol holds roughly 12,000 Wh per kilogram; a good lithium-ion pack
+    holds about 250. <strong>That is a factor of nearly fifty.</strong> Now apply efficiency: the engine
+    converts about 30% and the electric drivetrain about 90%, so the <em>useful</em> gap narrows to roughly
+    fifteen.
+    <br><br>
+    Still large — so why do EVs work at all? Compute the actual energy a car needs for a 300 km trip from
+    drag and rolling resistance, and you will find the requirement is modest enough that even fifteen-fold
+    worse storage is sufficient for most journeys. <mark>The physics does not favour batteries; the
+    application does.</mark>
+    <br><br>
+    Then find where EVs win decisively: compute the energy recovered by regenerative braking in city
+    driving, which an engine simply throws away as heat. Then find where they lose: compute the charging
+    power needed to add 300 km in five minutes and notice it is comparable to a small neighbourhood's
+    entire electrical demand.
+    <br><br>
+    <em>The realisation to reach:</em> the transition is not about which technology is "better". It is
+    about a specific set of numbers — energy density, efficiency, charge rate, cost per kWh — crossing
+    thresholds at different times for different use cases.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Physics N3 · Electronics N7 (charging load on the grid) · Geopolitics (lithium,
+  oil) · Economics (total cost of ownership).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Drivetrain</h2>
+  <p class="sub">Getting torque to the road at the right speed.</p>
+
+  <p><b>WHAT IT IS.</b> The chain from engine or motor to wheels: clutch, gearbox, driveshaft, differential.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because an engine produces useful torque only over a narrow speed band while a
+  car must move from zero to highway speed. The gearbox reconciles those, and the differential solves a
+  geometry problem that would otherwise drag a wheel through every turn.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · <a href="mechanical-engineering.html#n3">Mechanical N3</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Clutches and torque converters · gear ratios and final drive · manual, automatic,
+  dual-clutch, CVT · why EVs usually need one ratio · the differential · limited-slip and traction control ·
+  front, rear and all-wheel drive.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free film · <em>Title:</em> the 1937 Chevrolet film "Around the Corner" on the
+    differential — freely available, and still the best explanation ever produced<br>
+    <em>Why this one:</em> free, and it builds the differential from the problem upward, showing three
+    failed designs before the working one. <mark>It is a perfect example of the failure-before-concept
+    method this Atlas uses throughout.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find the problem the differential solves</span>
+    Before watching anything: push a toy car with a rigid axle around a tight circle on a smooth floor.
+    Watch one wheel scrub and skip. The outer wheel must travel further than the inner one, but a rigid axle
+    forces them to rotate at the same speed. <strong>Something must give, and it is grip.</strong>
+    <br><br>
+    Now watch the 1937 film and see the same problem solved with bevel gears. Then find a differential —
+    scrapyard, cutaway model, or animation — and trace the gear path with your finger while turning one
+    output.
+    <br><br>
+    Then compute gear ratios on a real car: engine RPM at a known speed in a known gear, tyre circumference,
+    and the final drive ratio from the specifications. Verify your arithmetic against the tachometer while
+    driving. <mark>You can predict engine speed at any road speed in any gear, which is the drivetrain fully
+    understood.</mark>
+    <br><br>
+    Then reason about the failure: what happens on a differential when one wheel is on ice? It sends power
+    to the wheel with least resistance, and you go nowhere. That is why limited-slip differentials and
+    traction control exist.
+    <br><br>
+    <em>The realisation to reach:</em> the differential is a mechanical solution to a geometric constraint,
+    and it has a failure mode built into the very property that makes it work.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mechanical N3 · Physics N2 (rotational dynamics) · Systems Thinking (a mechanism
+  as an algorithm).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Dynamics and grip</h2>
+  <p class="sub">The friction budget — the single most useful concept for anyone who drives.</p>
+
+  <p><b>WHAT IT IS.</b> How a vehicle accelerates, brakes and turns, all through four contact patches each
+  the size of a palm, with a finite total friction available.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because every control input draws from the same limited grip. Braking hard uses
+  most of it, so there is little left for steering — which is the physical explanation behind almost every
+  piece of driving advice you have ever been given.</p>
+
+  <p><b>DEPENDENCIES.</b> N2 · <a href="physics.html#n2">Physics N2</a>.</p>
+
+  <p><b>SUBTOPICS.</b> The contact patch · the friction circle · weight transfer under braking and
+  cornering · springs, dampers and their different jobs · roll, pitch, dive · understeer and oversteer ·
+  tyre load sensitivity · stopping distance and its velocity-squared dependence · aquaplaning.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free reference · <em>Title:</em> published tyre and vehicle dynamics primers, plus
+    India's official stopping-distance and road-safety data<br>
+    <em>Why this one:</em> free, and pairing the theory with actual accident and stopping data makes the
+    physics consequential rather than abstract.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Compute why doubling your speed quadruples the danger</span>
+    Kinetic energy scales with velocity squared. Compute stopping distance from 40, 60, 80 and 100 km/h
+    using a realistic friction coefficient. Then add reaction distance, which scales <em>linearly</em>.
+    <br><br>
+    Plot total distance against speed. The curve is not linear, and the difference between 60 and 80 km/h is
+    much larger than the 33% speed increase suggests. <mark>Then compute the speed at which you would still
+    be travelling when a car braking from 60 has already stopped.</mark> That number is the entire argument
+    for speed limits in one figure.
+    <br><br>
+    Then experience the friction circle safely: in a large empty space at low speed, brake hard while trying
+    to steer. The car resists turning. Release the brake and it turns. You have just spent your grip budget
+    on braking and had none left for steering — which is why ABS exists, since it modulates braking
+    precisely to preserve steering authority.
+    <br><br>
+    Then examine your own tyres: find the contact patches, measure them, and compute the pressure. Compare
+    against the tyre's rated inflation pressure — they should roughly match, because that is what pressure
+    means.
+    <br><br>
+    <em>The realisation to reach:</em> a car's entire relationship with the road happens through four patches
+    of rubber with a fixed total capability, and every skill of driving is about not asking for more than
+    that budget allows.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Physics N2 · Probability (accident risk) · Mechanical N2 (tyre materials) ·
+  Psychology (risk compensation).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Vehicle electronics</h2>
+  <p class="sub">A modern car is a real-time distributed system that happens to have wheels.</p>
+
+  <p><b>WHAT IT IS.</b> The dozens of electronic control units, the sensors feeding them, and the network
+  protocol connecting them.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because engine efficiency, emissions compliance, safety systems and comfort
+  features all require continuous closed-loop control faster than mechanical systems can provide.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · <a href="electrical-electronics.html#n6">Electronics N6</a> ·
+  <a href="distributed-systems.html">Distributed Systems</a> concepts.</p>
+
+  <p><b>SUBTOPICS.</b> ECUs and their partitioning · sensors: oxygen, MAP, wheel speed, knock · CAN bus,
+  arbitration and priority · why CAN has no addresses · OBD-II and standardised diagnostics · fault codes ·
+  ADAS sensors and fusion · over-the-air updates and their security implications.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free standard documentation + cheap hardware · <em>Title:</em> the OBD-II PID
+    documentation (freely published), used with a sub-thousand-rupee ELM327 adapter<br>
+    <em>Why this one:</em> free documentation, cheap hardware, and it turns any car built after 2010 into a
+    live sensor laboratory you already own or can borrow.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Read your car's mind while driving</span>
+    Plug an OBD-II adapter into any modern car and log live data with a free app: engine RPM, coolant
+    temperature, throttle position, oxygen sensor voltage, instantaneous fuel consumption.
+    <br><br>
+    Now watch the oxygen sensor. It <strong>oscillates continuously</strong> between rich and lean rather
+    than settling. That is not a fault — it is a closed-loop controller deliberately hunting around the
+    ideal air-fuel ratio, because the catalytic converter works best when alternating.
+    <mark>You are watching a balancing loop with a delay, from <a href="systems-thinking.html#n3">Systems
+    Thinking N3</a>, running in an engine bay.</mark>
+    <br><br>
+    Then correlate: log fuel consumption against speed on a highway and find the speed of best efficiency.
+    Compare it against your drag calculation from <a href="mechanical-engineering.html#n5">Mechanical N5</a>.
+    They should agree.
+    <br><br>
+    Then investigate CAN itself: it has no addresses, only message identifiers, and arbitration is won by
+    the lowest identifier — so priority is encoded in the message ID. Compare this to
+    <a href="networking.html#n2">Ethernet's collision handling</a> and note that CAN resolves contention
+    without any message being lost, which is why it is used where timing is safety-critical.
+    <br><br>
+    <em>The realisation to reach:</em> your car contains dozens of control loops running continuously, and
+    almost every "check engine" light is one loop reporting that it can no longer reach its set point.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking N2–N3 · Distributed Systems (real-time messaging) · Networking ·
+  Security (vehicle attack surface).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Safety</h2>
+  <p class="sub">Managing a large amount of kinetic energy over a very short distance.</p>
+
+  <p><b>WHAT IT IS.</b> The structures and systems that reduce injury in a crash — crumple zones, restraints,
+  airbags — plus the active systems that prevent crashes.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because in a collision the energy must go somewhere over some distance, and force
+  equals energy divided by distance. <strong>Extending the crash distance by half a metre halves the force
+  on the occupant</strong>, which is the entire principle.</p>
+
+  <p><b>DEPENDENCIES.</b> N3 · <a href="mechanical-engineering.html#n2">Mechanical N2</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Crumple zones and controlled deformation · the rigid safety cell · ride-down and
+  restraint timing · seatbelt pretensioners and load limiters · airbags as a supplement, not a replacement ·
+  active safety: ABS, ESC, AEB · crash test protocols and star ratings · why a "stronger" car is not
+  necessarily safer.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free crash test data and footage · <em>Title:</em> Global NCAP and Bharat NCAP published
+    results and videos — free<br>
+    <em>Why this one:</em> free, and the slow-motion footage paired with the published deformation and
+    injury data lets you connect a structural design decision to a measured outcome.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Compute the force, then watch the structure manage it</span>
+    A 1,200 kg car hits a wall at 60 km/h. Compute the kinetic energy. Now compute the average force if it
+    stops in 5 cm (a rigid car) versus 70 cm (a car with crumple zones). <strong>The force differs by a
+    factor of fourteen.</strong>
+    <br><br>
+    That single ratio is why cars are deliberately designed to destroy themselves. <mark>A car that survives
+    a crash intact has transferred all that force to its occupants</mark>, which is why older "solidly
+    built" cars perform badly in modern tests and why this is one of the most counter-intuitive facts in
+    engineering.
+    <br><br>
+    Then watch two NCAP videos in slow motion — a 5-star and a 0-star result for similar vehicles — and
+    identify the difference. Look at where deformation stops: in the good result, the passenger cell holds
+    its shape while everything ahead of it collapses.
+    <br><br>
+    Then examine the timing chain: the sensor fires, the pretensioner tightens, the airbag inflates and
+    begins deflating, all within about 100 milliseconds. Compute how far the car travels in that time at 60
+    km/h. It is under two metres — the entire safety system operates inside that window.
+    <br><br>
+    <em>The realisation to reach:</em> safety is not strength. It is <em>controlled weakness in the right
+    places</em>, arranged so that the distance over which energy is absorbed is as long as possible.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Physics N2 · Mechanical N2 · Probability N7 (risk) · Indian Politics (regulation
+  and NCAP adoption).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Transport networks</h2>
+  <p class="sub">Zooming out from the vehicle to the system it moves through.</p>
+
+  <p><b>WHAT IT IS.</b> The road, rail and freight networks that move people and goods, and the traffic
+  dynamics that govern them.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a vehicle is useless without a network, and network behaviour is
+  counter-intuitive: adding capacity often fails to reduce congestion, and flow collapses above a critical
+  density in ways that resemble fluid turbulence.</p>
+
+  <p><b>DEPENDENCIES.</b> N3 · <a href="systems-thinking.html">Systems Thinking</a> · Indian Geography.</p>
+
+  <p><b>SUBTOPICS.</b> Road hierarchy: expressway, national highway, state highway · design speed and
+  geometry · traffic flow, density and the fundamental diagram · induced demand · rail versus road freight
+  economics · modal share · India's logistics cost as a share of GDP · the Golden Quadrilateral and
+  dedicated freight corridors · last-mile cost.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official data · <em>Title:</em> the Ministry of Road Transport and Highways annual
+    reports and NHAI project data, alongside Indian Railways freight statistics — all free<br>
+    <em>Why this one:</em> free, official, and India's modal shift from rail to road over decades is one of
+    the clearest natural experiments in transport economics available anywhere.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Explain why widening the road did not help</span>
+    Take a road near you that was widened, and find travel-time data or ask people who use it daily. In
+    most cases congestion returned within a few years.
+    <br><br>
+    Now build the loop: <em>added capacity → shorter journey time → driving becomes more attractive relative
+    to alternatives → more journeys → congestion returns to roughly its previous equilibrium.</em> That is
+    <a href="systems-thinking.html#n5">a balancing loop with a delay</a>, and it is called induced demand.
+    <mark>Congestion equilibrates to the level at which people stop choosing to drive</mark>, so capacity
+    changes the number of people moving rather than the time it takes.
+    <br><br>
+    Then do the freight comparison: compute the cost per tonne-kilometre for road versus rail in India using
+    published figures, then find why road carries so much despite being more expensive per tonne-km.
+    Answer: door-to-door time, flexibility, and the cost and delay of transshipment. That is a
+    <em>total-cost</em> argument beating a <em>unit-cost</em> argument, which is a pattern that recurs
+    throughout <a href="business.html">Business</a>.
+    <br><br>
+    Then map one real corridor — say Delhi to Mumbai — and identify what determines its route: terrain,
+    existing cities, and the ghats. <a href="index.html#c6">Geography chose it</a> long before engineers did.
+    <br><br>
+    <em>The realisation to reach:</em> transport is a system with feedback, and interventions that seem
+    obviously helpful are absorbed by behavioural responses you did not model.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking N5 · Indian Geography (corridors, terrain) · Economics (logistics
+  cost, modal choice) · Business N5 (distribution).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Petrol holding 50× the energy per kg of a battery</td><td>The application, not the physics, decides</td></tr>
+      <tr><td>N2</td><td>A rigid axle scrubbing a wheel round a corner</td><td>The problem before the mechanism</td></tr>
+      <tr><td>N3</td><td>Braking hard and losing the ability to steer</td><td>One shared friction budget</td></tr>
+      <tr><td>N4</td><td>An oxygen sensor that never settles</td><td>A control loop, live, in the engine bay</td></tr>
+      <tr><td>N5</td><td>Crumple distance changing force by 14×</td><td>Controlled weakness is safety</td></tr>
+      <tr><td>N6</td><td>Congestion returning after widening</td><td>Induced demand as a balancing loop</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td>Indian Geography</td><td>N6 — corridors, terrain, and why routes go where they go</td></tr>
+      <tr><td>Economics</td><td>N6 — logistics cost is a large share of Indian GDP</td></tr>
+      <tr><td>Geopolitics</td><td>N1 — oil dependence and battery supply chains</td></tr>
+      <tr><td>Systems Thinking</td><td>N4 control loops and N6 induced demand, both textbook cases</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 06 · Cars &amp; Transportation</footer>
+
+</body>
+</html>

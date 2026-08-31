@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Distributed Systems — Atlas domain 13</title>
+<meta name="description" content="Partial failure, time, replication, consistency, consensus and backpressure — learned by breaking a cluster on purpose." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Partial failure</a>
+  <a href="#n2">2 · Time &amp; ordering</a>
+  <a href="#n3">3 · Replication</a>
+  <a href="#n4">4 · Consistency models</a>
+  <a href="#n5">5 · Consensus</a>
+  <a href="#n6">6 · Partitioning</a>
+  <a href="#n7">7 · Flow &amp; idempotency</a>
+  <a href="#n8">8 · The trade-off laws</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Distributed Systems</p>
+
+<div class="hero">
+  <div class="kicker">Domain 13 · Cluster C3 · gated by Networking + Databases + Probability</div>
+  <h1>Distributed Systems</h1>
+  <p class="dropcap">A distributed system is one in which the failure of a computer you did not know
+  existed can render your own computer unusable. Everything in this domain follows from a single
+  irreducible fact: <em>you cannot tell the difference between a machine that is slow and a machine that
+  is dead.</em></p>
+  <div class="why">
+    <b>The single idea.</b> In a single process, failure is total — the program lives or dies. Across a
+    network, failure is <mark>partial, asymmetric and undetectable</mark>. Every mechanism below exists to
+    make useful guarantees on top of a world where you cannot know what happened, only what you have been
+    told, and possibly not even that.
+  </div>
+  <div class="tags">
+    <span class="tag">#partial-failure</span>
+    <span class="tag t2">#consistency</span>
+    <span class="tag t3">#consensus</span>
+    <span class="tag">#idempotency</span>
+    <span class="tag t2">#backpressure</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">Nobody wants a distributed system. They are accepted as the price of something else.</p>
+
+  <p>Distribution is never the goal. It is the cost of wanting one of four things: more capacity than one
+  machine has, survival when a machine dies, physical proximity to users in other continents, or
+  independent teams shipping independently. <strong>Every one of those is a real need, and every one of
+  them buys you this entire domain's worth of problems.</strong></p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="networking.html">Networking</a> N4, N8 · <a href="databases.html">Databases</a> N4–N5 · <a href="probability.html">Probability</a> N4, N6</td><td>Infrastructure &amp; Cloud · Data Engineering · AI (training at scale)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The prerequisite that is genuinely non-negotiable</span>
+    <a href="databases.html#n5">Databases N5</a> — isolation levels. Distributed consistency models are the
+    same problem with the network's uncertainty added. <mark>Attempting consistency models before
+    isolation levels means learning the harder version of an idea you skipped the easy version of.</mark>
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>DISTRIBUTED SYSTEMS
+│
+├── 1 · PARTIAL FAILURE  [DEPTH] ..... the defining condition
+│   ├── The eight fallacies
+│   ├── Crash-stop, crash-recovery, Byzantine
+│   ├── Failure detectors and why they are imperfect
+│   └── The Two Generals problem
+│
+├── 2 · TIME &amp; ORDERING .............. there is no "now"
+│   ├── Clock drift and NTP
+│   ├── Happens-before and causality
+│   ├── Lamport and vector clocks
+│   └── Hybrid and TrueTime approaches
+│
+├── 3 · REPLICATION .................. more than one copy
+│   ├── Leader-follower
+│   ├── Multi-leader and conflict resolution
+│   ├── Leaderless and quorums
+│   └── Replication lag as a first-class concept
+│
+├── 4 · CONSISTENCY MODELS ........... what a reader may observe
+│   ├── Linearizable, sequential, causal, eventual
+│   ├── Read-your-writes and monotonic reads
+│   └── The cost of each in round trips
+│
+├── 5 · CONSENSUS .................... agreeing when nobody is trusted
+│   ├── The problem statement, precisely
+│   ├── Raft: election, log replication, safety
+│   ├── Quorums and why majorities work
+│   └── FLP impossibility and what it really says
+│
+├── 6 · PARTITIONING ................. splitting the data
+│   ├── Hash vs range partitioning
+│   ├── Consistent hashing
+│   ├── Rebalancing and hot spots
+│   └── Secondary indexes across partitions
+│
+├── 7 · FLOW &amp; IDEMPOTENCY ........... surviving your own traffic
+│   ├── Timeouts and the ambiguity they create
+│   ├── Retries, backoff, jitter, retry storms
+│   ├── Idempotency keys and exactly-once as an illusion
+│   └── Backpressure, bounded queues, load shedding
+│
+└── 8 · THE TRADE-OFF LAWS ........... CAP, PACELC, and honest engineering</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Partial failure <span class="pill pL">depth</span></h2>
+  <p class="sub">The one node that, if truly absorbed, makes the rest of the domain feel inevitable.</p>
+
+  <p><b>WHAT IT IS.</b> The condition in which some components of a system have failed, others have not,
+  and no component can reliably determine which is which.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a message that receives no reply has three indistinguishable
+  explanations: it never arrived, it arrived and the work was done but the reply was lost, or the other
+  side is merely slow. <strong>No timeout can separate these.</strong> Every retry, every consensus
+  protocol, and every idempotency key exists because of this ambiguity.</p>
+
+  <p><b>DEPENDENCIES.</b> Networking N4.</p>
+
+  <p><b>SUBTOPICS.</b> The eight fallacies of distributed computing · failure models: crash-stop,
+  crash-recovery, omission, Byzantine · failure detectors, completeness versus accuracy · the Two Generals
+  problem and its impossibility · why "is it up?" is not a well-formed question.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course · <em>Title:</em> MIT 6.824 <em>Distributed Systems</em>, lectures 1–2 —
+    full videos, notes and labs are free online<br>
+    <em>Why this one:</em> the best free distributed systems course available, built around implementing
+    real protocols rather than describing them. Lecture 1 establishes partial failure as the organising
+    problem, which is exactly the right framing.
+    <br><br>
+    <b>DEEPER (optional)</b> — Martin Kleppmann's Cambridge distributed systems lecture series, free on
+    YouTube, for a more formal treatment of failure models.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The request whose outcome you cannot know</span>
+    Build the smallest possible client and server. The server increments a counter and replies. Now make
+    the server sleep for ten seconds <em>after</em> incrementing but <em>before</em> replying.
+    <br><br>
+    From the client, set a five-second timeout. The call fails. Now answer the question honestly:
+    <strong>did the increment happen?</strong> You cannot tell from the client. Retry, and the counter is
+    now 2 when the user asked for 1.
+    <br><br>
+    Then run the experiment that makes it visceral. Have the server randomly choose one of three
+    behaviours: crash before the work, crash after the work but before replying, or be slow. From the
+    client, log what you observed. Across a hundred trials, produce a table of what you saw versus what
+    actually happened. <mark>They do not correlate.</mark>
+    <br><br>
+    Finally, make it real: pull the network cable or run <code>iptables -A INPUT -j DROP</code> on the
+    server mid-request. The client hangs — not fails, <em>hangs</em> — because a dropped packet produces
+    silence, and silence is indistinguishable from thinking.
+    <br><br>
+    <em>The realisation to reach:</em> a timeout is not a way of detecting failure. It is a way of
+    <em>giving up</em>, and the decision of what to do next must be made without knowing what happened.
+    Everything else in this domain is a strategy for acting under that ignorance.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N2 (a failure detector is a test with false positives, and base rates
+  apply) · Human Behavior (acting under irreducible uncertainty) · Geopolitics (signalling when you cannot
+  verify intent).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Time and ordering</h2>
+  <p class="sub">There is no global "now", and clocks lie in ways that produce silent data loss.</p>
+
+  <p><b>WHAT IT IS.</b> The study of how to order events across machines when no shared clock exists, and
+  the distinction between physical time and causal ordering.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because "which write happened last?" is the central question of replication, and
+  physical timestamps answer it incorrectly. Clocks drift, get corrected backwards, and differ between
+  machines by more than the duration of the operations you are ordering.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Networking N8.</p>
+
+  <p><b>SUBTOPICS.</b> Clock drift and skew · NTP and its accuracy limits · monotonic versus wall-clock
+  time · happens-before · Lamport clocks · vector clocks · last-write-wins and the data it silently
+  discards · hybrid logical clocks · Spanner's TrueTime and buying certainty with hardware.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> Lamport, "Time, Clocks, and the Ordering of Events in a
+    Distributed System" (1978), freely available<br>
+    <em>Why this one:</em> it is short, it is the origin of the idea, and it is one of the few genuinely
+    foundational papers that a non-specialist can read directly and understand. Reading the original is
+    faster than reading explanations of it.
+    <br><br>
+    <b>DEEPER (optional)</b> — Kleppmann's "Please stop calling databases CP or AP" and his clock-related
+    posts, free, for how this bites in production.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Lose a write with a correct clock</span>
+    Run two processes writing to a shared store using last-write-wins with wall-clock timestamps. Now skew
+    one machine's clock forward by two seconds — on a VM this is one command, and in reality it happens
+    through NTP correction, virtualisation pauses and leap seconds.
+    <br><br>
+    The machine with the fast clock now wins every conflict, permanently, <strong>regardless of what
+    actually happened first.</strong> Writes from the other machine vanish with no error and no log entry.
+    Count how many you lose over a thousand operations.
+    <br><br>
+    Now implement a Lamport clock instead — a counter incremented on every event and carried in every
+    message — and re-run. Causally related events are now correctly ordered. Then find the limitation:
+    Lamport clocks cannot tell you whether two events were <em>concurrent</em> or merely unordered.
+    Implement vector clocks and watch concurrency become detectable.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>time is not for ordering; causality is.</mark> A timestamp
+    tells you what a machine believed, and machines believe different things. Every "last write wins"
+    system is silently discarding data, and the only question is how much.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases N5 (snapshot isolation needs an ordering) · Physics (simultaneity is
+  not absolute — the analogy is closer than it appears) · Data Engineering (event time vs processing
+  time).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Replication</h2>
+  <p class="sub">Keeping more than one copy, and paying for it.</p>
+
+  <p><b>WHAT IT IS.</b> Maintaining copies of data on multiple machines, and the protocols that decide
+  where writes go, how copies converge, and what a reader may see in the meantime.</p>
+
+  <p><b>WHY IT EXISTS.</b> Three distinct reasons that are often conflated: surviving machine failure,
+  serving reads at higher volume, and serving reads closer to users. The right architecture depends on
+  which of the three you actually want.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2 · Databases N4.</p>
+
+  <p><b>SUBTOPICS.</b> Synchronous versus asynchronous replication · leader-follower · failover and split
+  brain · multi-leader and conflict resolution · leaderless replication and quorums · the R + W &gt; N
+  condition · read repair and anti-entropy · replication lag.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> Amazon's Dynamo paper (2007), sections on replication and
+    quorums<br>
+    <em>Why this one:</em> free, and it is unusually explicit about what was traded away and which problems
+    were pushed up into the application. That honesty is rare and instructive.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Read your own write and fail</span>
+    Set up PostgreSQL with a streaming replica — two containers, fifteen minutes. Write a row to the
+    primary and immediately read it from the replica in the same script. Sometimes it is there. Sometimes
+    it is not. Run it a thousand times and measure the distribution of the lag window.
+    <br><br>
+    That distribution is not symmetric. Plot it and recognise the shape from
+    <a href="probability.html#n4">Probability N4</a> — a heavy tail, where the p99 lag is many multiples of
+    the median. Now add load to the primary and watch the tail stretch.
+    <br><br>
+    Then build the fix and feel its cost: route reads for a user to the primary for N seconds after they
+    write. You have implemented read-your-writes consistency, and you have also just made your replicas
+    useless for the users who are most active.
+    <br><br>
+    Finally, simulate failover: kill the primary and promote the replica while writes are in flight. Count
+    the acknowledged writes that no longer exist. <mark>Asynchronous replication means "acknowledged" and
+    "durable" are different words.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> replication does not give you a copy. It gives you a copy of the
+    past, and the distance into the past is a distribution, not a number.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases N4 · Probability N4 (lag is heavy-tailed) · Infrastructure (multi-region
+  architecture) · Networking N8 (the lag floor is the speed of light).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Consistency models</h2>
+  <p class="sub">A precise vocabulary for what a reader is permitted to observe.</p>
+
+  <p><b>WHAT IT IS.</b> A hierarchy of guarantees — from linearizable, which behaves as if there were one
+  copy and one timeline, down to eventual, which promises only that copies stop diverging if writes stop.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because stronger guarantees cost round trips, and round trips are bounded by
+  physics. A consistency model is a purchase decision: how much latency will you pay for how much
+  simplicity in your application code.</p>
+
+  <p><b>DEPENDENCIES.</b> N2, N3 · Databases N5.</p>
+
+  <p><b>SUBTOPICS.</b> Linearizability · sequential and causal consistency · eventual consistency ·
+  the session guarantees: read-your-writes, monotonic reads, monotonic writes · why "strong" and "weak"
+  are marketing terms · CRDTs as convergence without coordination.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free reference · <em>Title:</em> Jepsen's "Consistency Models" page (jepsen.io/consistency)<br>
+    <em>Why this one:</em> free, and it presents the models as a <em>lattice</em> with the implication
+    arrows drawn explicitly — which turns a confusing pile of adjectives into a structure you can reason
+    about. Then read the Jepsen analyses of databases you use.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Break an application with a legal database</span>
+    Take a two-node replicated store with eventual consistency and build a trivial application on it: a
+    user updates their profile photo, then loads their profile page.
+    <br><br>
+    With reads load-balanced across replicas, the user sometimes sees their old photo. They will refresh,
+    see the new one, refresh again, see the old one. <strong>The database is behaving exactly as
+    specified.</strong> The bug is that you assumed a guarantee you never purchased.
+    <br><br>
+    Then work up the lattice and measure the cost of each step. Sticky routing gives read-your-writes
+    almost free. Quorum reads with R + W &gt; N give strong reads for the cost of extra round trips —
+    measure them. Full linearizability requires consensus on every read, and the latency will be
+    startling.
+    <br><br>
+    Finally, implement a CRDT — a grow-only counter or an observed-remove set — and watch two replicas
+    converge after partition <em>without any coordination at all</em>. Then find its limitation: try to
+    express "bank balance must never go negative" as a CRDT. You cannot.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>consistency is a price list, not a quality rating.</mark>
+    Eventual consistency is not a broken version of strong consistency; it is a different purchase, and
+    some invariants simply cannot be bought at that price.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases N5 · Networking N8 (round trips are the currency) · Economics
+  (a genuine cost-benefit decision) · Data Engineering (eventual consistency in pipelines).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Consensus</h2>
+  <p class="sub">Getting a group of unreliable machines to agree on one value, forever.</p>
+
+  <p><b>WHAT IT IS.</b> A protocol by which a set of nodes agrees on a single value or an ordered log of
+  values, such that the decision survives failures and no two nodes ever disagree about a committed entry.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because almost every hard distributed problem — leader election, lock services,
+  configuration, atomic commit, membership — reduces to agreement. Solve consensus once and you can build
+  the rest on top.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2, N3.</p>
+
+  <p><b>SUBTOPICS.</b> The safety and liveness properties · why majorities work — any two majorities
+  intersect · Raft: leader election, log replication, commitment, safety argument · terms as logical time ·
+  Paxos and why Raft was written · FLP impossibility and what it does and does not forbid · Byzantine
+  fault tolerance.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper + free labs · <em>Title:</em> "In Search of an Understandable Consensus
+    Algorithm" (the Raft paper), implemented via MIT 6.824's labs 2A–2C<br>
+    <em>Why this one:</em> the paper was explicitly written to be understandable, and the 6.824 labs are
+    free, self-checking, and brutal in the right way. <strong>Consensus cannot be learned by reading.</strong>
+    <br><br>
+    <b>DEEPER (optional)</b> — raft.github.io's interactive visualisation, free, to watch elections happen
+    before you implement them.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Implement leader election, then try to break it</span>
+    Implement Raft leader election alone — no log replication yet. Three nodes, randomised election
+    timeouts, request-vote messages. Get it electing a leader, then kill the leader and watch a new one
+    appear.
+    <br><br>
+    Now attack your own implementation. Make elections deterministic by removing the randomised timeout —
+    you will get split votes forever, and you have discovered why the randomisation is not an
+    implementation detail but a core part of the algorithm.
+    <br><br>
+    Then partition the cluster 2–1 and verify the minority cannot elect anyone. Then partition 1–1–1 and
+    watch nothing get elected at all, which is <em>correct behaviour</em> — the system chooses
+    unavailability over disagreement.
+    <br><br>
+    Finally, the experiment that teaches the safety argument: allow a node to vote twice in one term.
+    Elect two leaders. Watch them both accept writes. <mark>You have manufactured split brain, and the
+    single line preventing it was "vote once per term".</mark>
+    <br><br>
+    <em>The realisation to reach:</em> consensus is not about being clever. It is about the intersection
+    property of majorities, and every rule in the protocol exists to preserve one invariant. Removing any
+    of them produces divergence within seconds.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Indian Politics (quorum, majority rule, anti-defection) · Human Behavior
+  (coordination and commitment) · Databases N4 (atomic commit) · Infrastructure (etcd, ZooKeeper).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Partitioning</h2>
+  <p class="sub">Splitting data across machines, and the hot spot you did not anticipate.</p>
+
+  <p><b>WHAT IT IS.</b> Dividing a dataset so each machine holds a subset, plus the scheme for mapping a
+  key to a machine and rebalancing when membership changes.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because replication solves availability but not capacity — every replica holds
+  everything. Growing beyond one machine's storage or write throughput requires splitting.</p>
+
+  <p><b>DEPENDENCIES.</b> N3 · Software Engineering N1 (hashing).</p>
+
+  <p><b>SUBTOPICS.</b> Hash versus range partitioning · consistent hashing and virtual nodes ·
+  rebalancing without full reshuffle · hot keys and skew · request routing · secondary indexes: local
+  versus global · why cross-partition transactions are expensive.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> The Dynamo paper's consistent hashing section, alongside
+    the original Karger et al. consistent hashing paper (both free)<br>
+    <em>Why this one:</em> consistent hashing is one of the few ideas where the original paper is shorter
+    and clearer than the tutorials, and Dynamo shows the production adaptations.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Add one node and move the whole dataset</span>
+    Distribute a million keys across four nodes using <code>hash(key) % 4</code>. Now add a fifth node and
+    count how many keys must move. The answer is roughly <strong>80%</strong> — nearly the entire dataset,
+    for a 25% capacity increase.
+    <br><br>
+    Now implement consistent hashing and repeat. Roughly 20% move — only the keys that should. Plot both
+    against node count and see the difference in shape, not just magnitude.
+    <br><br>
+    Then find consistent hashing's own problem: with only a few nodes on the ring, the load is badly
+    uneven. Measure the ratio between the busiest and least busy node. Add virtual nodes — 100 ring
+    positions per physical node — and watch it flatten. You have just discovered why every real
+    implementation uses them.
+    <br><br>
+    Finally, create a hot key deliberately: make one key receive 30% of all traffic, as happens with a
+    celebrity account or a popular product. No partitioning scheme helps, because
+    <mark>the unit of partitioning is the key, and one key cannot be split.</mark> Then solve it with key
+    salting and observe what you gave up: you can no longer read that key with a single request.
+    <br><br>
+    <em>The realisation to reach:</em> partitioning distributes data, not load. Skew is the normal case,
+    not the exception, and it follows the same power-law shape as everything else in
+    <a href="probability.html#n4">Probability N4</a>.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N4 (skew is a power law) · Data Engineering (partitioning strategy,
+  the small-files problem) · Geography (data locality and residency).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> Flow control and idempotency</h2>
+  <p class="sub">The node that prevents your system from destroying itself.</p>
+
+  <p><b>WHAT IT IS.</b> The mechanisms that keep a system stable under load and correct under retry:
+  timeouts, backoff, jitter, idempotency keys, bounded queues, load shedding and circuit breakers.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because N1 makes retries necessary, and retries make overload self-amplifying.
+  A struggling system that is retried becomes a dead system. Most large outages are this loop, not the
+  original fault.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Probability N6 (queueing) · Networking N4.</p>
+
+  <p><b>SUBTOPICS.</b> Timeouts and budget propagation · exponential backoff and why jitter is required ·
+  retry storms and metastable failure · idempotency keys · exactly-once as an illusion, and effectively-once
+  as the achievable version · bounded queues · load shedding · circuit breakers · backpressure as a
+  feedback loop.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free article · <em>Title:</em> Amazon Builders' Library — "Timeouts, retries, and
+    backoff with jitter" and "Using load shedding to avoid overload" (both free)<br>
+    <em>Why this one:</em> written by engineers who caused and then fixed these outages at scale, free,
+    short, and specific about the numbers rather than the principles.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Build a retry storm, then survive it</span>
+    Run a service that handles 100 requests per second comfortably. Send 120. Latency rises. Now add a
+    client that retries three times on timeout — offered load becomes 360 requests per second, latency
+    rises further, more requests time out, more retries fire. <strong>The system does not recover even
+    when you reduce the original load back to 80.</strong>
+    <br><br>
+    That last part is the important one. You have produced a <em>metastable failure</em>: a system stuck in
+    a bad equilibrium sustained entirely by its own retries. Removing the original cause does not fix it.
+    <br><br>
+    Now fix it in three stages and measure each. Add exponential backoff — better, but clients still
+    synchronise into waves. Add jitter — the waves disappear, and the plot is dramatic. Add a bounded
+    queue with load shedding, and watch the system serve 100 requests per second successfully while
+    rejecting the rest immediately, instead of failing all 360 slowly.
+    <br><br>
+    Finally, the correctness half: with retries enabled, verify your counter is wrong. Add an idempotency
+    key and verify it is right. <mark>Retries and correctness are not separate concerns.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> rejecting work quickly is a feature. A system that accepts
+    everything and serves none of it has chosen the worst possible outcome, and choosing it is the default
+    if nobody designs otherwise.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking (this is a positive feedback loop, and jitter is desynchronisation)
+  · Probability N6 (queue explosion near saturation) · Economics (congestion pricing) · Networking N4 (TCP
+  congestion control solves the same problem).</p>
+</section>
+
+<section id="n8">
+  <h2><span class="num">N8</span> The trade-off laws</h2>
+  <p class="sub">CAP, PACELC, and how to use them honestly.</p>
+
+  <p><b>WHAT IT IS.</b> A small set of results stating what cannot be had simultaneously: CAP (under
+  partition, choose consistency or availability) and PACELC (and even without partition, choose latency or
+  consistency).</p>
+
+  <p><b>WHY IT EXISTS.</b> To stop engineers from looking for a system that has everything. The honest
+  version of these results is narrower and more useful than the popular version, and PACELC is the more
+  practically relevant of the two because partitions are rare while latency is constant.</p>
+
+  <p><b>DEPENDENCIES.</b> N4, N5.</p>
+
+  <p><b>SUBTOPICS.</b> CAP stated precisely, and the three common misstatements · why "CA" is not a real
+  category · PACELC · availability as a spectrum rather than a boolean · what real systems choose and why ·
+  reading a Jepsen report.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free article · <em>Title:</em> Martin Kleppmann, "Please stop calling databases CP or
+    AP" (free)<br>
+    <em>Why this one:</em> it dismantles the popular version of CAP carefully and replaces it with
+    something you can actually use, which is more valuable than learning the folk version first and
+    unlearning it later.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make the choice yourself, with a real partition</span>
+    Take your three-node Raft cluster from N5. Partition it 2–1 with firewall rules. On the majority side,
+    writes succeed. On the minority side, they hang or fail. <strong>You have observed a CP system
+    choosing consistency and sacrificing availability</strong> — for the minority.
+    <br><br>
+    Now do the same with an eventually consistent store configured for W=1. Both sides accept writes.
+    Nothing fails. Heal the partition and inspect the damage: conflicting values, and some resolution rule
+    silently choosing a winner. Count what was lost.
+    <br><br>
+    Then write down, for three real applications you can name — a bank ledger, a shopping cart, a
+    like-count — which choice each should make, and defend it. The answers differ, and
+    <mark>the fact that they differ is the entire content of this node.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> CAP is not a classification of databases. It is a decision you make
+    per operation, and mature systems make different choices for different operations within the same
+    application.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Economics (constrained optimisation) · Business (SLAs are this made contractual) ·
+  Systems Thinking (no free lunch in a constrained system).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>A timeout that cannot tell you what happened</td><td>Failure is undetectable</td></tr>
+      <tr><td>N2</td><td>A skewed clock silently wins every conflict</td><td>Causality, not time</td></tr>
+      <tr><td>N3</td><td>Read-your-write fails; lag is heavy-tailed</td><td>A replica is the past</td></tr>
+      <tr><td>N4</td><td>A correct database breaking your application</td><td>Consistency is a price list</td></tr>
+      <tr><td>N5</td><td>Allowing a double vote manufactures split brain</td><td>Majorities intersect</td></tr>
+      <tr><td>N6</td><td>Adding one node moves 80% of the data</td><td>Skew is the normal case</td></tr>
+      <tr><td>N7</td><td>A system that will not recover after load is removed</td><td>Metastable failure</td></tr>
+      <tr><td>N8</td><td>Partitioning a real cluster and counting the losses</td><td>The choice is per-operation</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="infrastructure-cloud.html">Infrastructure &amp; Cloud</a></td><td>N5 underpins orchestration; N7 is the operational core of reliability</td></tr>
+      <tr><td><a href="data-engineering.html">Data Engineering</a></td><td>N2 event time, N6 partitioning, N7 exactly-once processing</td></tr>
+      <tr><td><a href="artificial-intelligence.html">AI</a></td><td>Distributed training is N3 and N5 applied to gradients</td></tr>
+      <tr><td><a href="systems-thinking.html">Systems Thinking</a></td><td>N7 is the clearest engineering example of a runaway positive feedback loop</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 13 · Distributed Systems</footer>
+
+</body>
+</html>

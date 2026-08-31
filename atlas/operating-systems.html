@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Operating Systems — Atlas domain 09</title>
+<meta name="description" content="Processes, scheduling, virtual memory, the write path, syscalls and isolation — learned by watching a real kernel behave." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#setup">The environment</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Processes &amp; threads</a>
+  <a href="#n2">2 · Scheduling</a>
+  <a href="#n3">3 · Virtual memory</a>
+  <a href="#n4">4 · Filesystems &amp; the write path</a>
+  <a href="#n5">5 · Syscalls &amp; I/O</a>
+  <a href="#n6">6 · Isolation</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Operating Systems</p>
+
+<div class="hero">
+  <div class="kicker">Domain 09 · Cluster C3 · gated by Computing</div>
+  <h1>Operating Systems</h1>
+  <p class="dropcap">An operating system exists to tell three convincing lies: that your program has the
+  computer to itself, that it has unlimited contiguous memory, and that data written to a file is safely
+  stored. Each lie is useful, each one is leaky, and <em>the leaks are where all the interesting
+  behaviour lives.</em></p>
+  <div class="why">
+    <b>The single idea.</b> An OS is a <mark>resource multiplexer with a security boundary</mark>. Every
+    concept below is either a way of sharing something finite (CPU, memory, disk, network) among parties
+    who do not trust each other, or a way of hiding that the sharing is happening.
+  </div>
+  <div class="tags">
+    <span class="tag">#processes</span>
+    <span class="tag t2">#virtual-memory</span>
+    <span class="tag t3">#durability</span>
+    <span class="tag">#syscalls</span>
+    <span class="tag t2">#isolation</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">Everything mysterious about a running program is explained here.</p>
+
+  <p>Why does a program that works alone break when two copies run? Why does memory usage report two
+  different numbers? Why did a file exist but contain nothing after a power cut? Why is starting a
+  container fast and starting a VM slow? None of these are answerable from inside your program — they
+  are answerable only one layer down.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="computing.html">Computing</a> N3–N5 · <a href="software-engineering.html">Software Engineering</a> N6</td><td>Networking · Databases · Distributed Systems · Infrastructure &amp; Cloud</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">You already hold territory here</span>
+    Your <a href="../tracks/python/runtime/the-write-path.html">write path field notes</a> and the
+    <code>p3-crash-survival</code> project are N4, already earned by killing processes rather than by
+    reading. This page places that work in its surroundings.
+  </div>
+</section>
+
+<section id="setup">
+  <h2><span class="num">01</span> The environment</h2>
+  <p class="sub">One practical note, because it determines whether any of the hands-on work is possible.</p>
+
+  <p>You are on Windows. Most of this domain's instrumentation — <code>/proc</code>, <code>strace</code>,
+  <code>fork</code>, cgroups, namespaces — is Linux. <strong>Install WSL2 and do everything in this domain
+  there.</strong> It is a genuine Linux kernel, the tools behave normally, and it costs one command.</p>
+
+<pre>wsl --install
+# then, inside the Linux shell:
+sudo apt update &amp;&amp; sudo apt install strace ltrace sysstat htop</pre>
+
+  <div class="rule">
+    <span class="lbl">Why not learn the Windows kernel instead</span>
+    You could — but every resource, every server you will ever operate, and every layer above this
+    domain in the Atlas assumes Unix semantics. <mark>Learn the model the rest of the stack was built
+    against.</mark>
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">02</span> The tree</h2>
+
+<pre>OPERATING SYSTEMS
+│
+├── 1 · PROCESSES &amp; THREADS ........... the illusion of having the CPU
+│   ├── What a process actually contains
+│   ├── fork, exec, and process trees
+│   ├── Threads vs processes
+│   └── Signals and process lifecycle
+│
+├── 2 · SCHEDULING ................... deciding who runs next
+│   ├── Preemption and the timer interrupt
+│   ├── Context switch cost
+│   ├── Priorities, fairness, starvation
+│   └── CPU-bound vs I/O-bound behaviour
+│
+├── 3 · VIRTUAL MEMORY ............... the illusion of unlimited space
+│   ├── Address translation &amp; page tables
+│   ├── Page faults, major and minor
+│   ├── Overcommit and the OOM killer
+│   ├── Virtual vs resident size
+│   └── mmap and shared memory
+│
+├── 4 · FILESYSTEMS &amp; THE WRITE PATH .. the illusion of durability
+│   ├── Inodes, directories, links
+│   ├── Page cache and buffering
+│   ├── write vs flush vs fsync
+│   ├── Journaling and crash consistency
+│   └── What survives a power cut
+│
+├── 5 · SYSCALLS &amp; I/O ............... crossing the boundary
+│   ├── User space vs kernel space
+│   ├── The syscall mechanism
+│   ├── Blocking, non-blocking, epoll
+│   └── Interrupts and DMA
+│
+└── 6 · ISOLATION .................... sharing a machine safely
+    ├── Namespaces and cgroups
+    ├── Containers as a kernel feature
+    ├── Virtual machines and hypervisors
+    └── The security boundary and its holes</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Processes and threads</h2>
+  <p class="sub">What a running program actually is, as an object the kernel owns.</p>
+
+  <p><b>WHAT IT IS.</b> A process is the kernel's record of a running program: an address space, a set of
+  open file descriptors, credentials, and one or more threads of execution. A thread is a schedulable
+  flow of control that shares the address space with its siblings.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a machine must run code from parties that do not trust one another,
+  and because a crashed program must not take the machine with it. The process is the unit of both
+  isolation and accounting.</p>
+
+  <p><b>DEPENDENCIES.</b> Computing N5 (stack and heap) · Software Engineering N6 (concurrency).</p>
+
+  <p><b>SUBTOPICS.</b> The process control block · <code>fork</code> and copy-on-write ·
+  <code>exec</code> · parent/child trees and orphans · zombies · signals · threads and shared address
+  space · why a thread crash kills the process but a process crash does not kill its parent.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> <em>Operating Systems: Three Easy Pieces</em>
+    (OSTEP), Virtualisation chapters 4–6 · <em>Creator:</em> Arpaci-Dusseau<br>
+    <em>Why this one:</em> completely free, and it is the rare systems text organised around
+    <em>questions</em> rather than components. Each chapter opens with the crux of the problem before
+    naming any mechanism.
+    <br><br>
+    <b>DEEPER (optional)</b> — the <code>fork(2)</code>, <code>execve(2)</code> and
+    <code>signal(7)</code> man pages, which are the actual specification.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · One program becomes two mid-sentence</span>
+    Write a program that prints its PID, calls <code>fork()</code>, and then both branches print again.
+    You will see one program produce two different PIDs from a single line of code — and the return value
+    of the <em>same call</em> differs between them.
+    <br><br>
+    Then find the memory question: set a variable before the fork and change it in the child. The parent
+    does not see the change. Now check how much memory was actually copied — with copy-on-write, almost
+    none, until you write. Verify by forking a process holding a large array and watching RSS.
+    <br><br>
+    Finally, create a zombie: fork, let the child exit, and have the parent sleep without calling
+    <code>wait()</code>. Look at it in <code>ps</code>. The child is dead but still occupying a slot,
+    because <mark>the kernel must keep the exit status until someone asks for it.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> a process is not the program. It is a <em>data structure the kernel
+    maintains about</em> the program — and things like zombies exist because that structure has its own
+    lifecycle, independent of the code.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering N6 (threads) · Infrastructure (containers are processes with
+  restricted views) · Distributed Systems (a crashed process is the simplest failure model).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Scheduling</h2>
+  <p class="sub">How one CPU convinces many programs that each of them owns it.</p>
+
+  <p><b>WHAT IT IS.</b> The policy and mechanism by which the kernel decides which runnable thread gets a
+  core, and for how long.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because there are always more runnable things than cores. Every scheduler is a
+  compromise between throughput, latency and fairness, and you cannot maximise all three.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Computing N3 (the timer interrupt).</p>
+
+  <p><b>SUBTOPICS.</b> Preemption and the timer interrupt · time slices · context switch cost · run
+  queues · priorities and nice · starvation · CPU-bound versus I/O-bound processes and why the scheduler
+  favours the latter · load average and what it actually measures.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> OSTEP, scheduling chapters 7–10<br>
+    <em>Why this one:</em> it develops the scheduler by repeatedly breaking a simpler one — FIFO fails,
+    so shortest-job-first, which fails, so round-robin, and so on. The final design feels earned rather
+    than announced.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make context switching visible and expensive</span>
+    Run one CPU-bound loop and time it. Now run two, four, eight, sixteen copies simultaneously on a
+    machine with a known core count, and plot total completion time against process count. Up to the core
+    count it stays roughly flat; beyond it, it rises linearly — that bend is the moment the illusion of
+    parallelism stops being free.
+    <br><br>
+    Then measure the switch itself: two processes that ping-pong a single byte through a pipe, as fast as
+    possible, for a million rounds. Divide total time by rounds. You have measured your machine's context
+    switch cost — typically a few microseconds. Compare that to the cost of a function call from
+    Computing N7, and note the ratio is roughly a thousand.
+    <br><br>
+    Finally, run a CPU-bound and an I/O-bound process together and watch which one the scheduler favours
+    with <code>htop</code>. Ask why the answer is the opposite of "fair".
+    <br><br>
+    <em>The realisation to reach:</em> <mark>concurrency is not free, and the scheduler is not fair on
+    purpose</mark> — it optimises for keeping the CPU busy, which means rewarding processes that give it
+    up voluntarily.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N6 (this is queueing theory with a policy) · Distributed Systems
+  (load balancing is scheduling across machines) · Infrastructure (CPU limits and throttling).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Virtual memory</h2>
+  <p class="sub">Every process believes it owns a vast, empty, contiguous address space. None of that is true.</p>
+
+  <p><b>WHAT IT IS.</b> A translation layer between the addresses your program uses and the physical
+  locations that hold the data, implemented jointly by the kernel and a hardware unit in the CPU.</p>
+
+  <p><b>WHY IT EXISTS.</b> Three reasons at once: isolation (you cannot name another process's memory),
+  convenience (contiguity without fragmentation), and overcommitment (promising more than exists,
+  because most promises are never fully claimed).</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Computing N4 (the hierarchy).</p>
+
+  <p><b>SUBTOPICS.</b> Pages and page tables · the TLB · minor and major page faults · demand paging ·
+  swap · overcommit and the OOM killer · virtual size versus resident size · <code>mmap</code> · shared
+  memory · why memory-mapped files blur the file/memory distinction.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> OSTEP, virtual memory chapters 13–22<br>
+    <em>Why this one:</em> the single best free treatment of the subject, and it does not assume you have
+    a hardware background.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Allocate a terabyte on a laptop</span>
+    Write a program that allocates far more memory than the machine has — say 100 GB — and does not touch
+    it. On Linux with default settings, <strong>this succeeds.</strong> Check <code>ps</code>: virtual
+    size is enormous, resident size is nearly nothing.
+    <br><br>
+    Now start touching one byte per page and watch RSS climb in page-sized steps while VSZ stays fixed.
+    You are watching demand paging happen, one page fault at a time. Count the faults with
+    <code>/usr/bin/time -v</code>.
+    <br><br>
+    Then keep going until the machine cannot cope, and meet the OOM killer — a kernel component that
+    chooses a process to destroy because the system wrote cheques it cannot honour. Read its reasoning in
+    <code>dmesg</code>.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>allocation is a promise, not a delivery.</mark> This single
+    fact explains why memory monitoring is confusing, why containers get killed mysteriously, and why
+    "how much memory does my program use" has at least four different correct answers.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering N5 (a leak is now measurable in two different units) ·
+  Databases (the buffer pool competes with the page cache) · Infrastructure (container memory limits and
+  OOM events) · Computing N4.</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Filesystems and the write path</h2>
+  <p class="sub">The illusion of durability — and the exact point at which it becomes real.</p>
+
+  <p><b>WHAT IT IS.</b> The structures that turn a flat block device into named, nested, growable files,
+  and the caching layers that sit between your <code>write()</code> call and the physical medium.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because disks are slow and programs are impatient, so writes are buffered — and
+  because a machine can lose power between the buffer and the platter, every serious system needs a way to
+  say "no, actually store it now".</p>
+
+  <p><b>DEPENDENCIES.</b> N3 (the page cache is virtual memory) · N5.</p>
+
+  <p><b>SUBTOPICS.</b> Inodes, directory entries, hard and soft links · the page cache · write-back
+  caching · <code>write</code> vs <code>fflush</code> vs <code>fsync</code> · journaling · atomic rename
+  as a durability idiom · torn writes · what a filesystem guarantees and what it merely usually does.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> OSTEP, persistence chapters 39–42<br>
+    <em>Why this one:</em> chapter 42 on crash consistency is the clearest free explanation of why
+    journaling exists, and it will retroactively explain everything you observed in
+    <code>p3-crash-survival</code>.
+    <br><br>
+    <b>DEEPER (optional)</b> — "Files are hard" (Dan Luu, free) and the PostgreSQL <code>fsync</code>
+    incident write-ups, for how badly this goes wrong in production systems written by experts.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The rename that is safer than the write</span>
+    You have already killed a process mid-write and found a file that exists and is empty. Now solve it
+    properly and measure the cost of each level: write and exit; write and <code>flush</code>; write,
+    <code>flush</code> and <code>fsync</code>. Three throughput numbers, orders of magnitude apart.
+    <br><br>
+    Then discover the idiom that real systems use. Write the new content to a <em>temporary</em> file,
+    <code>fsync</code> it, then <code>rename()</code> it over the original. Kill the process at a hundred
+    random points during this sequence and verify that the destination is <em>always</em> either the
+    complete old version or the complete new one — never a mixture.
+    <br><br>
+    Then find the trap: does the directory entry itself need an fsync? Test it. The answer surprises most
+    engineers and is the source of a well-known class of data loss bugs.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>atomicity is not something the filesystem gives you; it is
+    something you construct out of one operation that happens to be atomic.</mark> Rename is that
+    operation, and nearly every durable system is built on it.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases (the WAL is this node, formalised) · Distributed Systems (durability
+  before acknowledgement) · Data Engineering (atomic publish of a dataset) · your own write-path notes.</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Syscalls and I/O</h2>
+  <p class="sub">The boundary between your code and the machine's authority.</p>
+
+  <p><b>WHAT IT IS.</b> The controlled doorway through which unprivileged code requests privileged
+  operations, and the models — blocking, non-blocking, event-driven — for waiting on slow devices.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a program must be able to touch hardware without being <em>allowed</em>
+  to touch hardware. The syscall is that compromise: a deliberate, checked transition into a more
+  privileged mode.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N3.</p>
+
+  <p><b>SUBTOPICS.</b> User and kernel mode · the syscall instruction and its cost · file descriptors as
+  a universal handle · blocking vs non-blocking · <code>select</code>, <code>poll</code>,
+  <code>epoll</code> · interrupts and DMA · why async I/O exists and what it actually buys.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free tool used as a laboratory · <em>Title:</em> <code>strace</code>, with the
+    <code>syscalls(2)</code> man page as reference<br>
+    <em>Why this one:</em> this node becomes obvious the moment you watch a real program's syscalls
+    scroll past, and stays abstract for as long as you only read about it.
+    <br><br>
+    <b>DEEPER (optional)</b> — "The C10K problem" (Dan Kegel, free) for why event-driven I/O was invented,
+    then Beej's Guide to Network Programming for the practice.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Count the cost of printing "hello"</span>
+    Run <code>strace ./hello</code> on a trivial C program and read every line. A program with one visible
+    statement performs dozens of syscalls before it reaches your code — loading the dynamic linker, mapping
+    libraries, setting up. Count them.
+    <br><br>
+    Now the measurement that matters: write a program that writes one million lines to a file, one
+    <code>write()</code> syscall per line. Time it. Then buffer in user space and issue one syscall per
+    8 KB. Time it again. The gap is the cost of crossing the boundary, and it is enormous.
+    <br><br>
+    Then use <code>strace -c</code> on something real — a Python interpreter starting up, or
+    <code>git status</code> in a large repository — and find which syscall dominates. In most slow
+    programs, the answer is a surprise and immediately suggests the fix.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>buffering exists because crossing the user/kernel boundary
+    costs roughly a thousand times more than a function call.</mark> Every buffered writer, every batch
+    API, and every "why is this slow" investigation traces back to this number.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Networking (sockets are file descriptors) · Software Engineering N7 (buffering
+  and framing) · Infrastructure (seccomp restricts exactly this boundary) · Databases (I/O patterns).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Isolation</h2>
+  <p class="sub">Sharing one machine among parties who must not see each other.</p>
+
+  <p><b>WHAT IT IS.</b> Two families of mechanism. Containers restrict what a process can <em>see and
+  use</em> by manipulating kernel features. Virtual machines emulate an entire machine so a second kernel
+  can run inside the first.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because hardware is expensive and workloads are bursty, so one machine must
+  serve many tenants — and because "many tenants" immediately becomes a security and fairness problem.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N3, N5.</p>
+
+  <p><b>SUBTOPICS.</b> Namespaces — PID, network, mount, user · cgroups for resource limits · the union
+  filesystem and image layers · what a container image actually contains · hypervisors, type 1 and 2 ·
+  the container-versus-VM security boundary · why a container shares the host kernel and what follows
+  from that.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free talk and accompanying code · <em>Title:</em> "Containers From Scratch" (Liz Rice) —
+    build a container in ~100 lines with no Docker<br>
+    <em>Why this one:</em> containers are usually taught as a product with commands to memorise. Building
+    one from namespaces and cgroups reveals that <strong>there is no such thing as a container</strong> —
+    only a process with a restricted view, which is a far more useful mental model.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Become PID 1, then escape</span>
+    Use <code>unshare</code> to run a shell in a new PID namespace. Run <code>ps</code> — your shell is
+    PID 1 and the host's hundreds of processes are invisible. Nothing was virtualised; the kernel simply
+    declined to show them to you.
+    <br><br>
+    Now add a memory cgroup limit of 100 MB and run a program that allocates 200 MB. It is killed, and
+    <code>dmesg</code> shows exactly the same OOM machinery from N3 — but scoped.
+    <br><br>
+    Then the instructive comparison: run <code>uname -r</code> inside a container and on the host. Same
+    kernel. Do it inside a VM. Different kernel. <mark>That one difference is the entire security
+    argument between the two technologies</mark>, and it explains why multi-tenant clouds run VMs
+    underneath their containers.
+    <br><br>
+    <em>The realisation to reach:</em> a container is not a lightweight VM. It is a normal process that
+    has been lied to about what exists — and every container escape in history is a hole in one of those
+    lies.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Infrastructure &amp; Cloud (orchestration schedules these) · Distributed Systems
+  (the unit of deployment) · Business (the economics of multi-tenancy) · Security.</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>One line of code, two PIDs, one zombie</td><td>The process is a kernel object</td></tr>
+      <tr><td>N2</td><td>Measuring your own context switch cost</td><td>Concurrency has a price</td></tr>
+      <tr><td>N3</td><td>Allocating 100 GB on a laptop, successfully</td><td>Allocation is a promise</td></tr>
+      <tr><td>N4</td><td>Write-temp-fsync-rename survives 100 random kills</td><td>Atomicity is constructed</td></tr>
+      <tr><td>N5</td><td>One syscall per line vs one per 8 KB</td><td>The boundary costs 1000×</td></tr>
+      <tr><td>N6</td><td>Becoming PID 1 without virtualising anything</td><td>Containers are a restricted view</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="networking.html">Networking</a></td><td>N5 — a socket is a file descriptor, and epoll is why servers scale</td></tr>
+      <tr><td><a href="databases.html">Databases</a></td><td>N4 becomes the write-ahead log; N3 becomes the buffer pool</td></tr>
+      <tr><td>Distributed Systems</td><td>N1 crash semantics; N4 durability before acknowledgement</td></tr>
+      <tr><td><a href="infrastructure-cloud.html">Infrastructure &amp; Cloud</a></td><td>N6 is the whole foundation; N2 becomes cluster scheduling</td></tr>
+      <tr><td><a href="data-engineering.html">Data Engineering</a></td><td>N4 atomic publish; N5 I/O batching</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 09 · Operating Systems</footer>
+
+</body>
+</html>

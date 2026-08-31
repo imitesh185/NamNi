@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Atlas — root map of 36 domains</title>
+<meta name="description" content="A knowledge dependency graph: what exists to learn, how it genuinely connects, and where to enter." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#what">What this is</a>
+  <a href="#node">How to read a node</a>
+  <a href="#lenses">The two lenses</a>
+  <h4>The Clusters</h4>
+  <a href="#c1">1 · Formal foundations</a>
+  <a href="#c2">2 · The physical world</a>
+  <a href="#c3">3 · The computing stack</a>
+  <a href="#c4">4 · Value &amp; exchange</a>
+  <a href="#c5">5 · Mind &amp; others</a>
+  <a href="#c6">6 · Place &amp; power</a>
+  <h4>Navigation</h4>
+  <a href="#fake">Real gates vs fake gates</a>
+  <a href="#skip">What to deliberately skip</a>
+  <a href="#bridges">The bridges</a>
+  <a href="#routes">Entry routes</a>
+  <h4>Register</h4>
+  <a href="#resources">Resource policy</a>
+  <a href="#register">All 36 domains</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span>Atlas</p>
+
+<div class="hero">
+  <div class="kicker">Root map · the meta-graph · built to outlive the tool that made it</div>
+  <h1>The Atlas — how 36 domains actually connect</h1>
+  <p class="dropcap">This is the navigation layer. It does not teach anything. It answers four questions
+  that otherwise cost you more time than the learning does: <em>what exists</em>, <em>what genuinely
+  gates what</em>, <em>where to enter</em>, and <em>what a thing connects to once you have it</em>.</p>
+  <div class="why">
+    <b>The claim this map makes.</b> Most of the perceived difficulty of learning broadly is not
+    difficulty at all — it is <mark>bad ordering and invented prerequisites</mark>. People believe they
+    need calculus before probability, physics before electronics, and economics before accounting.
+    All three are false, and each one costs months. The dependency arrows below are the real ones.
+  </div>
+  <div class="tags">
+    <span class="tag">#dependency-graph</span>
+    <span class="tag t2">#free-resources-only</span>
+    <span class="tag t3">#hands-on-per-node</span>
+    <span class="tag">#no-schedule</span>
+  </div>
+</div>
+
+<section id="what">
+  <h2><span class="num">00</span> What this is, and what it is not</h2>
+  <p class="sub">A territory to travel, not a course to complete.</p>
+
+  <p>Each of the 36 domains gets its own document. This page is the index that makes them navigable
+  — it holds the arrows <em>between</em> domains, which is the part that would otherwise be lost.</p>
+
+  <table class="nw">
+    <thead><tr><th>This map does</th><th>This map does not</th></tr></thead>
+    <tbody>
+      <tr><td>Say what exists inside a field</td><td>Test whether you learned it</td></tr>
+      <tr><td>Show which arrows are real</td><td>Schedule when you travel them</td></tr>
+      <tr><td>Name one good free resource per node</td><td>Offer ten alternatives</td></tr>
+      <tr><td>Attach a hands-on experience that makes the concept necessary</td><td>Attach exercises that merely demonstrate it</td></tr>
+      <tr><td>Point out where the domain touches another</td><td>Track your progress through it</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">The target is commander-level, not specialist-level</span>
+    Enough to know <strong>what a thing is, why it exists, roughly how it works, its components, its
+    trade-offs, and what it touches.</strong> Enough to follow a conversation, ask a real question,
+    spot a weak argument, and know what you would need in order to go deeper. Two domains break this
+    rule and go much deeper: <em>Software Engineering</em> and <em>Data Engineering</em>.
+  </div>
+</section>
+
+<section id="node">
+  <h2><span class="num">01</span> How to read a node</h2>
+  <p class="sub">Every significant node in every domain document carries this shape.</p>
+
+<pre>TOPIC
+WHAT IT IS          one paragraph, no jargon
+WHY IT EXISTS       the problem that forced it into being
+DEPENDENCIES        what must be roughly understood first — and nothing more
+SUBTOPICS           the branches beneath it
+PRIMARY RESOURCE    type · title · creator · why this one
+DEEPER (optional)   only if you decide to descend
+HANDS-ON            the phenomenon, investigation, build, or observation
+CONNECTS TO         the arrows out, into other domains</pre>
+
+  <div class="rule">
+    <span class="lbl">The hands-on rule</span>
+    A hands-on experience qualifies only if it makes you arrive at <em>“so that is why this exists”</em>.
+    It is a <strong>vehicle</strong>, never a portfolio piece. For a physical domain it may be taking
+    something apart; for geopolitics, reconstructing a real decision from incentives; for psychology,
+    a structured observation. <mark>The form follows the subject, not the habit of writing code.</mark>
+  </div>
+</section>
+
+<section id="lenses">
+  <h2><span class="num">02</span> The two lenses</h2>
+  <p class="sub">These two have no prerequisites and multiply the value of every other domain. They are not a cluster — they sit above all six.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4><a href="systems-thinking.html">Systems Thinking</a></h4>
+      <p>Stocks, flows, feedback, delays, leverage points. Turns every other domain from a list of
+      facts into a machine with behaviour. You already have <a href="../tracks/systems-thinking/overview.html">a working note</a> on this.</p>
+      <p><em>Why first:</em> once you can see a feedback loop, you see it in central banking, congestion
+      control, hormones, arms races, and hiring — five domains for the price of one.</p>
+    </div>
+    <div class="card">
+      <h4><a href="probability.html">Probability &amp; Decision Making</a></h4>
+      <p>Uncertainty, base rates, expectation, tails. The grammar of every claim about the future.</p>
+      <p><em>Why first:</em> without it you cannot evaluate a medical statistic, a benchmark, a forecast,
+      a risk, or a p99 — and you will confidently believe things that are wrong.</p>
+    </div>
+  </div>
+</section>
+
+<section id="c1">
+  <h2><span class="num">C1</span> Formal foundations</h2>
+  <p class="sub">Mathematics · Probability &amp; Decision Making</p>
+
+<pre>MATHEMATICS                            (root — nothing gates it)
+│
+├── Arithmetic &amp; algebraic fluency ......... gates everything below
+├── Functions, graphs, growth rates ........ gates Complexity, Economics
+├── Discrete mathematics ................... gates Computing
+│   ├── Logic &amp; proof ...................... gates World Philosophy
+│   ├── Sets &amp; relations ................... gates Databases
+│   ├── Combinatorics ...................... gates Probability
+│   └── Graph theory ....................... gates Networking, Distributed Systems
+├── Linear algebra ......................... gates AI, Physics, Graphics
+├── Calculus — single variable ............. gates Physics, Optimisation
+│   └── Multivariable  [only if AI] ........ gates Gradient methods
+└── Statistics ............................. gates Economics, Psychology, Finance
+
+PROBABILITY &amp; DECISION MAKING          ← Combinatorics
+│
+├── Sample spaces &amp; events
+├── Conditional probability &amp; Bayes ........ gates Psychology, AI, Medicine-reading
+├── Random variables, expectation, variance
+├── Distributions &amp; heavy tails ............ gates Finance, Distributed Systems
+├── Law of large numbers, CLT .............. gates Statistics, Benchmarking
+├── Markov chains .......................... gates Queueing, Reinforcement learning
+└── Decision theory, EV, utility ........... gates Economics, Business, Game theory</pre>
+
+  <div class="trap">
+    <span class="lbl">The trap in this cluster</span>
+    Mathematics is the domain where people most often start at the beginning and never arrive
+    anywhere. <strong>It is a toolbox, not a journey.</strong> Take the tool when a domain demands it —
+    the arrows above tell you which tool that is.
+  </div>
+</section>
+
+<section id="c2">
+  <h2><span class="num">C2</span> The physical world</h2>
+  <p class="sub">Physics · Mechanical · Electrical &amp; Electronics · Everyday Technology · Cars &amp; Transportation · Biology</p>
+
+<pre>PHYSICS                                ← Calculus (light)
+├── Mechanics: force, momentum, energy ..... gates Mechanical Engineering
+├── Thermodynamics &amp; heat .................. gates Engines, Climate, Biology
+├── Waves &amp; optics ......................... gates Displays, Fibre, Acoustics
+├── Electromagnetism ....................... gates Electrical &amp; Electronics
+└── Modern physics (light touch) ........... gates Semiconductors, Nuclear, GPS
+
+MECHANICAL ENGINEERING                 ← Mechanics + Thermodynamics
+├── Statics, stress, materials
+├── Machine elements: gears, linkages, bearings
+├── Heat engines &amp; cycles .................. gates Cars
+├── Fluid mechanics ........................ gates Aerodynamics, Pumps, HVAC
+└── Manufacturing, tolerance, fits
+
+ELECTRICAL &amp; ELECTRONICS               ← Electromagnetism (lightly)
+├── Voltage, current, resistance, power
+├── Circuits: series/parallel, RC, RL
+├── Components: resistor, capacitor, inductor, diode, transistor
+├── Digital logic: gates, flip-flops ....... gates Computing
+├── Analog↔digital: ADC, DAC, sampling ..... gates Audio, Sensors
+├── Power: AC/DC, transformers, the grid ... gates Energy geopolitics
+└── Signals &amp; modulation ................... gates Networking (physical layer)
+
+BIOLOGY &amp; THE HUMAN BODY               ← Chemistry basics
+├── Cell, DNA, protein synthesis
+├── Metabolism &amp; energy
+├── Organ systems: circulatory, nervous, immune, endocrine
+├── Neuroscience basics .................... gates Psychology
+└── Evolution as an algorithm .............. gates Human Behavior, Systems Thinking
+
+EVERYDAY TECHNOLOGY                    ← Electronics + Computing
+└── TV · phone · microwave · fridge · motor · router · charger · camera · lift
+
+CARS &amp; TRANSPORTATION                  ← Mechanical + Electrical
+├── Powertrain: ICE and EV
+├── Transmission &amp; drivetrain
+├── Suspension, steering, braking
+├── Vehicle electronics, ECUs, CAN bus
+└── Transport networks &amp; logistics ......... gates Geography, Economics</pre>
+
+  <div class="note">
+    <span class="lbl">The best entry point in this entire Atlas</span>
+    <strong>Everyday Technology.</strong> Pick one object and trace a single signal end to end — press
+    a remote button, follow it through infrared, microcontroller, receiver, processor, video pipeline,
+    panel driver, pixel. That one trace pulls in electronics, computing, optics and communication
+    <em>because you needed them</em>, which is the only way any of it stays.
+  </div>
+</section>
+
+<section id="c3">
+  <h2><span class="num">C3</span> The computing stack</h2>
+  <p class="sub">Computing · Software Engineering · OS · Networking · Databases · Distributed Systems · Infrastructure · Data Engineering · AI</p>
+
+<pre>COMPUTING                              ← Digital logic + Discrete maths
+├── Representation: binary, two's complement, floats, encodings
+├── Architecture: CPU, registers, cache, memory hierarchy
+├── The stack and the heap
+├── Compilation vs interpretation
+└── Complexity and real cost models
+
+SOFTWARE ENGINEERING  [DEEP]           ← Computing
+├── Objects: identity, equality, hashing, mutability
+├── References, aliasing, copy depth
+├── Data structures: arrays, hash maps, trees, heaps, graphs
+├── Recursion &amp; the call stack
+├── Memory management &amp; garbage collection
+├── Concurrency: threads, races, locks, async
+├── Serialization &amp; protocols
+├── Testing, debugging, observability
+└── Design: coupling, cohesion, interfaces
+
+OPERATING SYSTEMS                      ← Computing
+├── Processes &amp; threads
+├── Scheduling
+├── Virtual memory &amp; paging
+├── Filesystems &amp; the write path ........... you have field notes here already
+├── Syscalls, interrupts, I/O
+└── Isolation: containers, VMs ............. gates Cloud
+
+NETWORKING                             ← Computing + Signals
+├── Layering &amp; encapsulation
+├── Ethernet, IP, routing
+├── TCP vs UDP, congestion control ......... isomorphic to backpressure
+├── DNS, TLS, HTTP
+└── Latency, bandwidth, the speed of light
+
+DATABASES                              ← OS (storage) + Software Engineering
+├── The relational model &amp; SQL
+├── Indexes: B-tree vs LSM
+├── Transactions &amp; ACID
+├── Concurrency control &amp; isolation levels
+├── Query planning &amp; optimisation
+└── NoSQL families and the problem each solves
+
+DISTRIBUTED SYSTEMS                    ← Networking + Databases + Probability
+├── Partial failure as the defining condition
+├── Replication &amp; consistency models
+├── Consensus: Raft, Paxos
+├── Partitioning &amp; rebalancing
+├── Time, clocks, causality, ordering
+├── Backpressure, retries, idempotency
+└── CAP / PACELC as engineering trade-offs
+
+INFRASTRUCTURE &amp; CLOUD                 ← OS + Networking + Distributed Systems
+├── Virtualisation &amp; containers
+├── Orchestration &amp; scheduling
+├── Infrastructure as code
+├── Observability: logs, metrics, traces
+└── Cost models ........................... gates Business
+
+DATA ENGINEERING  [DEEP]               ← Databases + Distributed Systems + Infra
+├── Batch vs streaming
+├── Storage formats: row vs columnar
+├── Ingestion &amp; change data capture
+├── Modelling: normalisation, star schema
+├── Orchestration &amp; lineage
+├── Warehouse · lake · lakehouse
+└── Data quality &amp; contracts
+
+ARTIFICIAL INTELLIGENCE                ← Linear algebra + Probability + Data Engineering
+├── Learning as optimisation
+├── Classical ML: regression, trees, clustering
+├── Neural networks &amp; backpropagation
+├── Representations &amp; embeddings
+├── Transformers &amp; attention
+├── Training vs inference economics ........ gates Geopolitics (compute)
+└── Evaluation, bias, failure modes</pre>
+</section>
+
+<section id="c4">
+  <h2><span class="num">C4</span> Value &amp; exchange</h2>
+  <p class="sub">Accounting · Economics · Finance · Business</p>
+
+<pre>ACCOUNTING                             (root — needs only arithmetic)
+├── Double-entry: why every entry has two sides
+├── The three statements: balance sheet, P&amp;L, cash flow
+├── Accrual vs cash
+├── Depreciation &amp; amortisation
+└── How the three statements interlock ..... gates Finance, Business
+
+ECONOMICS                              ← Systems Thinking + Statistics
+├── Scarcity, incentives, marginal thinking
+├── Supply, demand, elasticity, price as information
+├── Market structures &amp; market failure
+├── Macro: GDP, inflation, unemployment
+├── Money, credit, central banking ......... gates Geopolitics
+├── Trade &amp; comparative advantage
+└── Growth &amp; development
+
+FINANCE                                ← Accounting + Economics + Probability
+├── Time value of money
+├── Risk, return, diversification
+├── Instruments: equity, debt, derivatives
+├── Valuation: multiples, DCF
+├── Markets &amp; price discovery
+└── Leverage, fragility, crises
+
+BUSINESS                               ← Accounting + Economics + Finance
+├── Business models &amp; value capture
+├── Unit economics: CAC, LTV, payback
+├── Competitive advantage &amp; moats
+├── Pricing
+├── Distribution &amp; go-to-market
+└── Organisation &amp; operations</pre>
+
+  <div class="trap">
+    <span class="lbl">The most common mis-ordering in this Atlas</span>
+    People start with Finance or Business and never learn Accounting, then spend years unable to read
+    the actual documents. <strong>Accounting is the language; Finance and Business are spoken in it.</strong>
+    It is also the cheapest node here — a few days buys you the ability to read any filing.
+  </div>
+</section>
+
+<section id="c5">
+  <h2><span class="num">C5</span> Mind &amp; others</h2>
+  <p class="sub">Psychology · Human Behavior · Communication · Conversation · Etiquette &amp; Social Presence</p>
+
+<pre>PSYCHOLOGY                             ← Neuroscience basics + Probability
+├── Perception &amp; attention
+├── Memory &amp; learning ...................... gates your own study method
+├── Judgment, heuristics, bias ............. needs Bayes to be more than a list
+├── Motivation &amp; emotion
+├── Personality &amp; individual differences
+└── Social psychology ...................... gates Human Behavior
+
+HUMAN BEHAVIOR                         ← Psychology + Economics + Evolution
+├── Revealed vs stated preference
+├── Norms, status, reciprocity
+├── Group dynamics &amp; conformity
+├── Trust, cooperation, defection .......... gates Game Theory
+└── Culture as transmitted behaviour
+
+COMMUNICATION                          ← Psychology + Human Behavior
+├── Audience &amp; framing
+├── Structure: narrative and argument
+├── Written vs spoken registers
+├── Persuasion vs manipulation — where the line is
+└── Feedback, repair, being misunderstood
+
+CONVERSATION                           ← Communication
+├── Openers &amp; reading context
+├── Turn-taking &amp; threading
+├── Question quality
+├── Disagreeing without rupture
+└── Endings and exits
+
+ETIQUETTE &amp; SOCIAL PRESENCE            ← Conversation + Culture
+├── Register and context-switching
+├── Hosting, and being hosted
+├── Professional norms
+└── Cross-cultural difference</pre>
+
+  <div class="rule">
+    <span class="lbl">Boundary condition for this cluster</span>
+    Everything here is aimed at <strong>observation and comprehension</strong>. The moment a technique's
+    purpose is to make someone act against their own interest, it has left this Atlas.
+    <mark>There is no reliable body-language mind-reading.</mark> What exists is hypothesis-building
+    from context, and it is a genuinely useful skill.
+  </div>
+</section>
+
+<section id="c6">
+  <h2><span class="num">C6</span> Place &amp; power</h2>
+  <p class="sub">Geography · History · Politics · Geopolitics · Religion · Philosophy — Indian and world</p>
+
+<pre>WORLD GEOGRAPHY                        ← Physics (climate, lightly)
+├── Plate tectonics &amp; terrain
+├── Climate systems, cells, the monsoon
+├── Rivers, basins, water
+├── Resources: energy, minerals, arable land
+└── Chokepoints &amp; trade routes ............. gates Geopolitics
+
+INDIAN GEOGRAPHY                       ← World Geography
+├── Physiographic divisions
+├── River systems &amp; water disputes
+├── Monsoon, soils, agriculture
+├── States, cities, and their economic bases
+└── Corridors: highways, rail, ports
+
+WORLD HISTORY                          ← World Geography
+├── Agriculture &amp; the first states
+├── Classical empires
+├── Trade, disease, and contact
+├── The industrial revolution
+├── Colonialism &amp; extraction
+├── The world wars
+└── The Cold War and after
+
+INDIAN HISTORY                         ← Indian Geography + World History
+├── Indus &amp; Vedic
+├── Mauryan, Gupta, and regional powers
+├── Sultanate &amp; Mughal
+├── Company rule, then Crown
+├── The freedom movement
+└── The Republic: 1947 · 1975 · 1991
+
+INDIAN POLITICS &amp; GOVERNMENT           ← Indian History
+├── The Constitution and its design choices
+├── Federalism and its asymmetries
+├── Parliament, executive, judiciary
+├── Elections, delimitation, representation
+├── Fiscal federalism &amp; the Finance Commission
+└── Parties, coalitions, and state politics
+
+GEOPOLITICS                            ← World Geography + World History + Economics
+├── Forms of power: military, economic, monetary
+├── Alliances &amp; deterrence ................. needs Game Theory
+├── Energy &amp; supply chains
+├── Sanctions and economic statecraft
+└── Regional theatres
+
+RELIGION                               ← World History
+├── What religion does structurally
+├── The Abrahamic family
+├── The Dharmic family
+├── East Asian traditions
+└── Secularism &amp; the modern state
+
+INDIAN PHILOSOPHICAL TRADITIONS        ← Religion + Indian History
+├── Vedas &amp; Upanishads
+├── The six darshanas
+├── Vedanta and its disagreements
+├── Buddhism &amp; Jainism
+└── Bhakti and modern reform
+
+WORLD PHILOSOPHY                       ← World History + Logic
+├── Greek foundations
+├── Epistemology: what can be known
+├── Ethics: what should be done
+├── Political philosophy: who may rule
+├── Philosophy of science ................. gates how you read any study
+└── Modern &amp; contemporary</pre>
+</section>
+
+<section id="fake">
+  <h2><span class="num">03</span> Real gates vs fake gates</h2>
+  <p class="sub">Invented prerequisites are the single largest cost in self-directed learning. Here are the ones worth deleting.</p>
+
+  <table>
+    <thead><tr><th>The belief</th><th>The reality</th></tr></thead>
+    <tbody>
+      <tr><td>Calculus before probability</td><td><strong>False.</strong> Discrete probability plus simulation covers most of what you need. Calculus enters only for continuous distributions, and later than you think.</td></tr>
+      <tr><td>Physics before electronics</td><td><strong>Mostly false.</strong> Ohm's law, circuits and components need almost no formal physics. Electromagnetic theory matters only at antennas and transmission lines.</td></tr>
+      <tr><td>Mathematics before computing</td><td><strong>Mostly false.</strong> You need binary and logic. Most working software touches no calculus at all.</td></tr>
+      <tr><td>Finance before accounting</td><td><strong>Backwards.</strong> Accounting is upstream. This inversion is the most expensive one on the list.</td></tr>
+      <tr><td>Macroeconomics before business</td><td><strong>False.</strong> Unit economics needs arithmetic and a real filing, not GDP.</td></tr>
+      <tr><td>History in chronological order</td><td><strong>False and counterproductive.</strong> Start from a present event you care about and walk backwards until it stops surprising you.</td></tr>
+      <tr><td>OS before networking</td><td><strong>False.</strong> Siblings, not parent and child. Either order works.</td></tr>
+      <tr><td>Linear algebra before machine learning</td><td><strong>True for understanding, false for using.</strong> Decide which you want before spending the months.</td></tr>
+      <tr><td>Biology before psychology</td><td><strong>Light dependency only.</strong> Neuroscience basics suffice; you do not need the Krebs cycle.</td></tr>
+      <tr><td>Scripture in the original language</td><td><strong>False for commander-level.</strong> Good translations plus commentary get you the argument. Language study is a different project.</td></tr>
+      <tr><td>You must finish a domain before moving</td><td><strong>False, and the most damaging belief here.</strong> None of these are finishable. You leave when the marginal return drops, and you return when another domain drags you back.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="skip">
+  <h2><span class="num">04</span> What to deliberately skip</h2>
+  <p class="sub">Unnecessary academic depth. These are real and valuable — and not on the path to commander-level understanding.</p>
+
+  <table class="nw">
+    <thead><tr><th>Skip</th><th>Unless</th></tr></thead>
+    <tbody>
+      <tr><td>Measure-theoretic probability</td><td>You are doing research-grade statistics</td></tr>
+      <tr><td>Real analysis, epsilon-delta proofs</td><td>You want mathematics as a subject, not a tool</td></tr>
+      <tr><td>Lagrangian &amp; Hamiltonian mechanics</td><td>Physics itself is the goal</td></tr>
+      <tr><td>Maxwell's equations in differential form</td><td>You are designing RF hardware</td></tr>
+      <tr><td>Organic chemistry</td><td>Biochemistry or materials is the goal</td></tr>
+      <tr><td>Automata theory, formal languages</td><td>You are writing a parser or a compiler</td></tr>
+      <tr><td>Compiler internals beyond “what it does”</td><td>Same</td></tr>
+      <tr><td>IFRS vs GAAP minutiae</td><td>You are preparing statements, not reading them</td></tr>
+      <tr><td>Historiographical debate</td><td>You are writing history rather than using it</td></tr>
+      <tr><td>Proof-heavy ML theory (VC dimension, PAC)</td><td>You are doing ML research</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">Why this section exists</span>
+    Breadth is only affordable because of what it refuses. <mark>Every one of these is a well people
+    fall into and do not come out of for a year.</mark> Knowing they are optional is worth more than
+    any single resource on this page.
+  </div>
+</section>
+
+<section id="bridges">
+  <h2><span class="num">05</span> The bridges</h2>
+  <p class="sub">Structures that appear identically in unrelated domains. This table is the actual product of breadth.</p>
+
+  <p>These are why a broad map beats a deep one for general understanding: learn the structure once
+  in the domain where it is most visible, and you get it free everywhere else.</p>
+
+  <table>
+    <thead><tr><th>Structure</th><th>Appears as</th></tr></thead>
+    <tbody>
+      <tr><td>Negative feedback loop</td><td>Thermostats · TCP congestion control · Central bank policy · Hormonal regulation · Predator–prey</td></tr>
+      <tr><td>Backpressure</td><td>Flow control · Inventory management · Monetary tightening · Traffic ramp metering</td></tr>
+      <tr><td>Consensus under partial failure</td><td>Raft · Corporate boards · Centre–state disputes · Treaty ratification · Juries</td></tr>
+      <tr><td>Heavy tails</td><td>p99 latency · Income distribution · Insurance claims · War casualties · Venture returns</td></tr>
+      <tr><td>Compounding</td><td>Interest · Cache hit ratios · Population growth · Skill acquisition · Technical debt</td></tr>
+      <tr><td>Principal–agent problem</td><td>Management · Democracy · Fund managers · Contractors · Service ownership</td></tr>
+      <tr><td>Adverse selection</td><td>Insurance · Used cars · Hiring · Loan books · Open-source maintenance</td></tr>
+      <tr><td>Chokepoints</td><td>Strait of Malacca · Single points of failure · Leading-edge fabs · Root DNS · One senior engineer</td></tr>
+      <tr><td>Amortisation</td><td>Depreciation · LSM compaction · Infrastructure investment · Training vs inference</td></tr>
+      <tr><td>Entropy and decay</td><td>Thermodynamics · Code rot · Institutional decay · Data quality · Memory</td></tr>
+      <tr><td>Caching and locality</td><td>CPU caches · Warehouses · Habit · Institutional memory · Data gravity</td></tr>
+      <tr><td>Signalling costly enough to be credible</td><td>Peacock tails · Credentials · Deterrence · Warranties · Open-source track record</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="routes">
+  <h2><span class="num">06</span> Entry routes</h2>
+  <p class="sub">Three honest ways in. None is a schedule; each is a direction of travel.</p>
+
+  <div class="card">
+    <h4>Route A · Professional gravity</h4>
+    <p>Start where you already have traction and let it pull the rest in.</p>
+<pre>Software Engineering → Operating Systems → Networking → Databases
+    → Distributed Systems → Infrastructure → Data Engineering
+         ↑ pulling in Probability exactly when a tail or a queue demands it
+         ↑ pulling in Business when cost models start to matter</pre>
+    <p><em>Best if:</em> you want depth to compound and breadth to arrive as a by-product.</p>
+  </div>
+
+  <div class="card">
+    <h4>Route B · Curiosity, through a real object</h4>
+    <p>Pick a physical thing and follow one signal all the way through it.</p>
+<pre>Everyday Technology (one device)
+    → Electronics (what the components do)
+    → Computing (what the processor does)
+    → Networking (how it talks)
+    → Physics (only where you get stuck)</pre>
+    <p><em>Best if:</em> you want the physical cluster and would abandon a textbook. This is the highest
+    completion-rate route in the Atlas.</p>
+  </div>
+
+  <div class="card">
+    <h4>Route C · Present event, walked backwards</h4>
+    <p>For the entire <em>Place &amp; Power</em> cluster, chronological order is the worst possible order.</p>
+<pre>One real event you care about
+    → the incentives of each actor
+    → the geography and resources that constrained them
+    → the history that produced those constraints
+    → the economics that priced them
+    → the philosophy or religion that framed them</pre>
+    <p><em>Best if:</em> you want geopolitics, history and economics to stick. They only stick when they
+    explain something you already wanted to understand.</p>
+  </div>
+
+  <div class="note">
+    <span class="lbl">The honest recommendation</span>
+    Run <strong>Route A</strong> as the spine, because it is where your existing traction is and depth
+    there is worth the most. Enter every other cluster through <strong>Route B or C</strong> —
+    <mark>never by starting at chapter one of a field you have no relationship with.</mark>
+  </div>
+</section>
+
+<section id="resources">
+  <h2><span class="num">07</span> Resource policy</h2>
+  <p class="sub">Free only. One primary per node, chosen and defended — not a list of ten.</p>
+
+  <p>Every node names one primary resource, the reason it was chosen, and its format. Deeper resources
+  are listed separately and marked optional. The universe I curate from, all freely available:</p>
+
+  <table class="nw">
+    <thead><tr><th>Kind</th><th>Sources</th></tr></thead>
+    <tbody>
+      <tr><td>Full courses</td><td>MIT OpenCourseWare · NPTEL · Stanford &amp; CMU public course pages · Harvard CS50</td></tr>
+      <tr><td>Free books</td><td>Operating Systems: Three Easy Pieces · Computer Networks: A Systems Approach · Dive Into Systems · The Feynman Lectures (online edition) · Project Gutenberg</td></tr>
+      <tr><td>Visual explanation</td><td>3Blue1Brown · Khan Academy · Ben Eater · Veritasium · Practical Engineering</td></tr>
+      <tr><td>Primary documents</td><td>SEC EDGAR filings · RBI &amp; Ministry of Finance publications · IMF &amp; World Bank data · treaty and speech transcripts · Constitution of India</td></tr>
+      <tr><td>Reference</td><td>Stanford Encyclopedia of Philosophy · official language and system documentation · arXiv · Our World in Data · USGS, NASA, IMD</td></tr>
+      <tr><td>Papers worth reading directly</td><td>Raft · Dynamo · MapReduce · The Google File System · Attention Is All You Need</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">Excluded on purpose</span>
+    Unvetted video content, engagement-optimised explainers, summary sites, and anything that
+    paraphrases a primary document you could simply read. <strong>A filing, a paper, a constitution
+    and a datasheet are all free and all better than commentary about them.</strong>
+  </div>
+</section>
+
+<section id="register">
+  <h2><span class="num">08</span> The register — all 36 domains</h2>
+  <p class="sub">All written. Each carries a node tree, curated free resources and a hands-on experience per node.</p>
+
+  <table class="nw">
+    <thead><tr><th>#</th><th>Domain</th><th>Cluster</th><th>Gated by</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>—</td><td>Systems Thinking</td><td>Lens</td><td>nothing</td><td><a href="systems-thinking.html">written</a></td></tr>
+      <tr><td>—</td><td>Probability &amp; Decision Making</td><td>Lens</td><td>Combinatorics</td><td><a href="probability.html">written</a></td></tr>
+      <tr><td>1</td><td>Mathematics</td><td>C1</td><td>nothing</td><td><a href="mathematics.html">written</a></td></tr>
+      <tr><td>2</td><td>Physics &amp; the Physical World</td><td>C2</td><td>Calculus (light)</td><td><a href="physics.html">written</a></td></tr>
+      <tr><td>3</td><td>Mechanical Engineering</td><td>C2</td><td>Mechanics, Thermo</td><td><a href="mechanical-engineering.html">written</a></td></tr>
+      <tr><td>4</td><td>Electrical &amp; Electronics</td><td>C2</td><td>EM (light)</td><td><a href="electrical-electronics.html">written</a></td></tr>
+      <tr><td>5</td><td>Everyday Technology</td><td>C2</td><td>Electronics, Computing</td><td><a href="everyday-technology.html">written</a></td></tr>
+      <tr><td>6</td><td>Cars &amp; Transportation</td><td>C2</td><td>Mechanical, Electrical</td><td><a href="cars-transportation.html">written</a></td></tr>
+      <tr><td>7</td><td>Computing</td><td>C3</td><td>Digital logic, Discrete</td><td><a href="computing.html">written</a></td></tr>
+      <tr><td>8</td><td>Software Engineering <span class="pill pL">deep</span></td><td>C3</td><td>Computing</td><td><a href="software-engineering.html">written</a></td></tr>
+      <tr><td>9</td><td>Operating Systems</td><td>C3</td><td>Computing</td><td><a href="operating-systems.html">written</a></td></tr>
+      <tr><td>10</td><td>Networking</td><td>C3</td><td>Computing, Signals</td><td><a href="networking.html">written</a></td></tr>
+      <tr><td>11</td><td>Infrastructure &amp; Cloud</td><td>C3</td><td>OS, Networking, Dist Sys</td><td><a href="infrastructure-cloud.html">written</a></td></tr>
+      <tr><td>12</td><td>Databases</td><td>C3</td><td>OS, Software Eng</td><td><a href="databases.html">written</a></td></tr>
+      <tr><td>13</td><td>Distributed Systems</td><td>C3</td><td>Networking, DB, Probability</td><td><a href="distributed-systems.html">written</a></td></tr>
+      <tr><td>14</td><td>Data Engineering <span class="pill pL">deep</span></td><td>C3</td><td>DB, Dist Sys, Infra</td><td><a href="data-engineering.html">written</a></td></tr>
+      <tr><td>15</td><td>Artificial Intelligence</td><td>C3</td><td>Lin alg, Probability, Data Eng</td><td><a href="artificial-intelligence.html">written</a></td></tr>
+      <tr><td>16</td><td>Economics</td><td>C4</td><td>Systems Thinking, Stats</td><td><a href="economics.html">written</a></td></tr>
+      <tr><td>17</td><td>Finance</td><td>C4</td><td>Accounting, Economics</td><td><a href="finance.html">written</a></td></tr>
+      <tr><td>18</td><td>Accounting</td><td>C4</td><td>arithmetic only</td><td><a href="accounting.html">written</a></td></tr>
+      <tr><td>19</td><td>Business</td><td>C4</td><td>Accounting, Econ, Finance</td><td><a href="business.html">written</a></td></tr>
+      <tr><td>20</td><td>Systems Thinking</td><td>Lens</td><td>nothing</td><td><a href="systems-thinking.html">written</a></td></tr>
+      <tr><td>21</td><td>Probability &amp; Decision Making</td><td>Lens</td><td>Combinatorics</td><td><a href="probability.html">written</a></td></tr>
+      <tr><td>22</td><td>Psychology</td><td>C5</td><td>Neuro basics, Probability</td><td><a href="psychology.html">written</a></td></tr>
+      <tr><td>23</td><td>Human Behavior</td><td>C5</td><td>Psychology, Economics</td><td><a href="human-behavior.html">written</a></td></tr>
+      <tr><td>24</td><td>Communication</td><td>C5</td><td>Psychology, Human Behavior</td><td><a href="communication.html">written</a></td></tr>
+      <tr><td>25</td><td>Conversation</td><td>C5</td><td>Communication</td><td><a href="conversation.html">written</a></td></tr>
+      <tr><td>26</td><td>Etiquette &amp; Social Presence</td><td>C5</td><td>Conversation, Culture</td><td><a href="etiquette.html">written</a></td></tr>
+      <tr><td>27</td><td>Indian Geography</td><td>C6</td><td>World Geography</td><td><a href="indian-geography.html">written</a></td></tr>
+      <tr><td>28</td><td>World Geography</td><td>C6</td><td>Physics (light)</td><td><a href="world-geography.html">written</a></td></tr>
+      <tr><td>29</td><td>Indian History</td><td>C6</td><td>Indian Geography</td><td><a href="indian-history.html">written</a></td></tr>
+      <tr><td>30</td><td>World History</td><td>C6</td><td>World Geography</td><td><a href="world-history.html">written</a></td></tr>
+      <tr><td>31</td><td>Indian Politics &amp; Government</td><td>C6</td><td>Indian History</td><td><a href="indian-politics.html">written</a></td></tr>
+      <tr><td>32</td><td>Geopolitics</td><td>C6</td><td>World Geo, World Hist, Econ</td><td><a href="geopolitics.html">written</a></td></tr>
+      <tr><td>33</td><td>Religion</td><td>C6</td><td>World History</td><td><a href="religion.html">written</a></td></tr>
+      <tr><td>34</td><td>Indian Philosophical Traditions</td><td>C6</td><td>Religion, Indian History</td><td><a href="indian-philosophy.html">written</a></td></tr>
+      <tr><td>35</td><td>World Philosophy</td><td>C6</td><td>World History, Logic</td><td><a href="world-philosophy.html">written</a></td></tr>
+      <tr><td>36</td><td>Biology &amp; Human Body Basics</td><td>C2</td><td>Chemistry basics</td><td><a href="biology.html">written</a></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Where you already have territory</span>
+    Five of these were not empty before the Atlas was written. Systems Thinking, game theory, predictive
+    processing and metacognition already existed as working notes, and the Python object model plus the
+    write path are real ground inside Software Engineering and Operating Systems. <mark>The Atlas absorbs
+    them rather than replacing them</mark> — each domain page links back to the note where you already hold
+    depth.
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>A map of reality. You travel it; it does not track you.</footer>
+
+</body>
+</html>

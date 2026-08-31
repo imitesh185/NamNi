@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Electrical &amp; Electronics — Atlas domain 04</title>
+<meta name="description" content="Voltage, current, components, digital logic and signals — learned on a breadboard with a multimeter." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#kit">The kit</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · The three quantities</a>
+  <a href="#n2">2 · Circuits</a>
+  <a href="#n3">3 · Components</a>
+  <a href="#n4">4 · Semiconductors</a>
+  <a href="#n5">5 · Digital logic</a>
+  <a href="#n6">6 · Signals &amp; conversion</a>
+  <a href="#n7">7 · Power &amp; the grid</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Electrical &amp; Electronics</p>
+
+<div class="hero">
+  <div class="kicker">Domain 04 · Cluster C2 · gated by Electromagnetism (lightly)</div>
+  <h1>Electrical &amp; Electronics</h1>
+  <p class="dropcap">This is the bridge domain — the place where <a href="physics.html">physics</a> becomes
+  <a href="computing.html">computing</a>. It is also the most <em>hands-on-able</em> domain in the Atlas:
+  a few hundred rupees of components lets you build, measure and break things that make the abstractions
+  permanent.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>Voltage is pressure, current is flow, resistance is the pipe.</mark> That
+    analogy is imperfect but carries you a remarkably long way, and everything else — capacitors,
+    transistors, logic gates — is a device that manipulates that flow in one specific way.
+  </div>
+  <div class="tags">
+    <span class="tag">#ohms-law</span>
+    <span class="tag t2">#transistors</span>
+    <span class="tag t3">#logic</span>
+    <span class="tag">#signals</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">And why almost none of the physics is actually required.</p>
+
+  <p>The "physics before electronics" prerequisite is <a href="index.html#fake">largely false</a>. Ohm's
+  law, circuits, components and digital logic need arithmetic and a mental model of flow. Electromagnetic
+  field theory becomes necessary only at antennas, transmission lines and high frequencies — which is far
+  past commander-level.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="physics.html#n5">Physics N5</a> (lightly) · arithmetic</td><td><a href="computing.html">Computing</a> · Everyday Technology · Cars · Networking (physical layer)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="kit">
+  <h2><span class="num">01</span> The kit</h2>
+  <p class="sub">One purchase makes this entire domain hands-on. It is the best value in the Atlas.</p>
+
+<pre>ESSENTIAL (a few hundred rupees, once)
+  Breadboard + jumper wires
+  Multimeter (any cheap digital one)
+  Assorted resistors, capacitors, LEDs
+  A few transistors (BC547) and diodes (1N4007)
+  9V battery or a 5V USB supply
+
+VERY USEFUL
+  Arduino Uno or clone      — microcontroller, ADC, PWM
+  Logic gate ICs (7400 series)
+  Potentiometers, push buttons
+
+OPTIONAL BUT TRANSFORMATIVE
+  USB oscilloscope or logic analyser  — makes signals visible
+  Old device to disassemble           — free, and the best teacher</pre>
+
+  <div class="rule">
+    <span class="lbl">Safety, stated once and meant</span>
+    Everything in this domain is done at <strong>battery or USB voltages</strong>. Mains electricity kills.
+    Do not open power supplies, do not probe live mains, and do not disassemble anything containing a large
+    capacitor — a CRT or a microwave oven can hold a lethal charge for a long time after unplugging.
+    <mark>Every experiment on this page works safely below 12 volts.</mark>
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">02</span> The tree</h2>
+
+<pre>ELECTRICAL &amp; ELECTRONICS
+│
+├── 1 · THE THREE QUANTITIES ......... voltage, current, resistance
+├── 2 · CIRCUITS .................... series, parallel, dividers, RC
+├── 3 · COMPONENTS .................. R, C, L, diode — what each one does
+├── 4 · SEMICONDUCTORS .............. the transistor as switch and amplifier
+├── 5 · DIGITAL LOGIC ............... gates, flip-flops, state
+├── 6 · SIGNALS &amp; CONVERSION ........ analog↔digital, sampling, modulation
+└── 7 · POWER &amp; THE GRID ............ AC/DC, transformers, distribution</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> The three quantities</h2>
+  <p class="sub">Voltage, current, resistance — and the relationship between them.</p>
+
+  <p><b>WHAT IT IS.</b> Voltage is the energy difference per unit charge between two points. Current is the
+  rate of charge flow. Resistance is the opposition to that flow. Ohm's law relates all three.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because nearly every electrical question reduces to these three plus power.
+  Getting them genuinely intuitive — including that voltage is always <em>between two points</em> and never
+  at one — resolves most confusion permanently.</p>
+
+  <p><b>DEPENDENCIES.</b> Arithmetic.</p>
+
+  <p><b>SUBTOPICS.</b> Charge and current · voltage as potential difference · resistance and resistivity ·
+  Ohm's law · power = VI · energy and the kilowatt-hour · why "voltage at a point" is meaningless without a
+  reference · ground as a chosen zero.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free simulation · <em>Title:</em> PhET "Circuit Construction Kit: DC" — free, browser-based<br>
+    <em>Why this one:</em> free, and it shows current as animated moving charge with meters you can attach
+    anywhere. Build the circuit in simulation, predict, then build it physically and check.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Kill an LED, then work out why</span>
+    Connect an LED directly across a 9V battery. It flashes brightly and dies. <strong>Now work out
+    why.</strong> An LED has a nearly fixed forward voltage of about 2V and almost no resistance beyond it —
+    so with 9V applied, current is limited only by whatever tiny resistance exists, and it is enormous.
+    <br><br>
+    Compute the resistor needed to limit current to 20 mA: (9 − 2) / 0.02 = 350Ω. Use the nearest value,
+    rebuild, and it works. <mark>You have just used Ohm's law to solve a real problem you created</mark>,
+    which is worth more than twenty textbook problems.
+    <br><br>
+    Then measure everything with your multimeter to confirm the model: voltage across the resistor, voltage
+    across the LED, and — the one people get wrong — current, which requires breaking the circuit and
+    putting the meter <em>in series</em>. Confirm the two voltages sum to 9V, and that the same current
+    flows through both components.
+    <br><br>
+    Then compute power dissipated in the resistor, touch it, and notice it is slightly warm. That warmth is
+    the energy your calculation predicted.
+    <br><br>
+    <em>The realisation to reach:</em> components do not "use" voltage, they <em>drop</em> it, and the drops
+    must sum to the source. Current is the same everywhere in a single loop. Those two rules solve most
+    circuits.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Physics N5 · Computing (power and heat limits) · Cars (12V systems).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Circuits</h2>
+  <p class="sub">How components combine, and the two configurations everything reduces to.</p>
+
+  <p><b>WHAT IT IS.</b> Series and parallel arrangements, the laws governing them, and the standard
+  sub-circuits — dividers, RC networks — that appear inside every real device.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because real circuits are large, and analysing them requires reducing them to
+  combinations of two patterns.</p>
+
+  <p><b>DEPENDENCIES.</b> N1.</p>
+
+  <p><b>SUBTOPICS.</b> Series and parallel · Kirchhoff's voltage and current laws · voltage dividers ·
+  current dividers · RC time constants · charging and discharging curves · loading effects · why
+  measurement changes the circuit.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free simulation + free videos · <em>Title:</em> PhET Circuit Construction Kit, alongside
+    Ben Eater's breadboard series<br>
+    <em>Why this one:</em> both free, and the combination lets you predict in simulation and verify in
+    hardware, which is exactly the prediction-then-measurement discipline used throughout this Atlas.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Build a clock out of a resistor and a capacitor</span>
+    Wire a resistor and capacitor in series across a supply, with a voltmeter across the capacitor. Close
+    the circuit and watch the voltage rise — not linearly, but along a curve that flattens.
+    <br><br>
+    Record voltage every second and plot it. It is exponential, and the time to reach 63% of the supply is
+    exactly R × C. Change R, then change C, and confirm the time constant scales as predicted.
+    <mark>You have built a timer out of two passive components with no clock and no code.</mark>
+    <br><br>
+    Then recognise the shape: it is identical to the room-cooling curve from
+    <a href="physics.html#n3">Physics N3</a>, because both are the same differential equation — a quantity
+    approaching equilibrium at a rate proportional to the remaining gap. That is also
+    <a href="systems-thinking.html#n2">a balancing loop</a>.
+    <br><br>
+    Then use it: this circuit is how a button debounce works, how a camera flash charges, and how the
+    simplest oscillators set their frequency.
+    <br><br>
+    <em>The realisation to reach:</em> a capacitor is a small energy reservoir, and pairing it with a
+    resistor creates <em>time</em> — a physical delay from nothing but two components.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking N1–N3 (a capacitor is a stock, RC is a delay) · Physics N3
+  (identical maths) · Computing N2.</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Components</h2>
+  <p class="sub">Six devices. Learn what each one does to flow, and you can read any schematic.</p>
+
+  <p><b>WHAT IT IS.</b> The passive and simple active components — resistor, capacitor, inductor, diode,
+  plus switches and sensors — and the single job each performs.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a schematic is a sentence and components are its vocabulary. A small
+  vocabulary covers the overwhelming majority of circuits.</p>
+
+  <p><b>DEPENDENCIES.</b> N2.</p>
+
+  <p><b>SUBTOPICS.</b> Resistors and colour codes · capacitors and charge storage · inductors and opposition
+  to current change · diodes and one-way flow · rectification · LEDs · sensors as variable resistors ·
+  reading a datasheet.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free primary documents · <em>Title:</em> component datasheets — free from every
+    manufacturer<br>
+    <em>Why this one:</em> free, authoritative, and learning to read a datasheet is the actual professional
+    skill. Take a BC547 transistor datasheet and find its maximum current, gain range and package pinout.
+    Everything else in electronics assumes you can do this.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Open a dead device and identify every component</span>
+    Take apart something broken and cheap — an old charger with the mains section left alone, a broken
+    toy, a dead remote, a discarded router. <mark>Identify every component on the board and state what job
+    it does.</mark>
+    <br><br>
+    You will find the same small set repeatedly: resistors limiting current, capacitors smoothing supply,
+    diodes preventing reverse current, an inductor in the power section, a crystal setting a clock, and one
+    or two chips doing everything else. Look up the markings on the largest chip — datasheets are free —
+    and you will often find the entire device's function described in its first paragraph.
+    <br><br>
+    Then trace the power path with your eyes: from the input, through protection, through regulation, to
+    the chip. Every board has this path, and once you can find it you can orient yourself in any
+    electronics you ever open.
+    <br><br>
+    <em>The realisation to reach:</em> electronics is not infinitely varied. It is a small vocabulary
+    reused, and the difference between devices is mostly the chip in the middle and the software inside it.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Everyday Technology (this <em>is</em> the disassembly skill) · Cars (automotive
+  electronics) · Physics N5.</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Semiconductors and the transistor</h2>
+  <p class="sub">The single most consequential invention in the Atlas.</p>
+
+  <p><b>WHAT IT IS.</b> Materials whose conductivity can be controlled, and the devices built from them —
+  principally the transistor, which lets a small signal control a large one.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because control requires amplification and switching. A transistor does both,
+  it has no moving parts, and it can be made microscopically small — which is why there are more transistors
+  in existence than any other manufactured object in history.</p>
+
+  <p><b>DEPENDENCIES.</b> N3 · <a href="physics.html#n6">Physics N6</a> (band gaps).</p>
+
+  <p><b>SUBTOPICS.</b> Doping, n-type and p-type · the p-n junction and why it conducts one way · the
+  transistor as a switch · the transistor as an amplifier · saturation and cut-off · MOSFETs versus BJTs ·
+  why switching produces heat · integration and Moore's law.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free video series · <em>Title:</em> Ben Eater's transistor and logic gate videos, free on
+    YouTube<br>
+    <em>Why this one:</em> free, and he builds logic gates from discrete transistors on a breadboard before
+    ever using a logic IC. <mark>Seeing a NAND gate made of three transistors permanently removes the
+    magic from computing.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Control a large current with a tiny one, then build a gate</span>
+    Wire a transistor as a switch: a small current into the base, a much larger current through the
+    collector driving an LED or a small motor. Measure both currents. The ratio is the gain, typically 100
+    to 300. <strong>A current too small to light the LED is controlling one that easily does.</strong>
+    <br><br>
+    Now sweep the base current slowly with a potentiometer and watch the output. In the middle region it is
+    an <em>amplifier</em> — output proportional to input. Push it to either extreme and it becomes a
+    <em>switch</em> — fully on or fully off. Same device, two uses, and the choice of operating region is
+    the entire distinction between analog and digital electronics.
+    <br><br>
+    Then build a NAND gate from transistors and resistors, and verify its truth table with a multimeter.
+    Then connect two NAND gates in the feedback arrangement from
+    <a href="computing.html#n2">Computing N2</a> and watch it hold a bit. <mark>You have built memory out
+    of transistors, having earlier built it in a simulator — and now you know what the simulator was
+    simulating.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> everything above this in the Atlas — logic, computers, software,
+    AI — is this one device, made small and repeated billions of times.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Computing N2 (this is the layer below it) · Physics N6 · Geopolitics
+  (semiconductor supply chains) · AI (compute is transistors).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Digital logic</h2>
+  <p class="sub">Where this domain hands off to <a href="computing.html">Computing</a>.</p>
+
+  <p><b>WHAT IT IS.</b> Treating voltages as two symbols and building combinational and sequential circuits
+  that compute functions and store state.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because analog signals degrade with every operation while digital ones can be
+  restored to clean levels at every stage. Digitisation trades resolution for <em>noise immunity</em>, and
+  that trade is why computers work at all.</p>
+
+  <p><b>DEPENDENCIES.</b> N4 · Mathematics N3 (boolean logic).</p>
+
+  <p><b>SUBTOPICS.</b> Logic levels and noise margins · gates and truth tables · combinational logic ·
+  adders · latches and flip-flops · clocks and sequential logic · registers and counters · propagation
+  delay and why clock speed has a limit.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free project course · <em>Title:</em> Nand2Tetris projects 1–3 (free), paired with
+    physical 7400-series logic ICs<br>
+    <em>Why this one:</em> free, and doing it both in simulation and in hardware closes the loop between
+    <a href="computing.html#n2">Computing N2</a> and this node — the same construction, once in software and
+    once in wire.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Build a 4-bit adder and watch it be wrong at speed</span>
+    Using 7400-series ICs, build a full adder, then chain four to make a 4-bit adder with LEDs on the
+    output. Set inputs with switches and verify the arithmetic by hand.
+    <br><br>
+    Now find the limit. Each gate takes time to settle — nanoseconds — and in a ripple-carry adder the
+    carry must propagate through every stage before the answer is valid. If you sampled the output too
+    early you would read garbage that briefly appears as the carry ripples through.
+    <br><br>
+    <mark>That propagation delay is precisely why processors have a maximum clock speed</mark>, and why
+    faster chips need shorter logic paths rather than merely faster clocks. If you have a logic analyser,
+    capture the transition and see the intermediate wrong values that exist for a few nanoseconds.
+    <br><br>
+    Then measure noise immunity directly: feed a gate an input voltage between the two logic levels and
+    watch the output snap decisively to one or the other. That snapping is the restoration that makes
+    digital signals survivable across long chains.
+    <br><br>
+    <em>The realisation to reach:</em> digital is not the absence of analog. It is analog with thresholds
+    and a restoration step, and every digital abstraction you rely on has an analog reality underneath with
+    a settling time.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Computing N2–N3 (the handoff) · Mathematics N3 · Everyday Technology.</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Signals and conversion</h2>
+  <p class="sub">How the continuous world enters and leaves a digital device.</p>
+
+  <p><b>WHAT IT IS.</b> Sampling analog quantities into numbers, converting numbers back into analog
+  outputs, and modulating signals for transmission.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because reality is continuous and computers are not. Every microphone, camera,
+  sensor, speaker and radio crosses this boundary, and the crossing has rules with consequences.</p>
+
+  <p><b>DEPENDENCIES.</b> N5 · <a href="physics.html#n4">Physics N4</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Sampling rate and the Nyquist limit · aliasing · quantisation and bit depth ·
+  ADCs and DACs · PWM as fake analog · filtering · amplitude and frequency modulation · digital modulation ·
+  signal-to-noise ratio · why bandwidth and data rate are related.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free tool + free documentation · <em>Title:</em> Audacity (free) for visualising real
+    signals, with an Arduino's ADC and PWM documentation<br>
+    <em>Why this one:</em> free, and Audacity lets you generate, record and inspect waveforms so that
+    sampling artefacts become visible and audible rather than theoretical.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make a high note become a low one</span>
+    In Audacity, generate a 3,000 Hz tone. Now resample the project down to 4,000 Hz — below twice the tone
+    frequency. Play it. <strong>The tone is now a completely different, lower pitch.</strong> It did not
+    degrade; it became something else entirely.
+    <br><br>
+    That is aliasing, and you have just demonstrated the Nyquist limit: sampling below twice the highest
+    frequency does not lose the signal, it <em>disguises</em> it as a different one. <mark>This is why
+    anti-aliasing filters exist before every ADC, and why the same effect makes wagon wheels appear to spin
+    backwards in film.</mark>
+    <br><br>
+    Then do quantisation: reduce a recording from 16-bit to 8-bit to 4-bit and listen. The hiss you hear is
+    quantisation noise — the error between the true value and the nearest representable one, which is
+    <a href="computing.html#n1">Computing N1's floating point problem</a> in audible form.
+    <br><br>
+    Then build PWM on an Arduino: drive an LED with a fast on-off square wave and vary the duty cycle. The
+    brightness varies smoothly even though the output is only ever fully on or fully off. Your eye is doing
+    the averaging — and this is how nearly all digital dimming and motor speed control works.
+    <br><br>
+    <em>The realisation to reach:</em> sampling is not approximation, it is exact <em>if</em> the rate is
+    high enough — and catastrophically wrong rather than merely imprecise if it is not.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Computing N1 (quantisation) · Networking N2 (modulation) · Everyday Technology
+  (audio, cameras, remotes) · AI (all sensor data crosses this boundary).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> Power and the grid</h2>
+  <p class="sub">Where electricity comes from, and the largest machine ever built.</p>
+
+  <p><b>WHAT IT IS.</b> Generation, transmission and distribution of electrical energy, and the reason
+  alternating current won.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because energy must be generated where fuel or wind is and consumed where people
+  are, and moving it costs. Transformers make high-voltage, low-loss transmission possible, and they only
+  work with alternating current — which settled a commercial war with a physics argument.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N3 · Physics N5 (induction).</p>
+
+  <p><b>SUBTOPICS.</b> AC and DC · why I²R losses force high transmission voltage · transformers · three
+  phase · the grid as a real-time balancing system · frequency as the balance indicator · inertia ·
+  why renewables complicate stability · batteries and storage · India's grid specifics.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free live data + free videos · <em>Title:</em> India's national grid frequency and load
+    data, published free by POSOCO/Grid-India, alongside Practical Engineering's free grid videos<br>
+    <em>Why this one:</em> free, and watching real-time frequency data makes the grid's balancing act
+    concrete: <mark>frequency is the visible evidence of supply and demand matching, second by second,
+    across a continent.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Watch a country balance itself in real time</span>
+    Pull India's grid frequency data. Nominal is 50 Hz. Watch it drift — a few hundredths above when
+    generation exceeds demand, below when it lags. <strong>There is no storage buffer.</strong> Generation
+    must equal consumption continuously, and frequency is the error signal.
+    <br><br>
+    This is <a href="systems-thinking.html#n2">a balancing loop with a very short time constant</a>, and the
+    rotating mass of every large generator provides inertia that slows the error's growth long enough for
+    control systems to respond. Then reason about why replacing spinning turbines with inverter-based solar
+    reduces that inertia and makes the loop harder to control — one of the genuinely hard problems in
+    energy transition, and now visible to you as a control problem rather than a political one.
+    <br><br>
+    Then do the transmission arithmetic: compute I²R losses for transmitting 100 MW at 400 V versus 400 kV
+    over the same line resistance. The high-voltage case loses a millionth as much. <mark>That single ratio
+    is why transformers exist, why AC won, and why every long-distance line runs at extreme voltage.</mark>
+    <br><br>
+    Then look at your own electricity bill, convert your monthly consumption to average watts, and compare
+    it to a single incandescent bulb. Most people are surprised in one direction or the other.
+    <br><br>
+    <em>The realisation to reach:</em> the grid is a continuously controlled dynamic system with no
+    storage — arguably the largest and most consequential control loop humans have built.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking N2–N3 · Physics N3, N5 · Geopolitics (energy dependence) ·
+  Economics (electricity pricing and subsidy) · Cars (EV charging load).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>An LED that dies instantly on 9V</td><td>Ohm's law, applied to your own mistake</td></tr>
+      <tr><td>N2</td><td>A timer built from a resistor and a capacitor</td><td>Two parts create time</td></tr>
+      <tr><td>N3</td><td>Identifying every part on a dead board</td><td>A small vocabulary, reused</td></tr>
+      <tr><td>N4</td><td>A NAND gate from three transistors, then memory</td><td>The magic layer, removed</td></tr>
+      <tr><td>N5</td><td>Carry rippling through an adder in nanoseconds</td><td>Why clock speed has a ceiling</td></tr>
+      <tr><td>N6</td><td>A 3 kHz tone becoming a different pitch</td><td>Aliasing disguises, not degrades</td></tr>
+      <tr><td>N7</td><td>Grid frequency drifting in real time</td><td>A continent-scale balancing loop</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="computing.html">Computing</a></td><td>N4 and N5 are the layer directly beneath it</td></tr>
+      <tr><td><a href="everyday-technology.html">Everyday Technology</a></td><td>All seven nodes, arriving together in every device you open</td></tr>
+      <tr><td><a href="cars-transportation.html">Cars &amp; Transportation</a></td><td>N4 motor control, N6 sensors, N7 EV charging</td></tr>
+      <tr><td><a href="networking.html#n2">Networking N2</a></td><td>N6 modulation is the physical layer</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 04 · Electrical &amp; Electronics</footer>
+
+</body>
+</html>

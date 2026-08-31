@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Finance — Atlas domain 17</title>
+<meta name="description" content="Time value, risk and return, instruments, valuation and leverage — built on accounting and probability." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Time value</a>
+  <a href="#n2">2 · Risk &amp; return</a>
+  <a href="#n3">3 · Instruments</a>
+  <a href="#n4">4 · Valuation</a>
+  <a href="#n5">5 · Markets</a>
+  <a href="#n6">6 · Leverage &amp; fragility</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Finance</p>
+
+<div class="hero">
+  <div class="kicker">Domain 17 · Cluster C4 · gated by Accounting + Economics + Probability</div>
+  <h1>Finance</h1>
+  <p class="dropcap">Finance is the study of moving value across <em>time</em> and redistributing
+  <em>risk</em>. Every instrument, however elaborate, is some combination of those two operations — and
+  once you see that, the vocabulary stops being intimidating and becomes a taxonomy.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>A rupee today is not a rupee next year, and a certain rupee is not an
+    uncertain one.</mark> The first fact gives you discounting; the second gives you risk premia.
+    Everything else — bonds, equities, options, insurance, valuation, crises — is built from those two
+    adjustments.
+  </div>
+  <div class="tags">
+    <span class="tag">#discounting</span>
+    <span class="tag t2">#risk-premium</span>
+    <span class="tag t3">#valuation</span>
+    <span class="tag">#leverage</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">And the honest warning about it.</p>
+
+  <p>Finance exists because savings and opportunities sit with different people, and because risk is
+  cheaper when spread. It is genuinely useful. It is also the domain in this Atlas most surrounded by
+  people who profit from your confusion, which makes the mechanism unusually worth owning.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="accounting.html">Accounting</a> · <a href="economics.html#n5">Economics N5</a> · <a href="probability.html#n4">Probability N4, N7</a></td><td>Business · Geopolitics (financial statecraft) · your own decisions</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The two prerequisites that are genuinely load-bearing</span>
+    <a href="accounting.html">Accounting</a>, because valuation is arithmetic on financial statements, and
+    <a href="probability.html#n7">Probability N7</a>, because
+    <mark>the single most expensive error in finance is maximising expected value where losses compound
+    and zero is absorbing.</mark> You have already done that simulation. This domain is where it pays.
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>FINANCE
+│
+├── 1 · TIME VALUE ................... moving money across time
+│   ├── Compounding and discounting
+│   ├── Present value, NPV, IRR
+│   ├── Annuities and perpetuities
+│   └── Real vs nominal rates
+│
+├── 2 · RISK &amp; RETURN ................ pricing uncertainty
+│   ├── Volatility and what it does not capture
+│   ├── Diversification and correlation
+│   ├── Systematic vs idiosyncratic risk
+│   └── The risk-free rate and risk premia
+│
+├── 3 · INSTRUMENTS .................. the taxonomy
+│   ├── Debt: bonds, yields, duration, credit
+│   ├── Equity: ownership, dividends, dilution
+│   ├── Derivatives: forwards, futures, options
+│   └── Funds, ETFs, and fee drag
+│
+├── 4 · VALUATION .................... what is it worth
+│   ├── Discounted cash flow
+│   ├── Terminal value and its dominance
+│   ├── Relative valuation and multiples
+│   └── Why two honest analysts differ by 3×
+│
+├── 5 · MARKETS ...................... price discovery
+│   ├── Order books and liquidity
+│   ├── Efficiency, and in what sense
+│   ├── Information and insider constraints
+│   └── Bubbles and reflexivity
+│
+└── 6 · LEVERAGE &amp; FRAGILITY ......... how finance breaks
+    ├── Leverage as amplification
+    ├── Maturity mismatch and runs
+    ├── Contagion
+    └── Fat tails and model failure</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Time value of money</h2>
+  <p class="sub">One equation that underlies every other node.</p>
+
+  <p><b>WHAT IT IS.</b> The observation that money available now is worth more than the same amount later,
+  and the arithmetic — compounding forward, discounting backward — that makes cash flows at different
+  times comparable.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because every financial decision compares amounts arriving at different times,
+  and they cannot be compared until they are moved to a common date. The discount rate that performs the
+  move is where all the judgment hides.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="mathematics.html#n2">Mathematics N2</a> (exponentials).</p>
+
+  <p><b>SUBTOPICS.</b> Compound interest · present and future value · net present value · internal rate of
+  return and its failure modes · annuities and perpetuities · real versus nominal rates · the rule of 72 ·
+  why the discount rate is an assumption and not a fact.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course materials · <em>Title:</em> Aswath Damodaran's corporate finance and
+    valuation classes — full lecture videos, slides, spreadsheets and datasets, all free at
+    pages.stern.nyu.edu/~adamodar<br>
+    <em>Why this one:</em> free, comprehensive, and he publishes his actual working spreadsheets and data.
+    <mark>He is also unusually honest about how much of valuation is assumption</mark>, which is the single
+    most important thing to learn here.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Discover that most of a valuation is a guess about year 30</span>
+    Build a ten-year discounted cash flow in a spreadsheet: project cash flows, add a terminal value, and
+    discount everything at 10%. Note the answer.
+    <br><br>
+    Now change the discount rate to 9%, then 11%. The valuation swings enormously for a one-point change.
+    Then change the terminal growth rate by half a point and watch it swing again.
+    <br><br>
+    Now compute what fraction of your total value comes from the <em>terminal value</em> — the lump sum
+    representing everything after year ten. For a typical growth company it is <strong>60–80%.</strong>
+    <mark>Most of what you just "calculated" is a guess about a period you did not model, discounted by a
+    rate you chose.</mark>
+    <br><br>
+    Then do the personal version, which is more useful than it sounds. Compute what ₹10,000 invested
+    monthly becomes over 10, 20 and 30 years at 8%, 10% and 12%. The 30-year numbers are startling
+    relative to the 20-year ones — that is the second half of the compounding curve doing nearly all the
+    work, and it is the strongest argument in this Atlas for starting early rather than optimising rates.
+    <br><br>
+    <em>The realisation to reach:</em> a DCF is not a measurement. It is <em>your assumptions, made
+    arithmetic</em> — which is why two competent analysts produce values differing by a factor of three
+    and both are being honest.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Mathematics N2 · Economics N5 (the rate comes from monetary policy) ·
+  Systems Thinking N2 (compounding is a reinforcing loop) · your own career decisions.</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Risk and return</h2>
+  <p class="sub">Where <a href="probability.html#n4">Probability N4</a> becomes money.</p>
+
+  <p><b>WHAT IT IS.</b> The relationship between uncertainty and expected compensation, the mathematics of
+  diversification, and the distinction between risk you are paid to bear and risk you are not.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because investors dislike uncertainty, so uncertain claims must be cheaper to
+  attract buyers. That discount, expressed as a higher expected return, is the risk premium — and
+  understanding what generates it separates investing from gambling.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · Probability N3–N4, N7.</p>
+
+  <p><b>SUBTOPICS.</b> Volatility as a proxy for risk and its inadequacy · correlation and diversification ·
+  systematic versus idiosyncratic risk · why only systematic risk is compensated · the risk-free rate ·
+  equity risk premium · drawdown and time to recovery · sequence-of-returns risk.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free data + free lectures · <em>Title:</em> Damodaran's free historical return datasets,
+    used alongside NSE's free historical index data<br>
+    <em>Why this one:</em> free, and this node only becomes real when computed on actual long-run returns
+    rather than on textbook examples with invented numbers.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The average return nobody actually received</span>
+    Get twenty years of Nifty index data, free from NSE. Compute the arithmetic mean annual return. Now
+    compute the compound annual growth rate actually achieved over the period.
+    <br><br>
+    <strong>The CAGR is lower than the arithmetic mean, always.</strong> Volatility itself destroys
+    compounded returns — a 50% loss requires a 100% gain to recover. Quantify the gap for your data. This
+    is the same asymmetry as <a href="probability.html#n7">Probability N7</a>'s ruin problem, in a form
+    that affects every saver.
+    <br><br>
+    Then run the sequence experiment. Take the same set of annual returns and shuffle their order. For a
+    lump sum invested once, the final value is identical regardless of order. Now do it for someone
+    investing monthly, and again for a retiree withdrawing monthly. <mark>Order now matters enormously —
+    the retiree who meets a crash in year one and the one who meets it in year twenty have completely
+    different outcomes from identical returns.</mark>
+    <br><br>
+    Finally, test diversification honestly: compute correlations between Indian equities, gold, and a bond
+    index during normal periods and then specifically during the worst months. Correlations rise in
+    crises — <strong>diversification weakens precisely when it is needed.</strong>
+    <br><br>
+    <em>The realisation to reach:</em> the average return is not the experienced return, and volatility is
+    not merely discomfort — it is a direct subtraction from what you actually end up with.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N4, N7 · Systems Thinking N4 (nonlinearity) · Psychology (loss
+  aversion) · Business (risk-adjusted decisions).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Instruments</h2>
+  <p class="sub">A taxonomy, not a vocabulary test. Every instrument is a claim on cash flows with a priority.</p>
+
+  <p><b>WHAT IT IS.</b> The main families of financial contract — debt, equity, derivatives, pooled vehicles
+  — and what each one claims, in what order, under what conditions.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because different investors want different risk. Splitting a business's uncertain
+  cash flows into a safe senior claim and a risky residual claim lets both a pension fund and a venture
+  investor fund the same enterprise.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2 · Accounting N2 (the balance sheet is the priority ladder).</p>
+
+  <p><b>SUBTOPICS.</b> Bonds, coupons, yield to maturity · the inverse price-yield relationship · duration
+  and interest rate risk · credit risk and ratings · equity as the residual claim · dividends and buybacks
+  · dilution · forwards and futures · options and payoff asymmetry · mutual funds, ETFs, expense ratios and
+  fee drag.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free primary documents · <em>Title:</em> an actual bond or NCD prospectus and a mutual
+    fund Scheme Information Document, both free on SEBI's and the issuer's sites<br>
+    <em>Why this one:</em> free, and the legally required disclosure documents state the terms, the risks
+    and the fees precisely — including the parts the marketing brochure omits. Learning to find the fee
+    table and the risk factors is the practical skill.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Compute the fee that eats a third of your retirement</span>
+    Take a real mutual fund's expense ratio from its scheme document — say 1.8% for an active fund and
+    0.2% for an index fund. Project ₹10,000 monthly for 30 years at 11% gross, subtracting each fee.
+    <br><br>
+    The difference is not 1.6%. It is <strong>a large fraction of the final corpus</strong>, because the
+    fee compounds against you every year on a growing balance. Compute the exact rupee figure. Most people
+    have never done this arithmetic and are shocked by it.
+    <br><br>
+    Then do the bond exercise, which builds an intuition almost nobody has. Take a bond paying a fixed
+    coupon. Now suppose market rates rise by 2%. Compute the new price — it must fall, because your fixed
+    coupon is now uncompetitive. Then do the same for a bond with 20 years remaining versus 2 years. The
+    long bond moves far more. <mark>You have just derived duration, and simultaneously explained why rising
+    rates damage long-dated debt holders and why banks holding long bonds can fail when rates rise.</mark>
+    <br><br>
+    Finally, draw an option payoff by hand — profit against underlying price at expiry, for a call and a
+    put. The kink is the entire point: <em>limited loss, unlimited gain</em> is an asymmetry, and asymmetry
+    is what all of derivatives is for.
+    <br><br>
+    <em>The realisation to reach:</em> instruments are combinations of three things — a claim, a priority,
+    and an asymmetry. Anything you cannot decompose into those is something you should not buy.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Accounting N2 (priority is the balance sheet order) · Probability N7 (asymmetric
+  payoffs) · Game Theory (options as strategic flexibility) · Economics N5 (rates move all of this).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Valuation</h2>
+  <p class="sub">Where accounting, economics and probability all arrive at once.</p>
+
+  <p><b>WHAT IT IS.</b> Estimating what a business or asset is worth — by discounting its expected cash
+  flows, or by comparing it to similar assets.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because price and value are different, and every investment decision is a claim
+  that they differ in a particular direction. Valuation is the discipline of making that claim explicitly
+  enough to be wrong.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2 · Accounting N3–N6 · Business (you must understand the business first).</p>
+
+  <p><b>SUBTOPICS.</b> Intrinsic versus relative valuation · free cash flow to firm and to equity · the cost
+  of capital · terminal value and growth assumptions · multiples and comparable selection · why multiples
+  are DCFs with the assumptions hidden · valuing loss-making companies · margin of safety.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course + free spreadsheets · <em>Title:</em> Damodaran's <em>Valuation</em> class,
+    free video lectures with his published models<br>
+    <em>Why this one:</em> free, and he values real companies live, including ones he gets wrong and revisits
+    later. <strong>Watching an expert be uncertain in public is the fastest cure for false precision.</strong>
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Value a company you know, then find out why you were wrong</span>
+    Pick an Indian company whose product you personally use and understand physically. Pull five years of
+    financials free from its annual reports. Build a DCF: project revenue, margins and capital spending,
+    choose a discount rate, compute a value per share.
+    <br><br>
+    Compare to the market price. You will differ, possibly by a lot. Now the actual exercise:
+    <strong>work out what the market must be assuming</strong> to justify its price. Reverse the DCF —
+    hold the price fixed and solve for the growth rate implied. Is that growth rate plausible? Sometimes it
+    is obviously not, and that is interesting; more often it is entirely plausible and you learn that your
+    disagreement was an assumption, not an insight.
+    <br><br>
+    Then do the multiples version: compute the P/E of five companies in the same industry. They differ.
+    <mark>Work out what a P/E actually encodes — growth, risk and capital intensity — and you will find a
+    multiple is a compressed DCF with the assumptions hidden inside a single number.</mark>
+    <br><br>
+    Finally, the humility check: find a valuation you or an analyst made three years ago and score it
+    against what happened.
+    <br><br>
+    <em>The realisation to reach:</em> valuation does not produce a number, it produces a <em>set of
+    assumptions you are now accountable for.</em> The output's precision is entirely fake; the discipline
+    of stating the assumptions is entirely real.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Accounting (all inputs come from there) · Business (assumptions come from strategy)
+  · Probability N7 (margin of safety is risk-of-ruin management) · Psychology (anchoring, overconfidence).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Markets and price discovery</h2>
+  <p class="sub">How prices form, and in what precise sense markets are efficient.</p>
+
+  <p><b>WHAT IT IS.</b> The mechanics of trading — order books, liquidity, spreads — and the theory of how
+  information becomes price.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a price is not announced, it is <em>discovered</em> through the actions
+  of participants with different information and beliefs. Understanding the mechanism explains liquidity
+  crises, flash crashes and why "the market thinks" is a loose way of speaking.</p>
+
+  <p><b>DEPENDENCIES.</b> N3 · Economics N2 · Probability N5.</p>
+
+  <p><b>SUBTOPICS.</b> Order books, bid-ask spread, market and limit orders · liquidity and its
+  disappearance under stress · the efficient market hypothesis in its three forms · what "efficient"
+  does and does not claim · why active funds mostly underperform after fees · behavioural critiques ·
+  bubbles and reflexivity · insider information and its regulation.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free data + free regulator material · <em>Title:</em> NSE's free market data and
+    investor education material, alongside SEBI's free investor resources<br>
+    <em>Why this one:</em> free, primary, and the regulator's own material is unusually plain about costs,
+    conflicts and the empirical record of active management — which is not what the industry's marketing
+    says.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Watch liquidity vanish, and check whether skill persists</span>
+    Look at a live order book for a large-cap stock and then for a small-cap. Note the spread and the depth.
+    Now look again during the first minutes after market open, and around a major announcement.
+    <mark>Liquidity is not a property of an asset; it is a condition that disappears exactly when you most
+    want to sell.</mark>
+    <br><br>
+    Then run the persistence test on skill. Take the top ten performing equity funds from five years ago —
+    all published free. Where did they rank over the following five years? Repeat for a different starting
+    year. You will find little persistence, which is the empirical core of the efficiency argument, and you
+    derived it yourself rather than accepting it.
+    <br><br>
+    Then compute the cost of trading rather than holding: apply a realistic spread plus brokerage plus
+    short-term tax to a strategy trading monthly versus one holding for ten years, at identical gross
+    returns. The gap is large, and it is the strongest practical argument in this node.
+    <br><br>
+    Finally, study one Indian bubble with free contemporary reporting and identify the reflexive loop:
+    rising prices attracted buyers, whose buying raised prices, which validated the story. That is a
+    <a href="systems-thinking.html#n2">reinforcing loop</a>, and it works identically in reverse.
+    <br><br>
+    <em>The realisation to reach:</em> "efficient" does not mean prices are right. It means they already
+    reflect what is widely known — so beating the market requires either better information, a longer
+    horizon, or tolerance for a risk others avoid. Nothing else works.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking N2 (reflexivity) · Psychology (herding, narrative) · Probability
+  N5 (distinguishing skill from luck) · Distributed Systems (an order book is a consensus mechanism).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Leverage and fragility</h2>
+  <p class="sub">How finance breaks — and why it breaks the same way every time.</p>
+
+  <p><b>WHAT IT IS.</b> Borrowing to amplify returns, the maturity mismatch at the heart of banking, and the
+  mechanisms by which one institution's failure becomes everyone's.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because leverage is genuinely useful and genuinely amplifies both directions, and
+  because the institution that borrows short and lends long is both economically valuable and inherently
+  vulnerable to a loss of confidence.</p>
+
+  <p><b>DEPENDENCIES.</b> N2, N3 · Probability N4 (fat tails) · Systems Thinking N2, N4.</p>
+
+  <p><b>SUBTOPICS.</b> Leverage and the amplification of returns and losses · margin calls and forced
+  selling · maturity mismatch · bank runs and deposit insurance · contagion and interconnection · procyclical
+  behaviour · why risk models fail together · systemic versus idiosyncratic failure · moral hazard and
+  bailouts.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official report · <em>Title:</em> the RBI's <em>Financial Stability Report</em>,
+    published free twice a year, plus the free official inquiry reports into a crisis of your choice<br>
+    <em>Why this one:</em> free, and a regulator's own account of what it is worried about is a far better
+    education in fragility than any commentary. Read two consecutive editions and see what changed.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Amplify a small loss into ruin, then trace a real one</span>
+    Model an investment with 4× leverage. A 10% gain becomes roughly 40%. Now model a 25% loss — the equity
+    is gone entirely. Find the exact percentage move that wipes you out at 2×, 4× and 10× leverage, and
+    notice how small it becomes.
+    <br><br>
+    Then add the mechanism that turns a loss into a spiral: a margin call. When your equity falls below a
+    threshold you must sell, and if many leveraged holders sell the same asset simultaneously, the price
+    falls further, triggering more calls. Simulate it with a hundred leveraged participants and watch the
+    cascade. <mark>Nobody in the simulation behaves irrationally, and everyone is destroyed.</mark>
+    <br><br>
+    Now trace a real Indian case with free public material — the IL&amp;FS collapse and the NBFC liquidity
+    crisis that followed. Identify the maturity mismatch (short-term commercial paper funding long-term
+    infrastructure), the trigger, the contagion channel to mutual funds and other NBFCs, and the policy
+    response. Then compare its <em>structure</em> to 2008's, which had different instruments and an
+    identical shape.
+    <br><br>
+    <em>The realisation to reach:</em> financial crises are not caused by leverage alone. They are caused by
+    <strong>leverage plus a maturity mismatch plus correlated positions</strong> — and that combination
+    reappears every decade in a new costume, which is why recognising the structure matters more than
+    knowing the history.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Distributed Systems N7 (metastable failure and cascades — structurally identical) ·
+  Systems Thinking N4 (dominance shift) · Probability N4 (fat tails) · Economics N5 · World History (1929,
+  2008).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>70% of a valuation coming from terminal value</td><td>A DCF is assumptions made arithmetic</td></tr>
+      <tr><td>N2</td><td>CAGR below the arithmetic mean, always</td><td>Volatility subtracts from wealth</td></tr>
+      <tr><td>N3</td><td>1.6% in fees taking a large slice of 30 years</td><td>Fees compound against you</td></tr>
+      <tr><td>N4</td><td>Reverse-engineering the market's implied growth rate</td><td>Your disagreement is an assumption</td></tr>
+      <tr><td>N5</td><td>Last decade's top funds, this decade</td><td>Skill persistence is weak</td></tr>
+      <tr><td>N6</td><td>A margin-call cascade where nobody acts irrationally</td><td>Structure, not villainy</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="business.html">Business</a></td><td>N4 valuation and N1 cost of capital drive every investment decision</td></tr>
+      <tr><td>Geopolitics</td><td>Sanctions, reserve currencies and capital flows are financial statecraft</td></tr>
+      <tr><td>Distributed Systems</td><td>N6 cascades are structurally the same as metastable failure</td></tr>
+      <tr><td>Psychology</td><td>N5 — markets are where cognitive bias becomes measurable and expensive</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 17 · Finance</footer>
+
+</body>
+</html>

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mechanical Engineering — Atlas domain 03</title>
+<meta name="description" content="Statics, materials, machines, heat engines and fluids — reverse-engineered from objects you can hold." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Statics &amp; loads</a>
+  <a href="#n2">2 · Materials</a>
+  <a href="#n3">3 · Machine elements</a>
+  <a href="#n4">4 · Heat engines</a>
+  <a href="#n5">5 · Fluids</a>
+  <a href="#n6">6 · Manufacturing</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Mechanical Engineering</p>
+
+<div class="hero">
+  <div class="kicker">Domain 03 · Cluster C2 · gated by Mechanics + Thermodynamics</div>
+  <h1>Mechanical Engineering</h1>
+  <p class="dropcap">Mechanical engineering is the discipline of making physical things that carry loads,
+  transmit motion and convert energy <em>without breaking, for years, at an acceptable cost.</em> That last
+  clause is the whole difficulty — physics tells you what is possible, and this domain tells you what
+  survives a decade of use by people who do not care.</p>
+  <div class="why">
+    <b>The single idea.</b> Every mechanical design is a negotiation between <mark>strength, stiffness,
+    weight, cost and manufacturability</mark>, and you cannot maximise all five. Recognising which one is
+    binding lets you understand any object you pick up.
+  </div>
+  <div class="tags">
+    <span class="tag">#loads</span>
+    <span class="tag t2">#materials</span>
+    <span class="tag t3">#mechanisms</span>
+    <span class="tag">#engines</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">Physics says "possible". This domain says "for how long, and at what price".</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="physics.html#n2">Physics N2</a> and <a href="physics.html#n3">N3</a></td><td>Cars &amp; Transportation · Everyday Technology · Infrastructure (physical) · Geopolitics (manufacturing capability)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">The learning mode for this domain</span>
+    <strong>Reverse engineering.</strong> Unlike computing, mechanical objects are visible — you can hold
+    them, take them apart and see why each feature exists. <mark>Every ridge, rib, fillet and hole on a
+    plastic part is there for a reason, and the reasons are learnable by looking.</mark>
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>MECHANICAL ENGINEERING
+│
+├── 1 · STATICS &amp; LOADS .............. forces in things that do not move
+│   ├── Equilibrium and free-body diagrams
+│   ├── Tension, compression, shear, bending, torsion
+│   ├── Stress and strain
+│   └── Safety factors
+│
+├── 2 · MATERIALS ................... why things are made of what they are
+│   ├── Stiffness vs strength vs toughness
+│   ├── Ductile vs brittle failure
+│   ├── Fatigue — the cause of most real failures
+│   └── Steel, aluminium, plastics, composites
+│
+├── 3 · MACHINE ELEMENTS ............ transmitting and transforming motion
+│   ├── Levers, gears, ratios
+│   ├── Belts, chains, linkages
+│   ├── Bearings and friction
+│   └── Fasteners and joints
+│
+├── 4 · HEAT ENGINES ................ converting heat into motion
+│   ├── The four-stroke cycle
+│   ├── Efficiency and where the fuel goes
+│   ├── Diesel vs petrol
+│   └── Turbines and jets
+│
+├── 5 · FLUIDS ...................... liquids and gases in motion
+│   ├── Pressure and hydrostatics
+│   ├── Continuity and Bernoulli
+│   ├── Laminar vs turbulent
+│   └── Drag, lift, pumps
+│
+└── 6 · MANUFACTURING ............... how it actually gets made
+    ├── Casting, forging, machining, moulding
+    ├── Tolerance and fits
+    ├── Design for manufacture
+    └── Why unit cost falls with volume</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Statics and loads</h2>
+  <p class="sub">Where forces go when nothing is moving.</p>
+
+  <p><b>WHAT IT IS.</b> Analysing structures in equilibrium — the forces must sum to zero and the moments
+  must sum to zero — and identifying which parts are in tension, compression, shear or bending.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because materials are strong in some load types and weak in others. Concrete is
+  excellent in compression and nearly useless in tension, which is why reinforced concrete exists and why
+  understanding load type precedes choosing material.</p>
+
+  <p><b>DEPENDENCIES.</b> Physics N2.</p>
+
+  <p><b>SUBTOPICS.</b> Equilibrium · free-body diagrams · the five load types · stress as force per area ·
+  strain · second moment of area and why an I-beam is that shape · safety factors and why they vary by
+  industry.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free videos · <em>Title:</em> Practical Engineering (Grady Hillhouse) — free structural
+    and civil engineering videos with physical demonstrations<br>
+    <em>Why this one:</em> free, and each video builds a small physical model and loads it to failure. You
+    see the failure mode before you learn its name, which is the correct order.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Break a sheet of paper's assumptions</span>
+    Hold a sheet of A4 horizontally by one edge. It flops. Now fold it into a corrugated zigzag and hold it
+    the same way. <strong>It supports a book.</strong> Nothing changed about the material — only the
+    distribution of material away from the bending axis.
+    <br><br>
+    That is the second moment of area, and it is why I-beams, corrugated sheets, bicycle frames and hollow
+    tubes look the way they do. <mark>Stiffness in bending depends on shape far more than on quantity of
+    material.</mark> Quantify it: a tube of the same weight as a solid rod is dramatically stiffer, and you
+    can feel this with a rolled paper tube versus a rolled solid paper rod.
+    <br><br>
+    Then go find it: examine a plastic chair, a bicycle frame, a table underside, a car door skin. Every one
+    has ribs, folds or tubes placed exactly where bending occurs. <em>Now you can read those features rather
+    than merely see them.</em>
+    <br><br>
+    <em>The realisation to reach:</em> mechanical design is mostly about putting material where the stress
+    is and removing it everywhere else — which is why efficient structures look skeletal.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Physics N2 · Cars (crash structures) · Everyday Technology (why casings have ribs)
+  · Biology (bone is optimised the same way).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Materials</h2>
+  <p class="sub">Why things are made of what they are made of.</p>
+
+  <p><b>WHAT IT IS.</b> The properties that determine material choice — stiffness, strength, toughness,
+  density, cost, corrosion resistance — and the failure modes each is vulnerable to.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because material selection is where most mechanical trade-offs are actually
+  resolved, and because <strong>the property people conflate — strength versus stiffness versus
+  toughness — are independent and frequently opposed.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> N1.</p>
+
+  <p><b>SUBTOPICS.</b> Stiffness versus strength versus toughness, precisely distinguished · ductile and
+  brittle failure · fatigue and cyclic loading · stress concentration at corners and holes · creep · the
+  main families: steels, aluminium, plastics, composites, ceramics · why cost per kilogram is rarely the
+  deciding factor.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free reference · <em>Title:</em> materials property charts (Ashby-style), widely available
+    free, showing stiffness against density and strength against cost<br>
+    <em>Why this one:</em> free, and a single chart makes the entire selection problem visual —
+    <mark>you can see immediately why aircraft use aluminium, why buildings use concrete, and why nothing
+    is best at everything.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find the crack that started at a corner</span>
+    Collect broken plastic items — a snapped clip, a cracked casing, a broken toy. Examine each fracture
+    with a magnifier and find where it <em>started</em>.
+    <br><br>
+    It will almost always be a sharp internal corner, a hole, or a moulding line. <strong>Stress
+    concentrates at geometric discontinuities</strong>, and a sharp corner can multiply local stress
+    several times over. That is why every well-designed part has a rounded fillet where sections meet, and
+    why the absence of one is a reliable predictor of where it will break.
+    <br><br>
+    Then demonstrate fatigue, which causes most real-world failures: take a paperclip and pull it hard —
+    it does not break. Now bend it back and forth twenty times at the same spot. It snaps at a load far
+    below its strength. <mark>Fatigue means a part can fail at a stress it survived a million times
+    before</mark>, which is why aircraft components have retirement lives measured in cycles rather than
+    condition.
+    <br><br>
+    Then examine one item that did <em>not</em> break: find the fillets, the ribs, the increased thickness
+    at load points. Someone chose those, and you can now see the choice.
+    <br><br>
+    <em>The realisation to reach:</em> things do not break because the material was weak. They break at
+    stress concentrations, after repetition, in ways predictable from geometry alone.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Cars (crash energy absorption) · Everyday Technology · Geopolitics (steel,
+  aluminium, rare earths) · Biology (bone remodelling).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Machine elements</h2>
+  <p class="sub">Transmitting and transforming motion — the vocabulary of every mechanism.</p>
+
+  <p><b>WHAT IT IS.</b> The standard components that move force and motion around: levers, gears, belts,
+  linkages, bearings and fasteners.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because power is produced in one form and needed in another — wrong speed, wrong
+  torque, wrong direction, wrong place. These elements perform the conversion, and every one trades
+  something for something else.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2 · Physics N2.</p>
+
+  <p><b>SUBTOPICS.</b> Mechanical advantage · gear ratios and the torque-speed trade · gear trains ·
+  belts, chains and their slip characteristics · four-bar linkages · cams · bearings and friction ·
+  lubrication · threaded fasteners and preload · why bolts loosen.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free reference · <em>Title:</em> the mechanism animations and 507 Mechanical Movements
+    collections available free online<br>
+    <em>Why this one:</em> free, and mechanisms are best learned by watching them move. Seeing fifty
+    linkages animated builds a vocabulary that no text can.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Take apart a bicycle drivetrain, then a mechanical clock</span>
+    A bicycle is the most accessible complete mechanical system. Count the teeth on the front and rear
+    sprockets and compute the ratio for each gear. Predict which gear gives most torque and which most
+    speed, then ride it and confirm.
+    <br><br>
+    <mark>Power in equals power out; the gear ratio only trades torque against speed.</mark> Nothing is
+    gained — that is the fundamental constraint, and it is conservation of energy from
+    <a href="physics.html#n2">Physics N2</a> appearing as a design limit.
+    <br><br>
+    Then find a cheap mechanical wind-up clock or an old wind-up toy and dismantle it. Trace the path from
+    the spring to the hands: each gear stage changes speed by its tooth ratio, and the escapement converts
+    continuous unwinding into discrete ticks. Count the teeth and verify the ratios produce exactly one
+    revolution per hour.
+    <br><br>
+    Then examine bearings: spin a skateboard wheel and time how long it takes to stop. Then a plain bushing.
+    The difference is rolling versus sliding friction, and it is the reason bearings exist.
+    <br><br>
+    <em>The realisation to reach:</em> a mechanism is a physical algorithm. It has inputs, transformations
+    and outputs, and reading one is the same skill as reading code — with the advantage that you can see
+    every step at once.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Cars (transmission) · Physics N2 · Everyday Technology (any device with moving
+  parts) · Computing (mechanism as algorithm).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Heat engines</h2>
+  <p class="sub">Converting heat into motion, badly, because the second law says so.</p>
+
+  <p><b>WHAT IT IS.</b> Machines that take heat from a hot source, convert part of it into work, and reject
+  the rest — internal combustion engines, steam and gas turbines, jets.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because chemical energy in fuel is dense and portable, but useless until
+  converted to motion. The conversion is fundamentally limited, and most of the fuel becomes heat you did
+  not want.</p>
+
+  <p><b>DEPENDENCIES.</b> N3 · <a href="physics.html#n3">Physics N3</a>.</p>
+
+  <p><b>SUBTOPICS.</b> The four-stroke cycle · compression ratio and knock · diesel versus petrol
+  ignition · thermal, mechanical and overall efficiency · where the fuel energy actually goes · turbines
+  and the Brayton cycle · turbine inlet temperature as the binding constraint · turbocharging.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free videos · <em>Title:</em> Engineering Explained and Lesics — free, animated engine
+    cycle explanations<br>
+    <em>Why this one:</em> free, and engine cycles are inherently four-dimensional; animation conveys in
+    ninety seconds what diagrams struggle with.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Account for every unit of fuel energy</span>
+    Take a petrol car's published figures — power output, fuel consumption at a given speed — and compute
+    where the energy goes. Fuel energy in, useful work out, and the difference.
+    <br><br>
+    You will find roughly <strong>a quarter to a third becomes motion</strong>, and the rest leaves as
+    exhaust heat and radiator heat. That is not poor engineering; it is close to the
+    <a href="physics.html#n3">Carnot limit</a> for the temperatures involved. Compute that limit from the
+    combustion and exhaust temperatures and compare.
+    <br><br>
+    Then compare to an electric motor, which converts over 90%, and locate the honest comparison: the
+    electricity had to be generated, often by a heat engine somewhere else, subject to the same limit.
+    <mark>The efficiency did not disappear — it moved to the power station, where it can be managed at
+    larger scale.</mark>
+    <br><br>
+    Then examine a real engine: find a cutaway or a scrapyard engine, identify the four strokes physically,
+    and locate the compression ratio in the geometry. Then reason about why higher compression means more
+    efficiency and why fuel octane limits it.
+    <br><br>
+    <em>The realisation to reach:</em> engine "inefficiency" is mostly physics, not sloppiness — and every
+    improvement of the last century has been about raising the hot-side temperature, which is limited by
+    what materials survive.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Physics N3 · Cars · Geopolitics (oil) · Materials (turbine blades).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Fluids</h2>
+  <p class="sub">The least intuitive node, and the one governing weather, flight, pumps and pipes.</p>
+
+  <p><b>WHAT IT IS.</b> The behaviour of liquids and gases at rest and in motion — pressure, flow,
+  turbulence, drag and lift.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a very large fraction of engineering moves fluids: water supply, engine
+  cooling, aerodynamics, HVAC, blood, weather. It is also where the mathematics genuinely gets hard, so
+  commander-level means intuition plus dimensionless numbers rather than equations.</p>
+
+  <p><b>DEPENDENCIES.</b> Physics N2, N3.</p>
+
+  <p><b>SUBTOPICS.</b> Pressure and depth · buoyancy · continuity — what goes in comes out · Bernoulli and
+  its correct statement · laminar versus turbulent flow · the Reynolds number · boundary layers · drag and
+  its velocity-squared dependence · lift · pumps and head · pipe losses.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free videos + free simulation · <em>Title:</em> Practical Engineering's fluids videos,
+    plus PhET "Fluid Pressure and Flow"<br>
+    <em>Why this one:</em> both free, and fluids resist intuition badly enough that visible demonstrations
+    are worth more here than in any other node.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Feel drag square itself</span>
+    Put your hand flat out of a moving vehicle's window at 30 km/h, then at 60. The force does not double —
+    <strong>it roughly quadruples</strong>, because drag scales with the square of velocity.
+    <br><br>
+    Now use it: compute the power needed to overcome drag, which scales with velocity <em>cubed</em>, and
+    explain from that alone why fuel consumption rises so sharply above about 80 km/h, why highway
+    efficiency drops with speed, and why speed limits have a fuel argument as well as a safety one.
+    <br><br>
+    Then do the continuity experiment: partially cover a tap or hose outlet with your thumb. The same volume
+    must pass through a smaller area, so velocity rises. That is continuity, and combined with Bernoulli it
+    explains carburettors, atomisers and why a shower curtain moves inward.
+    <br><br>
+    Then find turbulence: run a tap very slowly and watch the smooth, glassy column. Increase the flow and
+    watch it break into chaotic churning at a specific point. <mark>You have just crossed the critical
+    Reynolds number, and that transition is one of the sharpest and least explicable phenomena in classical
+    physics.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> fluid behaviour changes character abruptly rather than gradually, and
+    almost every practical fluids problem is really the question of which regime you are in.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Cars (aerodynamics) · World Geography (atmosphere and ocean circulation) ·
+  Biology (blood flow) · Systems Thinking N4 (a regime change).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Manufacturing</h2>
+  <p class="sub">The constraint that shapes every product you own.</p>
+
+  <p><b>WHAT IT IS.</b> The processes by which designs become objects — casting, forging, machining,
+  moulding, forming, additive — and the tolerances and costs each implies.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a design that cannot be made economically does not exist. Manufacturing
+  constraints explain more product features than aesthetics or function do.</p>
+
+  <p><b>DEPENDENCIES.</b> N2, N3.</p>
+
+  <p><b>SUBTOPICS.</b> The main processes and their economics · tooling cost versus per-unit cost · why
+  injection moulding needs volume · tolerance, fit and clearance · surface finish · assembly and part
+  count reduction · design for manufacture · why draft angles and uniform wall thickness exist.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free videos · <em>Title:</em> factory process documentaries and manufacturer process
+    videos — freely available for casting, injection moulding, stamping and machining<br>
+    <em>Why this one:</em> free, and watching a part be made removes an enormous amount of mystery. Ten
+    videos covering the main processes is sufficient for commander-level.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Read the manufacturing process off a plastic part</span>
+    Take any injection-moulded item — a bottle cap, a remote casing, a plastic chair. Find the
+    <strong>ejector pin marks</strong> (small circles), the <strong>parting line</strong> (a faint seam
+    around the part), the <strong>gate</strong> (where molten plastic entered), and the
+    <strong>draft angle</strong> (walls slightly tapered so the part can leave the mould).
+    <br><br>
+    Then notice the wall thickness is uniform almost everywhere, and where a thicker section was needed,
+    the designer used ribs instead. <mark>That is not a style choice — thick sections cool unevenly and sink,
+    so uniform walls plus ribs is the only way to get stiffness without defects.</mark>
+    <br><br>
+    Now do the economics: injection moulding requires a steel mould costing lakhs, but each part then costs
+    a few rupees. 3D printing needs no tooling but costs far more per part. Compute the break-even volume.
+    <strong>That single number decides which process every product in your house used</strong>, and explains
+    why prototypes look different from production items.
+    <br><br>
+    Then count parts on two competing products. Fewer parts almost always means cheaper assembly and higher
+    reliability, and it is one of the clearest signals of design maturity.
+    <br><br>
+    <em>The realisation to reach:</em> the shape of manufactured objects is dictated by the process that
+    made them at least as much as by their function — and once you can see the process, you can read the
+    object's history.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Business (unit economics, tooling as fixed cost) · Economics (scale economies) ·
+  Geopolitics (manufacturing capability as power) · Cars.</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Folded paper supporting a book</td><td>Shape beats quantity of material</td></tr>
+      <tr><td>N2</td><td>A paperclip snapping after twenty bends</td><td>Fatigue, not strength</td></tr>
+      <tr><td>N3</td><td>Counting teeth and predicting the gear you need</td><td>Ratios trade, never gain</td></tr>
+      <tr><td>N4</td><td>Two-thirds of your fuel leaving as heat</td><td>Carnot, not carelessness</td></tr>
+      <tr><td>N5</td><td>Drag quadrupling when speed doubles</td><td>Nonlinearity you can feel</td></tr>
+      <tr><td>N6</td><td>Reading ejector marks and draft angles</td><td>Process dictates shape</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="cars-transportation.html">Cars &amp; Transportation</a></td><td>All six nodes at once — a car is this domain assembled</td></tr>
+      <tr><td><a href="everyday-technology.html">Everyday Technology</a></td><td>N2, N3 and N6 in every physical product</td></tr>
+      <tr><td>Geopolitics</td><td>N6 — manufacturing capability is national power</td></tr>
+      <tr><td>Business</td><td>N6 — tooling is fixed cost, which sets minimum viable volume</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 03 · Mechanical Engineering</footer>
+
+</body>
+</html>

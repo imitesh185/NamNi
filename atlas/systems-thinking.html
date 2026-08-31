@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Systems Thinking — Atlas domain 20</title>
+<meta name="description" content="Stocks, flows, feedback, delays and leverage points — the lens that turns every other domain into a machine with behaviour." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this is a lens</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Stocks &amp; flows</a>
+  <a href="#n2">2 · Feedback loops</a>
+  <a href="#n3">3 · Delays</a>
+  <a href="#n4">4 · Nonlinearity</a>
+  <a href="#n5">5 · Archetypes</a>
+  <a href="#n6">6 · Leverage points</a>
+  <a href="#n7">7 · Models &amp; their limits</a>
+  <h4>Exit</h4>
+  <a href="#sightings">Sightings across the Atlas</a>
+  <a href="#handson">The hands-on spine</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Systems Thinking</p>
+
+<div class="hero">
+  <div class="kicker">Domain 20 · Lens · no prerequisites · applies to all six clusters</div>
+  <h1>Systems Thinking</h1>
+  <p class="dropcap">The second lens, and the cheapest high-value node in the Atlas — it has no
+  prerequisites and it changes how you read every other domain. Its claim is simple and unreasonably
+  productive: <em>behaviour over time is produced by structure, not by events or by the people involved.</em></p>
+  <div class="why">
+    <b>The single idea.</b> If a system keeps producing a result you dislike, <mark>the structure is
+    generating it and replacing the people will not help.</mark> Deming's version: every system is
+    perfectly designed to get the results it gets. This turns blame into diagnosis, which is the whole
+    practical value.
+  </div>
+  <div class="tags">
+    <span class="tag">#stocks-flows</span>
+    <span class="tag t2">#feedback</span>
+    <span class="tag t3">#delays</span>
+    <span class="tag">#leverage</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this is a lens, and how this page relates to your note</h2>
+  <p class="sub">You already built the deep version. This page is the map around it.</p>
+
+  <p>Your <a href="../tracks/systems-thinking/overview.html">Systems Thinking working note</a> is a
+  21-section treatment with frameworks, archetypes, a design protocol and worked examples. It is the
+  primary resource for this domain and nothing here replaces it.</p>
+
+  <p>What this page adds is the thing a single-domain note cannot: <strong>the sightings</strong> — where
+  each concept reappears, by name, in the other domains of the Atlas. That cross-referencing is the actual
+  product of a lens, because a lens is worth nothing until you can see through it at something specific.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td>Nothing. Optionally <a href="mathematics.html#n5">Mathematics N5</a> as a concept only — a stock is an integral of its flows.</td><td>Every domain. Most directly: Economics · Infrastructure · Distributed Systems · Human Behavior · Geopolitics · Biology</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>SYSTEMS THINKING
+│
+├── 1 · STOCKS &amp; FLOWS ............... what accumulates, and what changes it
+├── 2 · FEEDBACK LOOPS ............... reinforcing and balancing
+├── 3 · DELAYS ....................... the source of most oscillation
+├── 4 · NONLINEARITY &amp; DOMINANCE ..... why systems change character suddenly
+├── 5 · ARCHETYPES ................... recurring structures with known behaviour
+├── 6 · LEVERAGE POINTS .............. where to intervene, ranked
+└── 7 · MODELS &amp; THEIR LIMITS ........ mental models, and why they mislead</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Stocks and flows</h2>
+  <p class="sub">The distinction most people cannot perform, even when they can define it.</p>
+
+  <p><b>WHAT IT IS.</b> A stock is a quantity that accumulates — water, money, code, trust, carbon,
+  goodwill. A flow is the rate at which it changes. Stocks have memory; flows do not.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because confusing the two produces systematically wrong predictions in public
+  debate, in engineering and in personal finance. <em>Reducing the rate of increase is not reducing the
+  level</em>, and enormous quantities of confusion follow from missing that.</p>
+
+  <p><b>DEPENDENCIES.</b> None. Mathematics N5 as concept only.</p>
+
+  <p><b>SUBTOPICS.</b> Stocks as memory · inflows and outflows · net rate · why a stock cannot change
+  instantly · stock-and-flow diagrams · units, which disambiguate immediately.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Your own note · <em>Title:</em>
+    <a href="../tracks/systems-thinking/overview.html#stocks">Systems Thinking, §07 Stocks &amp; flows</a><br>
+    <em>Why this one:</em> already written, already yours.
+    <br><br>
+    <b>DEEPER (optional)</b> — MIT OCW 15.871 <em>System Dynamics</em> (free) for the formal modelling.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The bathtub question that most graduates get wrong</span>
+    A bathtub has water flowing in and out. You are shown a graph of the inflow and outflow rates over time
+    and asked to sketch the water level. This has been given to MIT graduate students, and a large
+    proportion get it wrong.
+    <br><br>
+    Do it yourself before reading anything: draw inflow rising and falling above a constant outflow, then
+    sketch the level. The level <em>keeps rising</em> for as long as inflow exceeds outflow — it only peaks
+    when the two curves <strong>cross</strong>, not when inflow peaks.
+    <br><br>
+    Now apply the identical structure to four real arguments and notice they are one argument:
+    <em>"emissions fell this year"</em> versus atmospheric concentration; <em>"the deficit is smaller"</em>
+    versus national debt; <em>"we closed more tickets than last month"</em> versus the backlog;
+    <em>"hiring slowed"</em> versus headcount.
+    <br><br>
+    <mark>In every case a falling flow is being reported as if it were a falling stock.</mark> Once you can
+    see this you will notice it weekly in the news, and it is the single most immediately useful thing in
+    this domain.
+    <br><br>
+    <em>The realisation to reach:</em> stocks are why systems have history and why they respond slowly.
+    You cannot argue a stock down; you can only change its flows and wait.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Economics (debt, inventory, capital) · Accounting (balance sheet is stocks, P&amp;L
+  is flows — the single clearest instance of this distinction anywhere) · Data Engineering (state versus
+  event) · Biology (metabolism).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Feedback loops</h2>
+  <p class="sub">The structure that produces behaviour, and the reason effects become causes.</p>
+
+  <p><b>WHAT IT IS.</b> A closed causal chain where a stock's level influences the flows that change it.
+  Balancing loops resist change and seek a goal; reinforcing loops amplify change and produce exponential
+  behaviour in either direction.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because linear cause-and-effect thinking cannot explain persistent behaviour.
+  Anything that holds steady despite disturbance has a balancing loop; anything that runs away has a
+  reinforcing one.</p>
+
+  <p><b>DEPENDENCIES.</b> N1.</p>
+
+  <p><b>SUBTOPICS.</b> Balancing loops and goal-seeking · reinforcing loops and exponential behaviour ·
+  loop dominance · causal loop diagrams · policy resistance · why "the obvious fix" often strengthens the
+  loop it was meant to break.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free interactive tool · <em>Title:</em> Loopy (ncase.me/loopy) — free, browser-based
+    causal loop simulator<br>
+    <em>Why this one:</em> free, requires no installation, and you draw a loop and immediately watch it
+    behave. <mark>The gap between "I understand feedback" and "I predicted what this loop would do" closes
+    in about ten minutes of using it.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find the loop that is producing something you dislike</span>
+    Pick a persistent problem in your own life or work — one that keeps returning after you fix it. Draw it
+    in Loopy as a causal loop diagram. The rule: <strong>every arrow must be a causal claim you would
+    defend</strong>, and you must find at least one closed loop.
+    <br><br>
+    The recurrence is the evidence. A problem that returns after being fixed is being <em>generated</em>,
+    and something in your diagram is generating it. Common finds: technical debt (less time → shortcuts →
+    more debt → less time), alert fatigue, deadline pressure, and the classic
+    <a href="distributed-systems.html#n7">retry storm</a>.
+    <br><br>
+    Then run the second half, which is where the value is. For each loop, identify the intervention you
+    have been making. Most people discover they have been repeatedly treating a <em>symptom outflow</em>
+    while the loop keeps refilling the stock — which is the "shifting the burden" archetype, arrived at
+    from your own data rather than from a list.
+    <br><br>
+    Then simulate: in Loopy, weaken one link and watch what the whole structure does. Some changes do
+    nothing. One usually changes everything.
+    <br><br>
+    <em>The realisation to reach:</em> you have been intervening on events. The structure was producing
+    them, and it will keep producing them at exactly the rate the loop allows.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="infrastructure-cloud.html#n2">Infrastructure N2</a> (reconciliation is a
+  balancing loop) · <a href="networking.html#n4">Networking N4</a> (congestion control is a balancing loop)
+  · <a href="distributed-systems.html#n7">Distributed Systems N7</a> (retry storms are reinforcing) ·
+  Economics (central banking) · Biology (homeostasis) · Geopolitics (arms races).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Delays</h2>
+  <p class="sub">The most underestimated element, and the source of nearly all oscillation.</p>
+
+  <p><b>WHAT IT IS.</b> The lag between an action and its visible effect, or between a change in a stock and
+  the perception of that change.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because nothing is instantaneous, and a balancing loop with a delay does not
+  settle smoothly — it overshoots, corrects, overshoots again. <strong>Oscillation almost never requires an
+  oscillating cause; a delay is sufficient.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> N2.</p>
+
+  <p><b>SUBTOPICS.</b> Perception, decision and action delays · overshoot and oscillation · why longer
+  delays require gentler responses · the bullwhip effect · delays as the reason good policies look like
+  failures.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free simulation · <em>Title:</em> The Beer Distribution Game — free browser versions of
+    the MIT supply chain simulation exist and can be played solo<br>
+    <em>Why this one:</em> free, and it is the classic demonstration. Every player behaves reasonably, every
+    player blames the others, and the wild oscillation is produced entirely by the delay structure. It
+    cannot be understood by description.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Create an oscillation out of nothing but a lag</span>
+    Simulate a thermostat in twenty lines. A room loses heat at a constant rate; a heater turns on when
+    measured temperature is below target. With no delay, the temperature holds steady near the set point.
+    <br><br>
+    Now add a delay to the <em>sensor</em> — five time steps between the real temperature and the reading.
+    The temperature begins to oscillate, and the system overshoots in both directions, despite nothing
+    changing about the goal or the heater. Increase the delay and watch the swings grow until the system
+    is unstable.
+    <br><br>
+    Then discover the counter-intuitive fix. Make the controller <strong>respond more weakly</strong> —
+    correct only a fraction of the perceived gap each step. The oscillation damps.
+    <mark>In a system with delays, responding more aggressively makes things worse, and the correct action
+    is to act less and wait.</mark>
+    <br><br>
+    Finally, find the same structure in three real places: the shower where you scald yourself adjusting
+    the tap, an interest rate change taking a year to reach inflation, and autoscaling that thrashes
+    because the metric window is longer than the scaling interval.
+    <br><br>
+    <em>The realisation to reach:</em> most oscillation is self-inflicted, and the aggressive corrective
+    action that feels responsible is frequently the cause.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Economics (monetary policy lag) · Infrastructure (autoscaling thrash) ·
+  Cars (control systems) · Human Behavior (delayed consequences and poor learning) · Climate.</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Nonlinearity and dominance shifts</h2>
+  <p class="sub">Why systems behave one way for years and then suddenly behave differently.</p>
+
+  <p><b>WHAT IT IS.</b> Relationships where output is not proportional to input, and situations where which
+  loop <em>dominates</em> the system's behaviour changes as conditions change.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because real systems have limits, saturations and thresholds. A system dominated
+  by a reinforcing loop grows until a balancing loop becomes stronger — and the transition can be abrupt
+  enough to look like a different system.</p>
+
+  <p><b>DEPENDENCIES.</b> N2, N3 · Mathematics N2.</p>
+
+  <p><b>SUBTOPICS.</b> Nonlinear relationships · thresholds and tipping points · loop dominance and shifts ·
+  limits to growth · carrying capacity · hysteresis, where the path back differs from the path out ·
+  path dependence.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Your own note · <em>Title:</em>
+    <a href="../tracks/systems-thinking/overview.html#nonlin">Systems Thinking, §10 Nonlinearity &amp; dominance</a><br>
+    <em>Why this one:</em> already written and already connected to the surrounding machinery.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Watch one system become two</span>
+    Simulate logistic growth: a population growing at a rate proportional to its size, limited by a
+    carrying capacity. Early on it looks exponential. Later it flattens. Plot it and mark the exact moment
+    the balancing loop overtakes the reinforcing one — <strong>nothing external changed at that moment.</strong>
+    <br><br>
+    Now connect it to something you have already measured. Your
+    <a href="probability.html#n6">queue simulation</a> did this: latency was flat and boring until
+    utilisation approached one, then went vertical. Same structure. Return to that plot and identify the
+    dominance shift on it.
+    <br><br>
+    Then explore hysteresis, which is the part that surprises people: build a system with a threshold where
+    the level to <em>trigger</em> a state change differs from the level to <em>reverse</em> it. Reputational
+    damage, ecosystem collapse, and a database that thrashes into swap all behave this way.
+    <mark>Getting back to where you were requires going further than where you broke.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> "it worked fine until it suddenly didn't" is almost never a sudden
+    event. It is a dominance shift that was approaching for a long time, invisibly.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N6 (the queue knee) · Distributed Systems N7 (metastable failure) ·
+  Economics (bubbles, recessions) · Biology (population dynamics) · Geopolitics (escalation thresholds).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Archetypes</h2>
+  <p class="sub">A small catalogue of structures that recur everywhere, with known behaviour and known fixes.</p>
+
+  <p><b>WHAT IT IS.</b> Named, recurring combinations of loops and delays — limits to growth, shifting the
+  burden, tragedy of the commons, escalation, success to the successful, fixes that fail.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because these structures appear in unrelated fields with identical dynamics.
+  Recognising one gives you both a prediction and a shortlist of interventions that have historically
+  worked.</p>
+
+  <p><b>DEPENDENCIES.</b> N2, N3, N4.</p>
+
+  <p><b>SUBTOPICS.</b> The core archetypes and their signature behaviour over time · the standard leverage
+  for each · how to recognise one from a symptom description alone.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Your own note · <em>Title:</em>
+    <a href="../tracks/systems-thinking/overview.html#archetypes">Systems Thinking, §11 System archetypes</a><br>
+    <em>Why this one:</em> the catalogue is already assembled with your own examples attached.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Diagnose a real news story from its structure</span>
+    Take a current controversy from a newspaper — groundwater depletion, a fisheries dispute, road
+    congestion after a road was widened, an antibiotic resistance story, a subsidy that made prices rise.
+    <br><br>
+    Before reading any analysis, identify the archetype and <strong>write down what the structure predicts
+    will happen next.</strong> Then read what the commentators say. You will frequently find they are
+    debating the actors' motives while the structure explains the outcome regardless of motive.
+    <br><br>
+    The road-widening one is the most instructive: adding capacity reduces travel time, which makes driving
+    more attractive, which increases traffic until congestion returns to roughly its previous level. This
+    is induced demand, it is a balancing loop with a delay, and it has been observed for decades while
+    remaining politically invisible.
+    <br><br>
+    Do this for six stories over time and keep your predictions.
+    <mark>Structure predicts better than motive, and having a written record proves it to you.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> most public argument is about who to blame. The archetype tells you
+    that swapping the actors would produce the same outcome, which redirects the question towards
+    something answerable.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Economics (commons, externalities) · Geopolitics (escalation, security dilemma) ·
+  Human Behavior (collective action) · Indian Politics (subsidy dynamics, groundwater).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Leverage points</h2>
+  <p class="sub">Where to push, ranked from weakest to strongest — and why we intuitively push on the weakest.</p>
+
+  <p><b>WHAT IT IS.</b> Meadows' ordered list of places to intervene in a system, from adjusting parameters
+  at the bottom to changing goals and paradigms at the top.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because effort is finite and the returns from different interventions differ by
+  orders of magnitude. <strong>The places most obvious and most politically available are the least
+  effective</strong>, which is why so much well-intentioned effort produces so little change.</p>
+
+  <p><b>DEPENDENCIES.</b> N1–N5.</p>
+
+  <p><b>SUBTOPICS.</b> The twelve leverage points · parameters as the weakest · buffers, stock structure,
+  delays · information flows · rules · self-organisation · goals · paradigms · why high-leverage points are
+  hard to move and often resisted.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free essay · <em>Title:</em> Donella Meadows, "Leverage Points: Places to Intervene in a
+    System" — freely available from the Donella Meadows Project<br>
+    <em>Why this one:</em> free, about twenty pages, and one of the highest value-per-page documents in
+    this entire Atlas. Read it once a year.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Rank your own interventions and find the wasted effort</span>
+    Take the loop diagram you drew in N2. List every intervention you have actually attempted on that
+    problem. Now place each one on Meadows' ladder.
+    <br><br>
+    Almost everything you have tried will sit in the bottom third — adjusting parameters, adding buffers,
+    working harder. That is not a personal failing; it is what the bottom of the ladder is for, because
+    those are the interventions that are <em>available</em> to an individual without permission.
+    <br><br>
+    Then do the harder half: identify one intervention at the level of <strong>information flow</strong>
+    (making a consequence visible to whoever causes it) and one at the level of <strong>rules</strong>.
+    Information flow is usually the highest-leverage point a person can actually reach alone, and it is
+    consistently underused. Making the true cost of a slow query, a shortcut, or a decision visible to the
+    person taking it changes behaviour without changing anybody's incentives on paper.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>the interventions that are easiest to make are the ones the
+    system is most able to absorb.</mark> That is not a coincidence — it is why the system is stable.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Infrastructure N5 (observability is an information-flow intervention) · Business
+  (incentive design) · Indian Politics (policy design) · Economics (Pigouvian taxes make externalities
+  visible) · Psychology (feedback and behaviour change).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> Models and their limits</h2>
+  <p class="sub">The self-aware node — why systems thinking must be applied to systems thinking.</p>
+
+  <p><b>WHAT IT IS.</b> The recognition that every model, mental or formal, is a simplification chosen for a
+  purpose, and that its boundary is a decision with consequences.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a systems diagram is enormously persuasive and can be completely wrong.
+  Choosing the boundary determines the conclusion, and the choice is usually unexamined.</p>
+
+  <p><b>DEPENDENCIES.</b> All of the above · Mathematics N6 · Psychology (bias).</p>
+
+  <p><b>SUBTOPICS.</b> Model boundaries and what is left outside · the map/territory distinction ·
+  bounded rationality · why people behave sensibly given their local information · sensitivity analysis ·
+  the danger of a diagram that explains everything.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Your own note · <em>Title:</em>
+    <a href="../tracks/systems-thinking/overview.html#learning">Systems Thinking, §14 Learning &amp; mental models</a>
+    and §19 Failure modes<br>
+    <em>Why this one:</em> you have already written the failure modes, which is the part most treatments of
+    this subject omit entirely.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Move the boundary and reverse the conclusion</span>
+    Take any diagram you have drawn and <strong>redraw it twice with different boundaries</strong> — once
+    much narrower, once much wider. For a technical example: model a slow service as the service alone,
+    then as the service plus its callers, then as the service plus its callers plus the team's incentives
+    and on-call rotation.
+    <br><br>
+    Each boundary produces a different diagnosis and a different recommended fix, and each is internally
+    coherent. The narrow model says optimise the code. The widest one says the on-call burden is causing
+    the shortcuts that cause the slowness.
+    <br><br>
+    Then find your own bounded rationality: identify a person in the system whose behaviour looks
+    irrational to you, and model the system <em>from their information set</em> — what they can see, what
+    they are measured on, what they are told. <mark>Their behaviour will usually become locally
+    rational</mark>, which relocates the problem from their character to the structure they sit inside.
+    <br><br>
+    <em>The realisation to reach:</em> a systems diagram is an argument, not a photograph. Its most
+    important content is what you left outside the boundary, and that content is invisible on the page.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Psychology (bias, bounded rationality) · World Philosophy (models and reality) ·
+  Mathematics N6 (all models are wrong) · AI N8 (a model has no access to what it excluded).</p>
+</section>
+
+<section id="sightings">
+  <h2><span class="num">::</span> Sightings across the Atlas</h2>
+  <p class="sub">The actual product of a lens. Every one of these is the same structure wearing local clothing.</p>
+
+  <table>
+    <thead><tr><th>Concept</th><th>Where it appears elsewhere in this Atlas</th></tr></thead>
+    <tbody>
+      <tr><td>Balancing loop</td><td><a href="infrastructure-cloud.html#n2">Orchestration reconciliation</a> · <a href="networking.html#n4">TCP congestion control</a> · thermostats · homeostasis · central bank inflation targeting</td></tr>
+      <tr><td>Reinforcing loop</td><td><a href="distributed-systems.html#n7">Retry storms</a> · compound interest · technical debt · network effects · arms races · viral spread</td></tr>
+      <tr><td>Stock vs flow</td><td>Balance sheet vs P&amp;L in Accounting · <a href="data-engineering.html#n3">table vs log</a> · debt vs deficit · backlog vs throughput</td></tr>
+      <tr><td>Delay causing oscillation</td><td>Autoscaling thrash · monetary policy lag · the bullwhip effect · <a href="databases.html#n3">stale query statistics</a></td></tr>
+      <tr><td>Dominance shift</td><td><a href="probability.html#n6">The queueing knee</a> · <a href="distributed-systems.html#n7">metastable failure</a> · market bubbles · logistic growth</td></tr>
+      <tr><td>Backpressure</td><td><a href="distributed-systems.html#n7">Bounded queues</a> · inventory management · monetary tightening · traffic ramp metering</td></tr>
+      <tr><td>Information flow as leverage</td><td><a href="infrastructure-cloud.html#n5">Observability</a> · <a href="infrastructure-cloud.html#n6">error budgets</a> · Pigouvian taxes · nutrition labels</td></tr>
+      <tr><td>Bounded rationality</td><td><a href="networking.html#n3">BGP routing decisions</a> · market participants · voters · every engineer during an incident</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">How to use this table</span>
+    When you meet a new system in any domain, ask the four questions from your own note: <em>what
+    accumulates here? which loop currently dominates? how long is the delay between action and visible
+    result? am I treating a symptom or the structure?</em>
+    <mark>Almost all wasted effort fails one of those four.</mark>
+  </div>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>The bathtub graph most graduates get wrong</td><td>A falling flow is not a falling stock</td></tr>
+      <tr><td>N2</td><td>Diagramming a problem that keeps returning</td><td>Recurrence means generation</td></tr>
+      <tr><td>N3</td><td>A thermostat oscillating from a sensor lag alone</td><td>Responding harder makes it worse</td></tr>
+      <tr><td>N4</td><td>Logistic growth; the moment dominance shifts</td><td>Sudden change was long approaching</td></tr>
+      <tr><td>N5</td><td>Predicting a news story from its archetype</td><td>Structure predicts better than motive</td></tr>
+      <tr><td>N6</td><td>Ranking your own interventions on the ladder</td><td>Easy interventions get absorbed</td></tr>
+      <tr><td>N7</td><td>Redrawing a diagram with three boundaries</td><td>The boundary chose the conclusion</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 20 · Systems Thinking · a lens</footer>
+
+</body>
+</html>

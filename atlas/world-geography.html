@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>World Geography — Atlas domain 28</title>
+<meta name="description" content="Tectonics, climate, water, resources and chokepoints — the physical constraints under history and geopolitics." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Tectonics &amp; terrain</a>
+  <a href="#n2">2 · Climate</a>
+  <a href="#n3">3 · Water</a>
+  <a href="#n4">4 · Soils &amp; agriculture</a>
+  <a href="#n5">5 · Resources</a>
+  <a href="#n6">6 · Chokepoints</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>World Geography</p>
+
+<div class="hero">
+  <div class="kicker">Domain 28 · Cluster C6 · gated by Physics (lightly)</div>
+  <h1>World Geography</h1>
+  <p class="dropcap">Geography is the constraint layer under history, politics and economics. It does not
+  determine outcomes, but it sets the <em>cost</em> of everything — and costs, applied over centuries,
+  shape where people live, what they grow, who trades with whom, and which places are worth fighting over.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>Tectonics decides terrain, terrain and latitude decide climate, climate
+    decides water, water decides agriculture, and agriculture decides where people are.</mark> That chain
+    explains the population map of the world, and once you hold it, most of history stops looking arbitrary.
+  </div>
+  <div class="tags">
+    <span class="tag">#tectonics</span>
+    <span class="tag t2">#climate</span>
+    <span class="tag t3">#water</span>
+    <span class="tag">#chokepoints</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists, and the trap in it</h2>
+  <p class="sub">Geography is a constraint, not a destiny.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="physics.html#n3">Physics N3</a> and <a href="mechanical-engineering.html#n5">fluids</a>, lightly</td><td>Indian Geography · World History · Geopolitics · Economics (development)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The determinism trap</span>
+    It is tempting to explain everything with geography, and popular writing frequently does.
+    <mark>Geography explains constraints and costs, not choices.</mark> Two societies with identical
+    geography have diverged repeatedly. Use it as the floor of an explanation, never as the whole of one —
+    and note that the strongest geographic claims usually come from books with the fewest counter-examples.
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>WORLD GEOGRAPHY
+│
+├── 1 · TECTONICS &amp; TERRAIN ........ why mountains and coasts are where they are
+├── 2 · CLIMATE ................... circulation, cells, monsoons, why deserts sit at 30°
+├── 3 · WATER ..................... rivers, basins, aquifers, and disputes
+├── 4 · SOILS &amp; AGRICULTURE ....... carrying capacity and what grows where
+├── 5 · RESOURCES ................. energy, minerals, and their uneven distribution
+└── 6 · CHOKEPOINTS ............... the places through which everything must pass</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Tectonics and terrain</h2>
+  <p class="sub">The slowest process in the Atlas, and the one everything else sits on.</p>
+
+  <p><b>WHAT IT IS.</b> Plate movement and the landforms it produces — mountain ranges, rifts, volcanic
+  arcs, earthquake zones, and the shape of coastlines.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because terrain determines where movement is cheap and where it is expensive,
+  and cost of movement over centuries determines trade routes, invasion routes, language boundaries and
+  political borders.</p>
+
+  <p><b>DEPENDENCIES.</b> Physics N2.</p>
+
+  <p><b>SUBTOPICS.</b> Plate boundaries — convergent, divergent, transform · orogeny and young versus old
+  mountains · rift valleys · volcanic and earthquake distribution · erosion and sediment transport ·
+  why old mountains are rounded and young ones sharp · continental shelves.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free data and maps · <em>Title:</em> USGS earthquake and tectonics resources, free, with
+    live global earthquake feeds<br>
+    <em>Why this one:</em> free, and plotting a month of real earthquakes draws the plate boundaries for
+    you. <mark>The map assembles itself from data you fetched, which is far more convincing than being
+    shown it.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Draw the plate boundaries from earthquake data</span>
+    Download a month of global earthquake data from USGS — free, as a CSV. Plot latitude and longitude of
+    every event above magnitude 4.
+    <br><br>
+    <strong>The plate boundaries appear.</strong> The Pacific Ring of Fire, the mid-Atlantic ridge, the
+    Himalayan front, the Indonesian arc — all drawn by nothing but where the ground moved.
+    <br><br>
+    Then colour by depth. Along subduction zones, earthquakes get deeper as you move inland — you are
+    seeing a plate descending, in cross-section, from a spreadsheet. <mark>This is one of the most
+    satisfying data exercises available anywhere in this Atlas.</mark>
+    <br><br>
+    Then apply it: find the Himalayan seismic belt and note which Indian cities sit near it. Then look up
+    the seismic zone map of India and check your inference. Then reason about the consequence for building
+    codes, which is where geology becomes policy.
+    <br><br>
+    <em>The realisation to reach:</em> the map of the world is a snapshot of a process still running, and
+    the mountains that define borders are the visible edge of a collision that has not stopped.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Indian Geography (the Himalaya and everything downstream) · Physics ·
+  Indian Politics (disaster policy) · World History (terrain as constraint on empire).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Climate</h2>
+  <p class="sub">A heat engine, driven by the difference between equator and poles.</p>
+
+  <p><b>WHAT IT IS.</b> The large-scale circulation of atmosphere and ocean, the resulting distribution of
+  rainfall and temperature, and the monsoon systems that follow.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the equator receives more energy than the poles, and the resulting
+  transport organises into cells that determine where deserts, forests and grasslands sit — at
+  predictable latitudes, on every continent.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 · <a href="physics.html#n3">Physics N3</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Differential heating and energy transport · Hadley, Ferrel and polar cells · why
+  deserts cluster near 30° · the Coriolis effect · the ITCZ and its seasonal migration · monsoon mechanism ·
+  ocean circulation and heat transport · rain shadows · continentality.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free data platform · <em>Title:</em> Our World in Data's climate section and NASA's free
+    Earth observation datasets<br>
+    <em>Why this one:</em> free, sourced, and it lets you construct the comparisons yourself rather than
+    accept a summary.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find every major desert on a latitude line</span>
+    On a world map, mark the Sahara, Arabian, Thar, Kalahari, Atacama, Australian and North American
+    deserts. Note their latitudes.
+    <br><br>
+    <strong>They cluster near 30° north and south, on every continent.</strong> That is not coincidence —
+    it is where Hadley cell air, having risen and rained out at the equator, descends dry. One atmospheric
+    mechanism placed every major desert on Earth.
+    <br><br>
+    Then explain the exceptions, which is where the real learning is. The Atacama is extreme because of a
+    cold offshore current <em>and</em> a rain shadow. Northwest India is wetter than its latitude predicts
+    because of the monsoon. <mark>The rule places them; the exceptions teach the mechanisms.</mark>
+    <br><br>
+    Then trace the monsoon properly: differential heating between the Indian Ocean and the Asian landmass,
+    the Tibetan plateau acting as an elevated heat source, and the ITCZ migrating north. Then look up
+    monsoon onset dates by region and check whether the progression matches the mechanism you just
+    described. It does, and the agreement is striking.
+    <br><br>
+    <em>The realisation to reach:</em> climate is not weather averaged. It is the output of a physical
+    circulation system whose structure you can derive, and whose predictions you can check against a map.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Physics N3 · Indian Geography (monsoon, agriculture) · Economics (agricultural
+  output and inflation) · World History (why civilisations sit where they do).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Water</h2>
+  <p class="sub">The resource that decides settlement, and increasingly the resource that decides conflict.</p>
+
+  <p><b>WHAT IT IS.</b> The distribution and movement of fresh water — rivers, basins, groundwater — and
+  the political geography of sharing it.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because fresh water is unevenly distributed, non-substitutable, and flows across
+  political boundaries without regard for them. <strong>Basins, not borders, are the natural unit</strong>,
+  and the mismatch between the two generates persistent disputes.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2.</p>
+
+  <p><b>SUBTOPICS.</b> Watersheds and basins · perennial versus seasonal rivers · glacier-fed versus
+  rain-fed · groundwater and aquifer recharge rates · deltas and their fertility and vulnerability ·
+  upstream-downstream asymmetry · transboundary water treaties · virtual water in trade.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free primary document · <em>Title:</em> the text of a real transboundary water treaty —
+    the Indus Waters Treaty is freely available and is one of the most durable in existence<br>
+    <em>Why this one:</em> free, and reading the actual allocation mechanism shows you how a genuinely hard
+    resource conflict was made tractable — and where its stresses now are.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Trace one river from source to sea and count the jurisdictions</span>
+    Pick a major transboundary river — Indus, Nile, Mekong, Brahmaputra, Danube. Trace it from source to
+    mouth and list every state or country it passes through, in order.
+    <br><br>
+    Then ask the upstream question: <strong>what could the most upstream party do, and what recourse would
+    the downstream party have?</strong> The asymmetry is stark and structural — upstream can divert,
+    dam or pollute, and downstream can only negotiate or fight.
+    <mark>This asymmetry explains a large share of the world's water politics without needing any history at
+    all.</mark>
+    <br><br>
+    Then examine groundwater, which is the more urgent case: find aquifer depletion data for the Indian
+    Punjab or the North China Plain. Compare extraction rate to recharge rate.
+    <strong>Where extraction exceeds recharge, the resource is being mined rather than used</strong> — it is
+    a stock being drawn down, not a flow being harvested, which is
+    <a href="systems-thinking.html#n1">Systems Thinking N1</a> with severe consequences.
+    <br><br>
+    Then connect it to <a href="economics.html#n1">Economics N1</a>: the free-electricity incentive chain
+    you traced there ends here, in a falling water table.
+    <br><br>
+    <em>The realisation to reach:</em> water is the clearest case where physical geography and political
+    geography disagree, and nearly every water conflict is that disagreement made concrete.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Indian Geography · Economics N1 · Geopolitics · Systems Thinking N1 · Indian
+  Politics (interstate river disputes).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Soils and agriculture</h2>
+  <p class="sub">Carrying capacity — the link between physical geography and where people actually are.</p>
+
+  <p><b>WHAT IT IS.</b> Soil formation and fertility, what grows where, and how many people a region can
+  feed.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because before industry, population was bounded by local food production. The
+  world's population map is still substantially a map of historical agricultural capacity, and the
+  political consequences of that persist.</p>
+
+  <p><b>DEPENDENCIES.</b> N2, N3.</p>
+
+  <p><b>SUBTOPICS.</b> Soil formation and horizons · alluvial, black, laterite and their properties ·
+  nutrients and depletion · irrigation and salinisation · crop suitability by climate · yield and carrying
+  capacity · the Green Revolution and its trade-offs · why floodplains renew themselves.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free data · <em>Title:</em> FAO's free global soil and crop datasets, alongside India's
+    free agricultural statistics<br>
+    <em>Why this one:</em> free, and overlaying soil type on population density is a two-map exercise that
+    makes the entire node obvious in one sitting.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Overlay soil, rainfall and population</span>
+    Get three maps of India: soil type, annual rainfall, and population density. Put them side by side.
+    <br><br>
+    <strong>The population map is largely predicted by the other two.</strong> The alluvial Gangetic plain
+    with reliable water carries enormous density; the arid northwest and the rugged northeast do not.
+    <mark>You have just derived the demographic map of a subcontinent from two physical inputs.</mark>
+    <br><br>
+    Then find where the prediction fails, because that is where non-geographic factors live: coastal
+    Maharashtra and Bengaluru are dense for reasons of industry, ports and policy rather than soil.
+    <em>Those exceptions are exactly where geography stopped being the binding constraint.</em>
+    <br><br>
+    Then examine the black cotton soils of the Deccan and ask why cotton, and the laterite soils of the
+    coast and ask why plantation crops. Each answer is a soil property meeting a crop requirement.
+    <br><br>
+    Then look at the Green Revolution: find yield data for wheat in Punjab before and after, then find the
+    groundwater and soil consequences. <strong>It solved a famine and created a water crisis</strong>, which
+    is a trade-off worth being able to state precisely rather than taking a side on.
+    <br><br>
+    <em>The realisation to reach:</em> where people are is not arbitrary and not recent. It is the
+    accumulated result of where food could reliably be grown, and it changes far more slowly than economies
+    do.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Indian Geography · Indian History (agrarian empires) · Economics N7 (structural
+  transformation) · Indian Politics (farm policy, MSP).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Resources</h2>
+  <p class="sub">Unevenly distributed, and therefore political.</p>
+
+  <p><b>WHAT IT IS.</b> The geographic distribution of energy, minerals and materials, and the consequences
+  of that distribution being extremely uneven.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because geological processes concentrated resources in specific places for
+  reasons unrelated to who lives there. That mismatch creates trade, dependence and leverage.</p>
+
+  <p><b>DEPENDENCIES.</b> N1.</p>
+
+  <p><b>SUBTOPICS.</b> Hydrocarbons and why they form where they do · coal and its geography · uranium ·
+  iron, copper, bauxite · rare earths and why concentration is about processing rather than deposits ·
+  lithium and cobalt · the resource curse and its contested evidence · reserves versus resources versus
+  production.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free data · <em>Title:</em> USGS Mineral Commodity Summaries and the free statistical
+    reviews of world energy<br>
+    <em>Why this one:</em> free, authoritative, updated annually, and it gives production and reserve figures
+    by country — which turns "who controls what" from an opinion into a table.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Compute concentration for one critical material</span>
+    Pick one material in something you own — lithium or cobalt in a battery, a rare earth in a motor or
+    speaker, palladium in a catalytic converter. Using free USGS data, find the top three producing
+    countries and compute their combined share of world production.
+    <br><br>
+    For several materials that share exceeds 70%. <mark>Then compute the same for processing capacity
+    rather than mining, and it is frequently far more concentrated still</mark> — which is the crucial
+    distinction most reporting misses. Deposits are widespread; the industrial capacity to refine them is
+    not.
+    <br><br>
+    Then reason about substitutability: if that supply were cut, what would happen? For some materials the
+    answer is a price rise and a substitute; for others there is no substitute at any price. That difference
+    is what makes a material strategic.
+    <br><br>
+    Then examine the resource curse claim honestly: find two resource-rich countries with very different
+    outcomes. The mechanism proposed — resource revenue weakening the need for a broad tax base and
+    therefore for accountability — is plausible and contested, and being able to state both sides is the
+    commander-level position.
+    <br><br>
+    <em>The realisation to reach:</em> resource power is about concentration and substitutability, not
+    abundance — and processing capacity is usually a stronger chokepoint than the deposit itself.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Geopolitics · Economics N6 (trade) · Cars N1 (battery materials) ·
+  AI N6 (semiconductors) · Indian Politics (mining policy).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Chokepoints</h2>
+  <p class="sub">The highest fan-out idea in this domain, and one you have already met three times.</p>
+
+  <p><b>WHAT IT IS.</b> Narrow passages through which a disproportionate share of trade, energy or data
+  must flow — straits, canals, passes, cables.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because geography forces concentration, and concentration creates leverage.
+  Whoever can close or threaten a chokepoint has power far exceeding their size.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N5.</p>
+
+  <p><b>SUBTOPICS.</b> Hormuz, Malacca, Suez, Bab el-Mandeb, Panama, Bosphorus · land passes and historical
+  invasion routes · submarine cable landing points · the difference between a chokepoint that can be
+  bypassed at cost and one that cannot · why chokepoints attract naval presence.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free analysis + free live data · <em>Title:</em> the US EIA's freely published world oil
+    transit chokepoints analysis, alongside live marine traffic maps<br>
+    <em>Why this one:</em> free, and the EIA publishes actual daily transit volumes per chokepoint —
+    turning a geopolitical talking point into a number you can reason with.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Close a strait on paper and follow the consequences</span>
+    Take the Strait of Hormuz. Look up the daily oil volume passing through it and what share of global
+    seaborne oil that represents. Now work out the alternatives: which pipelines bypass it, what capacity
+    they have, and how much of the flow could actually be rerouted.
+    <br><br>
+    <strong>The bypass capacity is a fraction of the throughput.</strong> Now trace the chain to yourself:
+    reduced supply, price spike, India's import bill, the rupee, fuel prices, inflation, and an RBI response
+    — which is <a href="economics.html#n5">Economics N5</a> arriving via a strait you will never see.
+    <br><br>
+    Then do the same for Malacca and note which country's energy security depends most on it, and what that
+    country has been building as a response. You will find the entire logic of several major infrastructure
+    programmes falls out of one map feature.
+    <br><br>
+    Then find the digital version: look up submarine cable maps and identify where cables cluster.
+    <mark>The internet has chokepoints in almost exactly the same places as shipping</mark>, for the same
+    geographic reasons — and this is the same structure as
+    <a href="distributed-systems.html">single points of failure</a>, a fab in one location, and one senior
+    engineer who knows the legacy system.
+    <br><br>
+    <em>The realisation to reach:</em> chokepoints are a general structure, not a geographic curiosity. Once
+    you can see them you find them in supply chains, codebases, organisations and infrastructure.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Geopolitics (this is its core) · Networking N3 (submarine cables) · Business N3
+  (structural leverage) · Distributed Systems (single points of failure) · Economics N6.</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Plate boundaries drawn from earthquake CSV</td><td>The map is a running process</td></tr>
+      <tr><td>N2</td><td>Every major desert near 30° latitude</td><td>One mechanism placed them all</td></tr>
+      <tr><td>N3</td><td>Counting jurisdictions along one river</td><td>Basins ignore borders</td></tr>
+      <tr><td>N4</td><td>Population predicted by soil and rainfall</td><td>Carrying capacity persists</td></tr>
+      <tr><td>N5</td><td>Processing concentration exceeding deposit concentration</td><td>Refining is the chokepoint</td></tr>
+      <tr><td>N6</td><td>Bypass capacity far below throughput</td><td>Chokepoints are general structure</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="indian-geography.html">Indian Geography</a></td><td>All six nodes, applied to one subcontinent</td></tr>
+      <tr><td><a href="world-history.html">World History</a></td><td>N4 and N6 — where states formed and which routes mattered</td></tr>
+      <tr><td><a href="geopolitics.html">Geopolitics</a></td><td>N5 and N6 — resources and chokepoints are most of it</td></tr>
+      <tr><td>Economics</td><td>N4 — agricultural output drives Indian inflation directly</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 28 · World Geography</footer>
+
+</body>
+</html>

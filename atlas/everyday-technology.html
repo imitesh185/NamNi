@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Everyday Technology — Atlas domain 05</title>
+<meta name="description" content="Trace one signal end to end through a real device. The highest completion-rate entry point in the Atlas." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why start here</a>
+  <a href="#method">The trace method</a>
+  <h4>The Traces</h4>
+  <a href="#t1">1 · The television</a>
+  <a href="#t2">2 · The phone</a>
+  <a href="#t3">3 · The microwave</a>
+  <a href="#t4">4 · The refrigerator</a>
+  <a href="#t5">5 · The router</a>
+  <a href="#t6">6 · The charger</a>
+  <h4>Exit</h4>
+  <a href="#build">The build</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Everyday Technology</p>
+
+<div class="hero">
+  <div class="kicker">Domain 05 · Cluster C2 · the recommended entry point to the physical world</div>
+  <h1>Everyday Technology</h1>
+  <p class="dropcap">This is the highest completion-rate route in the entire Atlas, and it is deliberately
+  structured differently from every other domain. It has no topic tree, because it is not a topic — it is a
+  <em>method</em>: pick one object, follow one signal through it end to end, and let the object decide which
+  physics, electronics and computing you need.</p>
+  <div class="why">
+    <b>Why this works when textbooks fail.</b> A chapter on displays teaches you about displays. Tracing a
+    remote button to a pixel changing colour forces you through <mark>infrared, microcontrollers, protocols,
+    processors, video decoding, panel drivers, polarisation and colour perception — because you needed each
+    one to continue.</mark> The device supplies the motivation that a syllabus cannot.
+  </div>
+  <div class="tags">
+    <span class="tag">#trace-one-signal</span>
+    <span class="tag t2">#disassembly</span>
+    <span class="tag t3">#end-to-end</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain has a different shape</h2>
+  <p class="sub">It is an integrator, not a subject.</p>
+
+  <p>Everyday Technology sits downstream of <a href="physics.html">Physics</a>,
+  <a href="electrical-electronics.html">Electronics</a>, <a href="mechanical-engineering.html">Mechanical</a>
+  and <a href="computing.html">Computing</a>. Its job is to make you use all four at once on something you
+  can hold — which is how they become permanent rather than remembered.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td>Nothing strictly — it <em>pulls</em> from Physics, Electronics and Computing as needed</td><td>Cars &amp; Transportation · confidence in every unfamiliar physical system</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Safety, and it is not optional</span>
+    Do not open anything containing mains voltage or a large capacitor. <strong>CRT televisions and
+    microwave ovens can hold a lethal charge for days after unplugging.</strong> Trace their behaviour from
+    the outside and from teardown videos instead — the understanding is identical, and free teardowns of
+    every device below already exist.
+  </div>
+</section>
+
+<section id="method">
+  <h2><span class="num">01</span> The trace method</h2>
+  <p class="sub">Six steps, applied to any device, forever.</p>
+
+<pre>1 · CHOOSE ONE STIMULUS      a button press, a plug-in, a spoken word
+2 · PREDICT THE PATH         write down what you think happens, in order
+3 · IDENTIFY THE BOUNDARIES  where does the signal change form?
+                             (light→electrical→digital→network→light)
+4 · RESEARCH EACH BOUNDARY   only the ones you could not explain
+5 · FIND THE MEASUREMENT     what could you observe to confirm it?
+6 · FIND THE FAILURE         what breaks, and what symptom does it produce?</pre>
+
+  <div class="note">
+    <span class="lbl">Step 6 is the one people skip</span>
+    Failure modes are where understanding is proven. <mark>If you can predict the symptom from the fault,
+    you understand the mechanism; if you can only describe the normal path, you have memorised a
+    diagram.</mark>
+  </div>
+</section>
+
+<section id="t1">
+  <h2><span class="num">T1</span> The television</h2>
+  <p class="sub">The flagship trace: from your thumb to a photon.</p>
+
+<pre>TELEVISION
+│
+├── REMOTE
+│   ├── Button matrix ............... rows × columns, why N+M wires not N×M
+│   ├── Microcontroller ............. wakes, scans, encodes
+│   ├── IR LED at ~940 nm ........... invisible to you, visible to a camera
+│   └── Protocol (NEC / RC-5) ....... address + command + carrier at 38 kHz
+│
+├── RECEIVER
+│   ├── IR photodiode + demodulator . why the 38 kHz carrier exists
+│   └── Decode to a command value
+│
+├── COMPUTE
+│   ├── SoC: CPU + GPU + video decoder
+│   ├── Memory and storage
+│   ├── An operating system (usually Android/Linux)
+│   └── Application layer
+│
+├── SOURCE
+│   ├── HDMI ........................ TMDS lanes, EDID handshake, HDCP
+│   ├── Wi-Fi / Ethernet ............ streaming, adaptive bitrate
+│   └── Casting ..................... DIAL, Cast, Miracast, AirPlay
+│
+├── VIDEO PIPELINE
+│   ├── Decode (H.264 / HEVC / AV1) . why hardware decoders exist
+│   ├── Scaling and frame rate conversion
+│   ├── Colour space and HDR mapping
+│   └── Panel driving
+│
+└── DISPLAY
+    ├── Pixels and subpixels (RGB)
+    ├── LCD: backlight + liquid crystal + polarisers
+    ├── OLED: per-pixel emission, no backlight
+    └── Response time, refresh rate, persistence</pre>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free protocol documentation + free teardowns · <em>Title:</em> the NEC infrared protocol
+    specification (freely documented), plus any television teardown video<br>
+    <em>Why this one:</em> free, and the IR protocol is small enough to understand completely in an hour —
+    which gives you one fully-owned link in the chain, and that is what makes the rest feel tractable.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · See invisible light, then decode it</span>
+    Point your TV remote at your phone's front camera and press a button. <strong>You will see the IR LED
+    flashing</strong> — the camera sensor detects near-infrared that your eye cannot. Most phone rear
+    cameras now filter it out; front cameras usually do not.
+    <br><br>
+    You have just observed a wavelength outside human vision, using a device you own. Now go further: with
+    an Arduino and a three-rupee IR receiver module, capture the actual bit pattern from each button.
+    Print the timings. <mark>You will find a header pulse, then bits encoded as pulse gaps, then an address
+    and a command, then the command's logical inverse as an error check.</mark>
+    <br><br>
+    Then do something with it: use an IR LED to <em>transmit</em> the captured code and control the TV from
+    your own hardware. You have now read and written a real-world protocol, and the concepts —
+    <a href="software-engineering.html#n7">framing</a>, addressing, checksums, carrier modulation — are the
+    same ones from Networking, arriving through a device in your living room.
+    <br><br>
+    Then find the failure modes and explain each: why the remote fails in bright sunlight (IR noise
+    swamping the 38 kHz carrier), why it needs line of sight but bounces off walls, and why pressing a
+    button on one brand's remote sometimes affects another brand's device.
+    <br><br>
+    <em>The realisation to reach:</em> the remote is a complete communication system — transmitter,
+    encoding, carrier, medium, receiver, error detection — small enough to understand entirely. Everything
+    larger is this with more layers.
+  </div>
+
+  <p><b>THE BUILD THIS SUGGESTS.</b> Your original question — <em>connecting a phone to a TV</em> — lives
+  here. See <a href="#build">The build</a> below.</p>
+</section>
+
+<section id="t2">
+  <h2><span class="num">T2</span> The phone</h2>
+  <p class="sub">The densest object most people own.</p>
+
+<pre>SMARTPHONE
+├── SENSING ......... touch (capacitive grid), accelerometer &amp; gyro (MEMS),
+│                     magnetometer, camera (CMOS sensor, Bayer filter), mic
+├── COMPUTE ......... SoC: CPU cores, GPU, NPU, ISP, modem; RAM; flash
+├── RADIO ........... cellular, Wi-Fi, Bluetooth, NFC, GNSS — all EM waves
+│                     at different frequencies with different protocols
+├── POWER ........... lithium-ion cell, charge controller, power management
+└── OUTPUT .......... OLED/LCD panel, haptic motor, speakers</pre>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make the sensors tell you what they see</span>
+    Install a free sensor-logging app that exposes raw values. Now investigate three things.
+    <br><br>
+    <strong>The accelerometer at rest reads about 9.8, not zero.</strong> It measures proper acceleration,
+    so sitting still it reads gravity; in free fall it would read zero. Drop the phone onto a cushion and
+    watch the trace confirm it. That is the equivalence principle, observable on a phone.
+    <br><br>
+    <strong>The magnetometer is confused by your desk.</strong> Rotate the phone near a laptop, a speaker
+    or steel furniture and watch the compass heading distort. Then reason about why navigation apps fuse
+    magnetometer, gyroscope and GPS rather than trusting any one — which is
+    <a href="probability.html#n2">Bayesian sensor fusion</a>, running in your pocket.
+    <br><br>
+    <strong>GPS needs relativity.</strong> Look up the satellite clock corrections: special relativity slows
+    the orbiting clocks, general relativity speeds them up, and the net correction is tens of microseconds
+    per day. Without it, positions would drift by kilometres daily. <mark>A theoretical physics result from
+    1915 is a required software patch in your phone.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> a phone is not one device. It is roughly a dozen independent physical
+    measurement systems, fused probabilistically, and the fusion is where most of the cleverness is.
+  </div>
+</section>
+
+<section id="t3">
+  <h2><span class="num">T3</span> The microwave oven</h2>
+  <p class="sub">A physics demonstration disguised as an appliance.</p>
+
+  <p>A magnetron generates ~2.45 GHz electromagnetic radiation. Water molecules are polar, so they rotate to
+  follow the oscillating field, and that rotation is heat. The metal mesh in the door has holes far smaller
+  than the 12 cm wavelength, so the radiation cannot escape while visible light passes freely.</p>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Measure the speed of light with cheese</span>
+    Remove the turntable. Place a wide plate of chocolate, cheese or marshmallows inside and heat briefly
+    until the first melted spots appear. <strong>They will be evenly spaced.</strong>
+    <br><br>
+    Those spots are the antinodes of a standing wave. Measure the distance between them — that is half a
+    wavelength. Multiply by two, then by the frequency printed on the oven's label (usually 2450 MHz).
+    <mark>You get the speed of light, within a few percent, from a plate of melted cheese.</mark>
+    <br><br>
+    Then explain the turntable: without it, food sits permanently at nodes or antinodes and heats unevenly.
+    The turntable exists because standing waves have fixed positions and food does not.
+    <br><br>
+    Then reason about why metal sparks (conductors concentrate field at sharp edges), why the door mesh
+    works (aperture smaller than wavelength), and why a microwave heats water but not a dry ceramic plate
+    (polarity, not temperature).
+    <br><br>
+    <em>The realisation to reach:</em> wavelength has a physical size you can measure with food, and the
+    entire design of the appliance follows from that one number.
+  </div>
+</section>
+
+<section id="t4">
+  <h2><span class="num">T4</span> The refrigerator</h2>
+  <p class="sub">A heat pump, and the clearest everyday demonstration of the second law.</p>
+
+  <p>A compressor raises refrigerant pressure and temperature; the condenser coils outside dump that heat to
+  the room; an expansion valve drops the pressure, making the refrigerant very cold; the evaporator inside
+  absorbs heat from the food. Heat is moved from cold to hot, which requires work — that is the compressor,
+  and that is why your kitchen gets warmer overall.</p>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Prove your fridge heats your kitchen</span>
+    Feel the coils or the side panel of a running refrigerator — they are warm. Now reason it through: the
+    fridge removes heat Q from inside and does work W to do it, so it rejects Q + W to the room.
+    <strong>A refrigerator with its door open is a room heater</strong>, which is genuinely surprising to
+    most people and follows directly from <a href="physics.html#n3">Physics N3</a>.
+    <br><br>
+    Then find the same machine reversed: an air conditioner is a refrigerator whose cold side faces the room
+    and whose hot side faces outside. A heat pump water heater is the same machine again. <mark>Three
+    appliances, one mechanism, differing only in which side you point where.</mark>
+    <br><br>
+    Then compute the coefficient of performance from the appliance's rating label — heat moved divided by
+    electricity consumed. It exceeds 1, often reaching 3 or 4, which sounds like a violation until you
+    remember you are <em>moving</em> heat rather than creating it.
+    <br><br>
+    <em>The realisation to reach:</em> refrigeration does not create cold. It moves heat, at a cost, and the
+    cost is bounded below by the temperature difference you are fighting.
+  </div>
+</section>
+
+<section id="t5">
+  <h2><span class="num">T5</span> The Wi-Fi router</h2>
+  <p class="sub">Where <a href="networking.html">Networking</a> becomes a physical object on a shelf.</p>
+
+  <p>A router is a small computer with several radios and a switch. It runs DHCP to assign addresses, NAT to
+  share one public address, a DNS forwarder, a firewall, and radios at 2.4 and 5 GHz with different range
+  and bandwidth characteristics.</p>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Explain your own dead zone</span>
+    Use a free Wi-Fi analyser app to map signal strength through your home. Plot it. Then explain every
+    weak spot physically: <strong>2.4 GHz penetrates walls better but is crowded and slower; 5 GHz is fast
+    and clean but stopped by concrete.</strong> Find the wall that kills your signal and check what it is
+    made of.
+    <br><br>
+    Then look at channel occupancy — you will see your neighbours' networks overlapping yours. In the 2.4
+    GHz band only three channels genuinely do not overlap, which is why that band is congested everywhere.
+    This is a <a href="networking.html#n2">shared medium contention problem</a>, made visible.
+    <br><br>
+    Then log into the router's admin page and find the DHCP lease table, the NAT table and the firewall
+    rules. Every abstraction from Networking N3 and N5 is there as a concrete list you can read. Then run
+    <code>traceroute</code> and identify which hop is the router itself.
+    <br><br>
+    Then create a failure deliberately: set a static IP that collides with the DHCP range and observe the
+    symptom. Predicting the symptom from the fault is the test.
+    <br><br>
+    <em>The realisation to reach:</em> your home network is the entire Networking domain in miniature, with
+    every layer physically present and inspectable.
+  </div>
+</section>
+
+<section id="t6">
+  <h2><span class="num">T6</span> The phone charger</h2>
+  <p class="sub">The smallest device worth tracing, and a negotiation you never see.</p>
+
+  <p>Mains AC is rectified to DC, chopped at high frequency by a switching transistor, passed through a small
+  transformer, rectified again, smoothed and regulated. It is small precisely <em>because</em> it switches
+  fast — from <a href="physics.html#n5">Faraday's law</a>, higher frequency means fewer turns and less iron.</p>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Watch two devices negotiate a contract</span>
+    Use a cheap USB power meter — a few hundred rupees — between charger and phone. Watch voltage and
+    current during a full charge cycle.
+    <br><br>
+    You will see the voltage <strong>change</strong> mid-charge, stepping between 5V, 9V and higher. That is
+    USB Power Delivery: the two devices negotiate over a data line, agreeing a voltage neither one chose
+    alone. <mark>Your charger and your phone are running a protocol with an offer, a request and an
+    acceptance</mark> — it is a handshake, exactly like <a href="networking.html#n4">TCP's</a>.
+    <br><br>
+    Then watch the current taper as the battery fills. Lithium-ion charges at constant current then constant
+    voltage, and the tapering tail is why the last 20% takes disproportionately long. Now you know why fast
+    charging claims are always quoted to 50% or 80%.
+    <br><br>
+    Then compare cables: the same charger and phone will negotiate lower power over a cheap cable, because
+    the cable's own resistance and its identification chip participate in the negotiation.
+    <br><br>
+    <em>The realisation to reach:</em> even the dumbest-looking object in your house contains a protocol, a
+    negotiation and a control loop.
+  </div>
+</section>
+
+<section id="build">
+  <h2><span class="num">::</span> The build — phone to TV</h2>
+  <p class="sub">The project you originally described, placed where it belongs.</p>
+
+  <p>You wanted to build middleware connecting a phone to a television. That project is an excellent vehicle
+  because it forces you across almost every boundary in this Atlas. Here is the ladder, in the order the
+  problems arrive:</p>
+
+  <table>
+    <thead><tr><th>Rung</th><th>What you build</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Discover the TV on your network</td><td>mDNS/SSDP, UDP multicast, <a href="networking.html#n5">service discovery</a></td></tr>
+      <tr><td>2</td><td>Read its capabilities</td><td>DIAL or UPnP device description, XML over HTTP</td></tr>
+      <tr><td>3</td><td>Launch an app on it remotely</td><td><a href="networking.html#n7">HTTP as a control protocol</a></td></tr>
+      <tr><td>4</td><td>Send a media URL and play it</td><td>Media formats, codecs, what the TV can decode</td></tr>
+      <tr><td>5</td><td>Control playback and read state</td><td>Stateful protocol, <a href="distributed-systems.html#n1">partial failure</a> when the TV sleeps</td></tr>
+      <tr><td>6</td><td>Stream from the phone rather than a URL</td><td>Running an HTTP server on the phone, <a href="networking.html#n8">bandwidth and latency</a></td></tr>
+      <tr><td>7</td><td>Handle the TV disappearing mid-stream</td><td>Timeouts, retries, <a href="distributed-systems.html#n7">idempotent resume</a></td></tr>
+      <tr><td>8</td><td>Add IR control for the non-networked TV</td><td>Back to <a href="#t1">T1</a> — encode NEC frames and transmit</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">Why this is a good project and a todo app is not</span>
+    Every rung produces a genuine failure that demands a concept you do not yet have.
+    <mark>The TV is an uncooperative, undocumented, occasionally asleep peer on an unreliable network</mark>
+    — which makes it a real distributed systems problem disguised as a home automation toy.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What this domain sends there</th></tr></thead>
+    <tbody>
+      <tr><td><a href="physics.html">Physics</a></td><td>Every trace hits a physics boundary and sends you back for exactly what you need</td></tr>
+      <tr><td><a href="electrical-electronics.html">Electrical &amp; Electronics</a></td><td>Component identification, signals, power supplies</td></tr>
+      <tr><td><a href="networking.html">Networking</a></td><td>T5 and the build are Networking with physical objects attached</td></tr>
+      <tr><td><a href="cars-transportation.html">Cars</a></td><td>The same trace method, applied to a much larger system</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">The transferable skill</span>
+    After six traces, the method itself is the asset. <strong>Given any unfamiliar device, you will know
+    how to decompose it, where the boundaries are, and what to measure</strong> — which is exactly the
+    "no dread at an unfamiliar domain" objective this Atlas exists for.
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 05 · Everyday Technology · trace one signal, end to end</footer>
+
+</body>
+</html>

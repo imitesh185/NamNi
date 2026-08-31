@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mathematics — Atlas domain 01</title>
+<meta name="description" content="A toolbox, not a journey. Six branches, each taken when a domain demands it, with phenomena rather than exercises." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">The toolbox principle</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Fluency</a>
+  <a href="#n2">2 · Functions &amp; growth</a>
+  <a href="#n3">3 · Discrete mathematics</a>
+  <a href="#n4">4 · Linear algebra</a>
+  <a href="#n5">5 · Calculus</a>
+  <a href="#n6">6 · Statistics</a>
+  <h4>Exit</h4>
+  <a href="#pull">Pull table</a>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Mathematics</p>
+
+<div class="hero">
+  <div class="kicker">Domain 01 · Cluster C1 · root — nothing gates it</div>
+  <h1>Mathematics</h1>
+  <p class="dropcap">Mathematics is the domain where more self-directed learners are lost than anywhere
+  else in this Atlas — not because it is hard, but because they treat it as a <em>journey with a
+  beginning</em>. It is not. It is a toolbox, and the correct behaviour is to walk over, take one tool,
+  and go back to the problem that sent you.</p>
+  <div class="why">
+    <b>The single rule for this domain.</b> <mark>Never study mathematics for its own sake unless you have
+    decided that mathematics is the goal.</mark> Take a branch when another domain has made you unable to
+    proceed without it. The <a href="#pull">pull table</a> below tells you which branch each domain will
+    eventually demand, so you can recognise the moment when it arrives.
+  </div>
+  <div class="tags">
+    <span class="tag">#toolbox</span>
+    <span class="tag t2">#discrete</span>
+    <span class="tag t3">#linear-algebra</span>
+    <span class="tag">#statistics</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> The toolbox principle</h2>
+  <p class="sub">Why "start from the beginning and go forward" fails here specifically.</p>
+
+  <p>Mathematics is taught in a sequence because a curriculum needs one, not because the subject has one.
+  The dependency graph is much sparser than the textbook order implies: you can do a great deal of
+  probability with no calculus, all of discrete mathematics with no algebra beyond school level, and most
+  of linear algebra without either.</p>
+
+  <p>The reason this matters is motivational rather than logical. A branch taken because a real problem
+  demanded it is retained. A branch taken because it was chapter three is not — and by chapter nine you
+  will have forgotten chapter three and concluded you are bad at mathematics.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td>Nothing. This is a root node.</td><td><a href="probability.html">Probability</a> · Physics · <a href="computing.html">Computing</a> · AI · Economics · Finance · World Philosophy (logic)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">What commander-level does not include</span>
+    Real analysis · measure theory · abstract algebra · topology · differential equations beyond the idea ·
+    proof technique as a craft. <mark>These are the mathematics of mathematicians</mark>, and none of them
+    is on the path to understanding the other 35 domains.
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+  <p class="sub">Six branches. The arrows between them are far weaker than a textbook suggests.</p>
+
+<pre>MATHEMATICS
+│
+├── 1 · FLUENCY ...................... the only genuinely sequential part
+│   ├── Arithmetic, fractions, percentages, ratios
+│   ├── Algebraic manipulation
+│   ├── Powers, roots, logarithms
+│   └── Units and dimensional analysis
+│
+├── 2 · FUNCTIONS &amp; GROWTH ........... how quantities change together
+│   ├── Functions, domain, range
+│   ├── Linear, polynomial, exponential, logarithmic
+│   ├── Growth rate comparison ............. gates Computing N7
+│   └── Reading and drawing graphs
+│
+├── 3 · DISCRETE MATHEMATICS ......... the mathematics of computing
+│   ├── Logic, truth, implication ......... gates World Philosophy
+│   ├── Sets, relations, functions ........ gates Databases
+│   ├── Counting &amp; combinatorics .......... gates Probability
+│   ├── Graphs &amp; trees .................... gates Networking, Distributed Systems
+│   └── Induction and recursion ........... gates Software Engineering N4
+│
+├── 4 · LINEAR ALGEBRA ............... data as geometry
+│   ├── Vectors and vector spaces
+│   ├── Matrices as transformations
+│   ├── Dot product, projection, similarity  gates Embeddings
+│   ├── Eigenvectors and eigenvalues
+│   └── Decompositions (SVD, PCA) ......... gates AI
+│
+├── 5 · CALCULUS ..................... change and accumulation
+│   ├── Limits, informally
+│   ├── Derivatives as rate of change ..... gates Optimisation, Physics
+│   ├── Integrals as accumulation ......... gates Stocks &amp; flows
+│   └── Multivariable + gradients  [only if AI]
+│
+└── 6 · STATISTICS ................... describing and inferring from data
+    ├── Descriptive statistics
+    ├── Sampling and estimation
+    ├── Hypothesis testing and its misuse
+    ├── Regression
+    └── Causal inference vs correlation ... gates Economics, Psychology</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Fluency</h2>
+  <p class="sub">The only part of this domain that genuinely must come first.</p>
+
+  <p><b>WHAT IT IS.</b> Comfortable manipulation of numbers and symbols: ratios, percentages, powers,
+  logarithms, rearranging an equation without anxiety, and reasoning about units.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because every other branch assumes it silently. Most adults who believe they
+  "cannot do maths" have a gap here and not in the advanced material — and the gap is usually specific and
+  small.</p>
+
+  <p><b>DEPENDENCIES.</b> None.</p>
+
+  <p><b>SUBTOPICS.</b> Fractions and ratios · percentage change and its asymmetry · exponents and
+  logarithms · orders of magnitude · scientific notation · dimensional analysis · estimation.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free interactive practice · <em>Title:</em> Khan Academy, Algebra 1 and 2 — used
+    diagnostically, not sequentially<br>
+    <em>Why this one:</em> free, and it has a diagnostic that finds your actual gaps rather than making you
+    restart from the beginning. <strong>Take the diagnostic, fix only what it flags, and leave.</strong>
+    <br><br>
+    <b>DEEPER (optional)</b> — none needed. This node has a floor and you cross it.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Estimate things nobody has told you</span>
+    Fermi estimation. Answer these with no lookups, showing your reasoning chain, then check:
+    <em>how many litres of milk does Mumbai consume per day? How many piano tuners work in India? How much
+    does one hour of your laptop's electricity cost?</em>
+    <br><br>
+    Then the version that matters professionally: <em>how many bytes does one day of logging produce for a
+    service handling 1,000 requests per second? How many servers would that require? What is that per
+    month at public prices?</em>
+    <br><br>
+    Check your answers. You will typically land within a factor of ten, which is far better than most
+    people expect and is <mark>enough precision to make almost every real decision.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> arithmetic fluency is not about accuracy, it is about being willing
+    to compute at all. The people who seem quantitatively sharp are mostly people who reach for a number
+    while everyone else is still reaching for an opinion.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Every domain. Especially Infrastructure N7 (cost), Business (unit economics),
+  Physics (dimensional analysis catches errors).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Functions and growth</h2>
+  <p class="sub">The branch that quietly governs how you reason about scale.</p>
+
+  <p><b>WHAT IT IS.</b> The idea of one quantity determined by another, the standard families of such
+  relationships, and — the part that matters most — how differently they behave as inputs grow.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because human intuition is linear and reality frequently is not. Exponential
+  growth, logarithmic returns and power laws all defeat untrained intuition in ways that have consequences
+  in engineering, finance and epidemiology alike.</p>
+
+  <p><b>DEPENDENCIES.</b> N1.</p>
+
+  <p><b>SUBTOPICS.</b> Functions, domain and range · linear and affine · polynomial · exponential and
+  doubling time · logarithmic and diminishing returns · power laws · asymptotic comparison · log scales
+  and when to use them.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free video series · <em>Title:</em> 3Blue1Brown, "Exponential growth and epidemics" plus
+    the log-scale explainer<br>
+    <em>Why this one:</em> free, and it demonstrates the failure of linear intuition on a case where the
+    stakes were real and public, which fixes the idea more firmly than an abstract treatment.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find where the loser overtakes the winner</span>
+    Plot four functions on the same axes: <em>n</em>, <em>n log n</em>, <em>n²</em>, and
+    <em>1000n</em>. Find every crossover point.
+    <br><br>
+    The interesting one is the last: <em>1000n</em> beats <em>n²</em> only above n = 1000, which means an
+    "asymptotically worse" algorithm wins for every input below that. Now connect it to
+    <a href="computing.html#n7">Computing N7</a>, where you measured exactly this and were surprised.
+    <br><br>
+    Then switch to log axes and watch an exponential become a straight line. Take a real dataset — Covid
+    case counts, Moore's law, compound interest, your own service's traffic — and plot it both ways.
+    <mark>On linear axes exponential growth looks flat and then vertical; on log axes it looks like a line
+    with a slope you can read off and extrapolate.</mark>
+    <br><br>
+    Finally, the estimate that changes how you hear news: use the rule of 70 to convert any growth rate
+    into a doubling time in your head. 7% growth doubles in a decade. Apply it to GDP, to a savings
+    account, and to a database that is "only growing 5% a month".
+    <br><br>
+    <em>The realisation to reach:</em> the shape of a curve is a claim about the future, and choosing the
+    axes is choosing what people will believe.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Computing N7 · Economics (growth, compounding) · Finance · Systems Thinking
+  (exponential behaviour comes from reinforcing loops) · Probability N4.</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Discrete mathematics</h2>
+  <p class="sub">If you take only one branch for your professional work, take this one.</p>
+
+  <p><b>WHAT IT IS.</b> The mathematics of countable, separate things: logic, sets, counting, graphs and
+  induction. It is the native mathematics of computing, and almost none of it requires calculus.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because computers manipulate discrete structures. Every data structure is a set
+  or a graph, every program is a logical statement, every complexity argument is a counting argument, and
+  every recursive algorithm is an inductive proof in disguise.</p>
+
+  <p><b>DEPENDENCIES.</b> N1.</p>
+
+  <p><b>SUBTOPICS.</b> Propositional logic, implication and contrapositive · quantifiers · sets, relations,
+  functions · counting, permutations, combinations · the pigeonhole principle · graphs, trees, paths,
+  cycles · traversal · induction and strong induction · recurrence relations.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free textbook + course · <em>Title:</em> <em>Mathematics for Computer Science</em>
+    (Lehman, Leighton, Meyer) — the free MIT 6.042 textbook<br>
+    <em>Why this one:</em> free, written specifically for people who will use mathematics in computing
+    rather than prove theorems about it, and every chapter is motivated by a computational problem.
+    Chapters on logic, induction, counting and graphs are the ones to take.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find the illegal step in a proof that 1 = 2</span>
+    Look up the classic "proof" that 1 = 2 and find the exact line where it fails — it is always a division
+    by something that is secretly zero. Then do the same for the "proof" that all horses are the same
+    colour, which fails at the base case of an induction, and for a convincing geometric argument that
+    64 = 65.
+    <br><br>
+    This is the fastest way to internalise that <mark>a proof is a chain where every link must hold, and
+    an argument that feels compelling can be broken at exactly one point.</mark> It transfers directly to
+    evaluating arguments in <a href="#n6">statistics</a>, in geopolitics, and in code review.
+    <br><br>
+    Then build a graph of something you own. Parse the import statements of a codebase, or the links
+    between your own notes, and construct the graph. Now ask real questions of it: is it acyclic? What is
+    the longest dependency chain? Which node, if removed, disconnects the most? Which nodes form a cycle
+    that should not exist?
+    <br><br>
+    You will find a circular dependency you did not know about. That discovery — <em>a real defect found
+    by a graph algorithm you implemented</em> — is worth more than fifty textbook graph exercises.
+    <br><br>
+    <em>The realisation to reach:</em> graphs are not a topic, they are a <em>lens</em>. Once you have it,
+    dependency management, social networks, routing, citation, supply chains and family trees stop being
+    different subjects.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering N3–N4 · Databases N1 (relations are sets) · Networking N3
+  (routing is shortest path) · Distributed Systems N2 (happens-before is a partial order) · World
+  Philosophy (formal logic).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Linear algebra</h2>
+  <p class="sub">Data as geometry — and the branch that AI made unavoidable.</p>
+
+  <p><b>WHAT IT IS.</b> The study of vectors, the spaces they live in, and the transformations that map one
+  space to another. A matrix is not a grid of numbers; it is a function that moves space around.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because an enormous class of problems can be expressed as "apply a linear
+  transformation to a large collection of vectors", and computers are extremely fast at exactly that.
+  Graphics, machine learning, search, compression and physics all reduce to it.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2.</p>
+
+  <p><b>SUBTOPICS.</b> Vectors as points and as directions · linear combinations, span, basis · matrices as
+  transformations · matrix multiplication as composition · the dot product as similarity · projection ·
+  determinant as area scaling · eigenvectors as directions that survive a transformation · SVD and PCA as
+  finding structure.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free video series · <em>Title:</em> 3Blue1Brown, <em>Essence of Linear Algebra</em>
+    (15 episodes)<br>
+    <em>Why this one:</em> free, and it is genuinely the best explanation of this subject in any medium.
+    It teaches the geometric meaning first, so the algebra becomes a notation for something you can already
+    see. Watch all of it — it is short, and it makes everything else in the branch easy.
+    <br><br>
+    <b>DEEPER (optional)</b> — MIT OCW 18.06 (Gilbert Strang), free, when you need the computational
+    machinery rather than the intuition.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Compress a photograph and watch meaning survive</span>
+    Load a greyscale photograph as a matrix of numbers. Compute its singular value decomposition, then
+    reconstruct the image using only the largest 5, 20, 50 and 200 singular values. Plot all five images
+    side by side.
+    <br><br>
+    At 5 you see blurred structure. At 20 the image is recognisable. At 50 it is nearly perfect — using a
+    small fraction of the original numbers. You have just discovered, by measurement, that
+    <mark>real data is far lower-dimensional than it appears</mark>, and that is the single idea underneath
+    compression, embeddings, recommendation systems and dimensionality reduction.
+    <br><br>
+    Then plot the singular values themselves on a log scale. The steep drop-off <em>is</em> the redundancy,
+    quantified. Do the same for a photograph of noise and watch the curve stay flat — noise is genuinely
+    high-dimensional, and that is what distinguishes it from signal.
+    <br><br>
+    Finally, the intuition exercise: take a 2D grid of points, apply a matrix, and plot before and after.
+    Try a rotation, a shear, a projection onto a line. Find a matrix whose determinant is zero and watch
+    the plane collapse onto a line — information destroyed, irreversibly. That is what "singular" means.
+    <br><br>
+    <em>The realisation to reach:</em> a matrix is a verb, not a noun.
+  </div>
+
+  <p><b>CONNECTS TO.</b> AI (embeddings are vectors, attention is dot products) · Physics · Computing N4
+  (why matrix layout affects speed) · Statistics (regression is projection).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Calculus</h2>
+  <p class="sub">Change and accumulation — needed less often than its reputation suggests.</p>
+
+  <p><b>WHAT IT IS.</b> Two linked ideas: the derivative, which is an instantaneous rate of change, and the
+  integral, which is accumulation over a range. They are inverses of one another.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because most physical laws are statements about rates. It matters to you for
+  three specific things: understanding physics, understanding optimisation in AI, and understanding stocks
+  and flows in <a href="../tracks/systems-thinking/overview.html">systems thinking</a>. If none of those is
+  active, this branch can wait.</p>
+
+  <p><b>DEPENDENCIES.</b> N2.</p>
+
+  <p><b>SUBTOPICS.</b> Limits informally · the derivative as slope and as rate · rules of differentiation ·
+  optimisation via stationary points · the integral as area and as accumulation · the fundamental theorem ·
+  partial derivatives and the gradient (only if AI).</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free video series · <em>Title:</em> 3Blue1Brown, <em>Essence of Calculus</em><br>
+    <em>Why this one:</em> free, and it derives the rules rather than presenting them, so nothing has to be
+    memorised. Twelve short episodes replace a semester of manipulation you will never need.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Break a derivative with floating point</span>
+    Compute a derivative numerically: <code>(f(x+h) - f(x)) / h</code>, and make h smaller and smaller —
+    0.1, 0.01, down to 10⁻¹⁵. Plot the error against h.
+    <br><br>
+    The error falls as expected, reaches a minimum, and then <strong>rises again</strong>. Below a certain
+    h, subtracting two nearly identical floating point numbers destroys all your significant digits — this
+    is <a href="computing.html#n1">Computing N1</a> arriving inside a calculus problem.
+    <br><br>
+    <mark>Mathematics says smaller h is always better; the machine says there is an optimum.</mark> Find it
+    experimentally, then reason about why it sits near the square root of machine epsilon.
+    <br><br>
+    Then do the accumulation half concretely: take a real time series — your electricity meter, a bank
+    statement, a service's request rate — and move between rate and total in both directions. Integrate a
+    rate to get a total; differentiate a total to recover the rate. You are now fluent in the stock-and-flow
+    distinction that most people cannot do, and which is the foundation of
+    <a href="systems-thinking.html">Systems Thinking</a>.
+    <br><br>
+    <em>The realisation to reach:</em> continuous mathematics is an idealisation running on discrete
+    hardware, and knowing where the idealisation breaks is more valuable than being fast at the algebra.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Physics · AI (gradient descent) · Systems Thinking (stocks and flows are integrals
+  and derivatives) · Computing N1 (numerical error) · Economics (marginal analysis is differentiation).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Statistics</h2>
+  <p class="sub">Distinct from probability: probability reasons forward from a model, statistics reasons backward from data.</p>
+
+  <p><b>WHAT IT IS.</b> Summarising data, estimating unknown quantities from samples, quantifying
+  uncertainty in those estimates, and — hardest of all — reasoning about cause.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because almost every claim you will encounter about the world is a statistical
+  claim, and most of them are wrong in one of about six recognisable ways. This branch is largely
+  defensive.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="probability.html">Probability</a> N3–N5.</p>
+
+  <p><b>SUBTOPICS.</b> Descriptive statistics and what they hide · sampling and bias · estimation and
+  standard error · confidence intervals and their correct interpretation · hypothesis testing, p-values and
+  their misuse · multiple comparisons · regression · confounding · correlation versus causation · the basics
+  of causal inference.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> <em>Think Stats</em> (Allen Downey), free at Green Tea Press<br>
+    <em>Why this one:</em> free, computational, and built on real datasets — so every claim is one you
+    verify by running code rather than accept. It also treats exploratory analysis seriously, which most
+    introductions skip.
+    <br><br>
+    <b>DEEPER (optional)</b> — <em>Causal Inference: The Mixtape</em> (Scott Cunningham), free online, when
+    you want to move from "these are correlated" to "does this cause that".
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Four datasets, identical statistics, completely different truths</span>
+    Load Anscombe's quartet — four small datasets with <em>the same</em> mean, variance, correlation and
+    regression line. Compute all four summaries and confirm they match to two decimal places. Then plot
+    them. One is linear, one is curved, one has a single outlier dragging the line, one is a vertical
+    cluster plus a lone point.
+    <br><br>
+    <strong>Every summary statistic agreed. Every dataset means something different.</strong> Then look at
+    the Datasaurus Dozen, where the same trick is done with a dinosaur.
+    <br><br>
+    Now the harder phenomenon: construct Simpson's paradox with real data. Find a case where a treatment
+    appears better in every subgroup but worse overall — or take the Berkeley admissions data, where each
+    department admitted women at an equal or higher rate while the university as a whole appeared biased
+    against them. Reproduce the reversal numerically and explain it.
+    <br><br>
+    <mark>The aggregate and the subgroups tell opposite stories, and both are arithmetically correct.</mark>
+    Which one is right depends entirely on a causal question that the data alone cannot answer.
+    <br><br>
+    <em>The realisation to reach:</em> statistics cannot tell you what caused what. It can only tell you
+    what is consistent with what, and the causal claim always comes from outside the data — from a model of
+    the world you brought with you.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N5 · Psychology (the replication crisis) · Economics (empirical work) ·
+  Data Engineering N6 (distribution tests) · World Philosophy (induction, evidence).</p>
+</section>
+
+<section id="pull">
+  <h2><span class="num">::</span> The pull table</h2>
+  <p class="sub">Which branch each domain will eventually demand — so you can recognise the moment rather than pre-empt it.</p>
+
+  <table>
+    <thead><tr><th>When you are doing…</th><th>You will need…</th><th>And only this much</th></tr></thead>
+    <tbody>
+      <tr><td><a href="computing.html">Computing</a> N7 — complexity</td><td>N2 growth rates</td><td>Comparing function families. No proofs.</td></tr>
+      <tr><td><a href="software-engineering.html">Software Engineering</a> N3–N4</td><td>N3 graphs, induction</td><td>Traversal and cycle detection.</td></tr>
+      <tr><td><a href="databases.html">Databases</a> N1</td><td>N3 sets and relations</td><td>Set operations and functional dependency.</td></tr>
+      <tr><td><a href="probability.html">Probability</a> N1</td><td>N3 counting</td><td>Permutations and combinations.</td></tr>
+      <tr><td><a href="distributed-systems.html">Distributed Systems</a> N2</td><td>N3 partial orders</td><td>Happens-before as a relation.</td></tr>
+      <tr><td>AI — embeddings, attention</td><td>N4 linear algebra</td><td>Dot products, projection, SVD.</td></tr>
+      <tr><td>AI — training</td><td>N5 gradients</td><td>Partial derivatives and the chain rule.</td></tr>
+      <tr><td>Physics</td><td>N5 calculus</td><td>Derivatives as rates, integrals as accumulation.</td></tr>
+      <tr><td>Economics, Finance</td><td>N2, N5, N6</td><td>Growth, marginal analysis, regression.</td></tr>
+      <tr><td>Systems Thinking</td><td>N5 concept only</td><td>Stocks are integrals of flows. No computation.</td></tr>
+      <tr><td>World Philosophy</td><td>N3 logic</td><td>Implication, validity, quantifiers.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">How to use this table</span>
+    Read it as a <strong>reassurance</strong> rather than a plan. When a domain stalls you on mathematics,
+    this tells you the branch and — more importantly — <mark>how little of it you actually need before you
+    can go back.</mark>
+  </div>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Fermi estimates that land within 10×</td><td>Willingness to compute</td></tr>
+      <tr><td>N2</td><td>An exponential becoming a straight line</td><td>Axes are an argument</td></tr>
+      <tr><td>N3</td><td>Finding the illegal step; a real dependency cycle</td><td>Graphs are a lens</td></tr>
+      <tr><td>N4</td><td>A photo reconstructed from 20 singular values</td><td>Data is low-dimensional</td></tr>
+      <tr><td>N5</td><td>A derivative that gets worse as h gets smaller</td><td>Idealisation meets hardware</td></tr>
+      <tr><td>N6</td><td>Anscombe's quartet; Simpson's paradox</td><td>Summaries hide; causation is external</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="probability.html">Probability</a></td><td>N3 counting is the only real prerequisite</td></tr>
+      <tr><td>Artificial Intelligence</td><td>N4 linear algebra and N5 gradients, and almost nothing else</td></tr>
+      <tr><td>Physics</td><td>N5 calculus and N4 vectors</td></tr>
+      <tr><td>Economics &amp; Finance</td><td>N2 growth, N5 marginal analysis, N6 regression</td></tr>
+      <tr><td>World Philosophy</td><td>N3 logic — the shared ancestor of proof and argument</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 01 · Mathematics · a toolbox, not a journey</footer>
+
+</body>
+</html>

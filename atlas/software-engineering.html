@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Software Engineering — Atlas domain 08</title>
+<meta name="description" content="Objects, references, structures, concurrency, design — taught through phenomena that make each concept necessary." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Objects</a>
+  <a href="#n2">2 · References &amp; aliasing</a>
+  <a href="#n3">3 · Data structures</a>
+  <a href="#n4">4 · Recursion</a>
+  <a href="#n5">5 · Memory &amp; GC</a>
+  <a href="#n6">6 · Concurrency</a>
+  <a href="#n7">7 · Serialization</a>
+  <a href="#n8">8 · Observability</a>
+  <a href="#n9">9 · Design</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Software Engineering</p>
+
+<div class="hero">
+  <div class="kicker">Domain 08 · Cluster C3 · gated by Computing · <span class="pill pL">deep</span></div>
+  <h1>Software Engineering</h1>
+  <p class="dropcap">This is one of two domains in the Atlas set to genuine depth rather than
+  commander-level. The subject is not <em>how to write code that works</em> — that is programming. It is
+  <em>how to reason about a system made of moving parts that outlives the day you wrote it</em>, which is
+  a different and much harder thing.</p>
+  <div class="why">
+    <b>The single idea.</b> Every concept in this domain exists because a simpler approach broke at a
+    particular scale. <mark>The concept is never the lesson — the breakage is the lesson.</mark> Learn
+    each one by reaching the breakage first, deliberately, in something small enough that you can see the
+    whole failure.
+  </div>
+  <div class="tags">
+    <span class="tag">#objects</span>
+    <span class="tag t2">#references</span>
+    <span class="tag t3">#concurrency</span>
+    <span class="tag">#design</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">Programming is instructing a machine. Engineering is managing what happens next.</p>
+
+  <p>A program that runs once, for you, on your machine, needs almost none of this. Every idea below
+  earns its place only when at least one of five things is true: the program is <strong>large</strong>,
+  it <strong>lives a long time</strong>, it is <strong>touched by other people</strong>, it
+  <strong>runs concurrently</strong>, or it <strong>must not lose data</strong>. That is the actual
+  boundary between programming and engineering.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="computing.html">Computing</a> — especially stack/heap and cost models</td><td>Operating Systems · Databases · Distributed Systems · Data Engineering · AI (engineering half)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">You already hold territory here</span>
+    Your <a href="../tracks/python/object-model/1.1-identity-type-value.html">object model</a> and
+    <a href="../tracks/python/data-model/2.1-special-methods.html">data model</a> tracks cover N1 and N2
+    at depth already, and <a href="../tracks/Projects/README.md">the projects track</a> is the correct
+    delivery mechanism for N3 onward. This page is the map around them, not a replacement.
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+  <p class="sub">Nine nodes, ordered by the breakage that forces each one.</p>
+
+<pre>SOFTWARE ENGINEERING
+│
+├── 1 · OBJECTS ....................... identity, type, value, equality, hashing
+├── 2 · REFERENCES &amp; ALIASING ......... names, containers, copy depth, mutability
+├── 3 · DATA STRUCTURES ............... arrays, hash maps, trees, heaps, graphs
+├── 4 · RECURSION &amp; THE CALL STACK .... self-similar structure, cycles, depth
+├── 5 · MEMORY &amp; GARBAGE COLLECTION ... lifetime, refcounts, cycles, leaks
+├── 6 · CONCURRENCY ................... threads, races, locks, async, deadlock
+├── 7 · SERIALIZATION &amp; PROTOCOLS ..... crossing a process or machine boundary
+├── 8 · TESTING, DEBUGGING, OBSERVABILITY ... knowing what your system is doing
+└── 9 · DESIGN ........................ coupling, cohesion, interfaces, abstraction</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Objects</h2>
+  <p class="sub">Identity, type, value — and the contract between equality and hashing.</p>
+
+  <p><b>WHAT IT IS.</b> An object has three properties: what it <em>is</em> (identity), what
+  <em>kind</em> of thing it is (type), and what it <em>holds</em> (value). Two of those never change.
+  Equality, hashing and ordering are protocols layered on top, and they have contracts you can violate.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because collections need to answer “have I seen this before?” — and that
+  question is meaningless until you have decided whether you mean <em>the same object</em> or <em>an
+  equal one</em>. Nearly every subtle bug involving sets, dicts and caches traces back to that choice.</p>
+
+  <p><b>DEPENDENCIES.</b> Computing N5 (stack and heap).</p>
+
+  <p><b>SUBTOPICS.</b> Identity vs equality · type as behaviour, not label · the eq/hash contract ·
+  ordering · immutability as a guarantee · value objects.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Official documentation · <em>Title:</em> The Python Language Reference §3, “Data model”<br>
+    <em>Why this one:</em> free, precise, and the actual contract rather than someone's summary of it.
+    Most confusion here comes from reading tutorials that paraphrase this document badly.
+    <br><br>
+    <b>DEEPER (optional)</b> — Composing Programs (Berkeley CS61A, free online), chapter 2, for the same
+    ideas expressed as abstraction rather than as language rules.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The object that vanished</span>
+    Define a small class holding two fields. Give it an <code>__eq__</code> and an <code>__hash__</code>
+    based on those fields. Put an instance into a <code>set</code>. Confirm it is there.
+    <br><br>
+    Now <strong>mutate one of the fields</strong> and look for the object again. It is gone. The set
+    still contains it — <code>len()</code> proves that — but membership testing cannot find it, and
+    iterating will yield an object the set claims not to contain.
+    <br><br>
+    Then find the second surprise: define <code>__eq__</code> without <code>__hash__</code> and watch the
+    class become unhashable entirely. Ask why the language would do that <em>to you</em> rather than for you.
+    <br><br>
+    <em>The realisation to reach:</em> a hash-based container is not storing your object, it is storing
+    it <mark>at an address computed from its value</mark> — so mutating the value without telling the
+    container moves the door but not the house.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases (primary keys are this exact contract) · Distributed Systems
+  (consistent hashing) · Data Engineering (deduplication) · Mathematics (equivalence relations).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> References and aliasing</h2>
+  <p class="sub">A name is a label, not a box — and containers hold labels too.</p>
+
+  <p><b>WHAT IT IS.</b> Assignment binds a name to an object; it does not copy. Containers hold
+  references, not values. Copying therefore has a <em>depth</em>, and mutability determines whether depth
+  matters.</p>
+
+  <p><b>WHY IT EXISTS.</b> Copying everything on every assignment would be unusably slow. Sharing is the
+  default for performance reasons, and every aliasing bug is the price of that decision.</p>
+
+  <p><b>DEPENDENCIES.</b> N1.</p>
+
+  <p><b>SUBTOPICS.</b> Binding vs mutation · shallow and deep copy · argument passing · mutable default
+  arguments · defensive copying · immutability as a design tool.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Your own existing note · <em>Title:</em>
+    <a href="../tracks/python/object-model/1.3-references-aliasing.html">1.3 References &amp; aliasing</a><br>
+    <em>Why this one:</em> you have already built it and marked it Evergreen. Re-deriving it from an
+    external resource would be strictly worse than re-reading your own derivation.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The function with a memory</span>
+    Write a function that takes a list with a default value of <code>[]</code>, appends to it, and returns
+    it. Call it three times with no argument. The results accumulate across calls — the function has
+    grown a memory it was never given.
+    <br><br>
+    Now build the more dangerous version: a “template” dictionary of configuration, copied into each of
+    ten workers with a shallow copy, where one nested value is a list. Have one worker append to that
+    list. Watch all ten change.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>the default argument was evaluated once, at definition
+    time</mark> — and a shallow copy duplicates the outer container while faithfully sharing everything
+    inside it. Both bugs are the same bug: you assumed a copy where the language gave you a reference.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Concurrency (shared mutable state is this problem with a timing dimension) ·
+  Functional programming · Distributed Systems (why messages are copied by value across a boundary).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Data structures</h2>
+  <p class="sub">Not a catalogue to memorise. A set of trade-offs to recognise.</p>
+
+  <p><b>WHAT IT IS.</b> Arrays, hash maps, linked structures, trees, heaps and graphs — each one fast at
+  some operations and slow at others, with the trade-off determined by physical layout.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because there is no structure that is good at everything. Choosing correctly
+  means knowing which operation you will perform ten million times and which you will perform once.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2 · Computing N4 (the memory hierarchy is why arrays win more often than
+  theory suggests).</p>
+
+  <p><b>SUBTOPICS.</b> Dynamic arrays and amortised growth · hash maps, collisions, load factor · linked
+  lists and pointer chasing · trees and balance · heaps and priority · graphs and traversal.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course · <em>Title:</em> MIT OCW 6.006, lectures on hashing, trees and heaps<br>
+    <em>Why this one:</em> free, and it derives each structure from the problem it solves rather than
+    presenting it as a fact to absorb.
+    <br><br>
+    <b>DEEPER (optional)</b> — Open Data Structures (opendatastructures.org, free) when you want the
+    implementations in full.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Build a cache and get evicted</span>
+    Build a cache as a plain dictionary in front of a slow function. It works, and it is fast. Now let it
+    run against a large key space until memory becomes a problem — and you have discovered that
+    <em>a cache without eviction is just a memory leak with good intentions.</em>
+    <br><br>
+    Add a size limit. Immediately you face a real question with no obvious answer: <strong>which entry do
+    you throw away?</strong> Try random eviction, then first-in-first-out, then least-recently-used. To
+    implement LRU efficiently you will find that a dictionary alone cannot do it — you need
+    <em>ordering</em> as well as lookup, and you will end up combining a hash map with a linked list
+    because neither structure alone has both properties.
+    <br><br>
+    Measure hit rate for each policy on a realistic access pattern. Then try a workload where LRU is the
+    <em>worst</em> possible policy — a sequential scan larger than the cache.
+    <br><br>
+    <em>The realisation to reach:</em> you did not choose a data structure, <mark>you composed two
+    structures because your access pattern needed two different things</mark>. That is what real
+    structure selection looks like.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases (a B-tree is this node at disk scale) · Operating Systems (page
+  replacement is literally cache eviction) · Distributed Systems (distributed caches) · Economics
+  (inventory policy is the same problem).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Recursion and the call stack</h2>
+  <p class="sub">Processing something that contains smaller versions of itself.</p>
+
+  <p><b>WHAT IT IS.</b> A technique for structures whose shape is self-similar, and the machine mechanism
+  — the call stack — that makes it possible and also limits it.</p>
+
+  <p><b>WHY IT EXISTS.</b> Some structures have no natural loop over them because their depth is unknown:
+  a filesystem, a JSON document, an expression tree, an organisation chart. Recursion is how you write
+  code whose shape matches the data's shape.</p>
+
+  <p><b>DEPENDENCIES.</b> Computing N5.</p>
+
+  <p><b>SUBTOPICS.</b> Base case and recursive case · the call stack and stack traces · depth limits ·
+  converting to iteration with an explicit stack · memoisation · cycle detection.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> SICP (MIT Press, free online edition), §1.2 ·
+    <em>Why this one:</em> it distinguishes a recursive <em>process</em> from a recursive
+    <em>procedure</em>, which is the distinction that makes tail calls and stack growth make sense.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Walk a filesystem until it bites</span>
+    Write a walker that computes the total size of a directory tree. It is naturally recursive because
+    directories contain directories. Run it on your home directory.
+    <br><br>
+    Three things will go wrong, and each teaches a distinct concept. It may hit a <strong>symlink
+    loop</strong> and recurse forever — forcing you to invent visited-set cycle detection, which is a
+    graph concept arriving inside a tree problem. It may hit a <strong>permission error</strong> halfway
+    through and lose all accumulated work — forcing you to think about partial failure. And on a
+    deep-enough tree it may hit the <strong>recursion limit</strong> — forcing the iterative rewrite with
+    an explicit stack.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>the thing you thought was a tree was a graph.</mark> That
+    single discovery is worth more than any number of recursion exercises, and it arrives on its own if
+    you point the program at a real filesystem instead of a synthetic one.
+  </div>
+
+  <p><b>CONNECTS TO.</b> N3 (graphs) · Data Engineering (lineage graphs, DAG orchestration) · Distributed
+  Systems (dependency cycles) · Mathematics (induction is the proof form of recursion).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Memory management and garbage collection</h2>
+  <p class="sub">Who decides when an object stops existing.</p>
+
+  <p><b>WHAT IT IS.</b> The strategies by which a runtime determines that memory can be reclaimed:
+  reference counting, tracing collectors, generational heuristics — and their failure modes.</p>
+
+  <p><b>WHY IT EXISTS.</b> Manual freeing produces two catastrophic bug classes (use-after-free and
+  leaks). Automatic collection removes one of them and makes the other quieter, at the cost of pauses
+  and unpredictability.</p>
+
+  <p><b>DEPENDENCIES.</b> N2 (references are exactly what a collector counts) · Computing N5.</p>
+
+  <p><b>SUBTOPICS.</b> Reference counting · cycles · tracing and mark-sweep · generational collection ·
+  weak references · finalisers · what a “leak” means in a managed language.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Official documentation + tool · <em>Title:</em> Python's <code>gc</code> and
+    <code>tracemalloc</code> modules, used as instruments<br>
+    <em>Why this one:</em> free, installed, and this node is only convincing when you watch the numbers
+    move on your own process.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make an object immortal by accident</span>
+    Create two objects that refer to each other, drop every external name to both, and check whether they
+    were freed. Under pure reference counting they cannot be — each holds the other's count above zero —
+    so they are unreachable and alive at the same time. Disable the cycle collector and watch memory
+    climb.
+    <br><br>
+    Then build the leak that actually happens in production: a cache keyed by object, a registry that
+    appends every instance it has ever seen, or a closure that captured something large. Use
+    <code>tracemalloc</code> to find it the way you would in a real incident, rather than by reading the
+    code you already know is wrong.
+    <br><br>
+    <em>The realisation to reach:</em> a managed language does not prevent leaks. It only changes the
+    question from <em>“did I forget to free it?”</em> to <mark>“what is still holding a reference I forgot
+    about?”</mark>
+  </div>
+
+  <p><b>CONNECTS TO.</b> Operating Systems (virtual memory, RSS) · Databases (connection and buffer pools)
+  · Infrastructure (why a service restarts nightly) · Biology (apoptosis is scheduled cleanup).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Concurrency</h2>
+  <p class="sub">More than one thing happening, and the loss of a single timeline.</p>
+
+  <p><b>WHAT IT IS.</b> Structuring a program so that multiple activities overlap in time, plus the
+  mechanisms — locks, queues, immutability, message passing — that keep shared state from being corrupted
+  by that overlap.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because processors stopped getting faster and started getting wider, and
+  because most programs spend their time waiting rather than computing. Both facts force overlap.</p>
+
+  <p><b>DEPENDENCIES.</b> N2 (shared mutable state), N5 · Computing N3.</p>
+
+  <p><b>SUBTOPICS.</b> Concurrency vs parallelism · threads and processes · race conditions · atomicity
+  and the read-modify-write problem · locks, deadlock, livelock · queues as the safer default · async and
+  event loops · immutability as a concurrency strategy.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> The Little Book of Semaphores (Allen Downey, free PDF)<br>
+    <em>Why this one:</em> it is structured as a sequence of puzzles you attempt before seeing the answer,
+    which is the only way synchronisation ever becomes intuitive rather than memorised.
+    <br><br>
+    <b>DEEPER (optional)</b> — OSTEP (free online), the concurrency section, once Operating Systems is on
+    your map.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The counter that cannot count</span>
+    Two threads, each incrementing a shared counter one million times. Expected result: two million.
+    Run it. You will get something less, and a different number every time.
+    <br><br>
+    The value of this exercise is entirely in the <em>next</em> step: explain precisely where the lost
+    updates went, in terms of read-modify-write being three operations rather than one. Then fix it with a
+    lock and measure the cost — the fixed version is often <strong>slower than a single thread</strong>,
+    which is the second and more important surprise.
+    <br><br>
+    Then build a deliberate deadlock with two locks acquired in opposite orders, watch it hang, and fix it
+    by imposing a global lock ordering. Finally, rewrite the whole thing with a queue and no shared state
+    at all, and notice that the problem simply ceases to exist.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>locks do not make concurrency safe; they make it slow enough
+    to be safe.</mark> The structural fix is almost always to stop sharing, not to guard the sharing
+    better.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Operating Systems (scheduling, context switches) · Distributed Systems (the same
+  problem with the added possibility that the other party has died) · Databases (isolation levels are
+  concurrency control) · Human Behavior (coordination problems).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> Serialization and protocols</h2>
+  <p class="sub">What happens when a value has to leave the process that created it.</p>
+
+  <p><b>WHAT IT IS.</b> Converting in-memory structures to a byte sequence and back, plus the agreements
+  — framing, schema, versioning — that let two programs interpret those bytes identically.</p>
+
+  <p><b>WHY IT EXISTS.</b> Memory representations contain pointers, and a pointer is meaningless outside
+  the process that made it. Anything crossing a process, machine or time boundary must be flattened.</p>
+
+  <p><b>DEPENDENCIES.</b> N1, N2 · Computing N1 (encoding).</p>
+
+  <p><b>SUBTOPICS.</b> Text vs binary formats · framing and message boundaries · schemas and evolution ·
+  backward and forward compatibility · endianness · the security risk of deserialising untrusted input.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book chapter · <em>Title:</em> <em>Designing Data-Intensive Applications</em>,
+    chapter 4 — <em>if</em> you have library access; otherwise the free primary is the official
+    documentation for JSON, Protocol Buffers and Apache Avro read side by side<br>
+    <em>Why this one:</em> reading three schema systems together makes the trade-off visible in a way no
+    single one does — self-describing versus compact, and flexible versus checked.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Send an object and watch it not arrive</span>
+    Open a socket between two processes and send an object across it. It will not work, and the reasons
+    arrive in a useful order.
+    <br><br>
+    First the object cannot be sent at all — you must decide what its bytes are. Then the receiver gets
+    <em>half a message</em>, or two messages stuck together, because TCP is a byte stream with no notion of
+    where your message ends. You will invent length-prefixing, which is framing. Then you will change the
+    sender's structure by adding a field and discover the receiver breaks — and you will have arrived at
+    schema evolution.
+    <br><br>
+    Finally: send a float and a large integer, and check that what arrived is bit-for-bit what left.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>a network gives you bytes, not messages.</mark> Every message
+    boundary you have ever relied on was constructed by software, and you have now constructed one.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Networking (framing is where these meet) · Data Engineering (Avro, Parquet,
+  schema registries) · Distributed Systems (rolling upgrades demand compatibility in both directions) ·
+  Security (deserialisation is a classic remote code execution vector).</p>
+</section>
+
+<section id="n8">
+  <h2><span class="num">N8</span> Testing, debugging, observability</h2>
+  <p class="sub">Three different answers to “what is this system actually doing?”</p>
+
+  <p><b>WHAT IT IS.</b> Testing asks the question before deployment against cases you thought of.
+  Debugging answers it after a failure you did not. Observability answers it continuously, in production,
+  for questions you have not yet thought to ask.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because your mental model of the system diverges from the system immediately
+  and permanently. These are the three instruments for measuring that divergence.</p>
+
+  <p><b>DEPENDENCIES.</b> All previous nodes.</p>
+
+  <p><b>SUBTOPICS.</b> Unit, integration and property-based testing · test doubles · the debugger versus
+  print statements · bisection · structured logs, metrics, traces · cardinality · what makes a system
+  “observable” rather than merely monitored.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course · <em>Title:</em> MIT <em>The Missing Semester of Your CS Education</em> —
+    the debugging, profiling and testing lectures<br>
+    <em>Why this one:</em> free, short, and it teaches the tools nobody teaches — debuggers, profilers,
+    bisection — which are exactly the ones that separate hours of guessing from minutes of knowing.
+    <br><br>
+    <b>DEEPER (optional)</b> — the Hypothesis documentation for property-based testing, which will change
+    what you think a test is.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find a bug you did not plant</span>
+    Take any of the earlier hands-on systems, seed it with a subtle fault — an off-by-one in eviction, a
+    lock released too early — and then <strong>leave it for a week.</strong> Come back and find it using
+    only a debugger and bisection, without re-reading the diff.
+    <br><br>
+    Then do the harder version: write a property-based test that asserts something structural rather than
+    specific — <em>“the cache never exceeds its size limit, for any sequence of operations”</em> — and let
+    the framework generate thousands of sequences to try to break it. It will find inputs you would never
+    have written by hand.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>example-based tests check the cases you already imagined,
+    which are exactly the cases you already handled.</mark> Properties check the space you did not imagine.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Infrastructure (metrics, traces, incident response) · Probability (a flaky test
+  is a probabilistic statement) · Psychology (confirmation bias is the main obstacle to debugging).</p>
+</section>
+
+<section id="n9">
+  <h2><span class="num">N9</span> Design</h2>
+  <p class="sub">The only node with no correct answers — which is precisely why it is last.</p>
+
+  <p><b>WHAT IT IS.</b> Deciding where the boundaries go: which things know about which other things, what
+  is hidden behind an interface, and what has to change together.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because requirements change, and the cost of a change is determined almost
+  entirely by how many places must be touched. Design is the discipline of arranging code so that likely
+  changes are cheap and unlikely ones are merely possible.</p>
+
+  <p><b>DEPENDENCIES.</b> Genuine experience of N1–N8. This node cannot be learned first, and attempting
+  to is the most common way engineers waste years.</p>
+
+  <p><b>SUBTOPICS.</b> Coupling and cohesion · interfaces and information hiding · abstraction and its
+  leaks · composition over inheritance · when duplication is cheaper than the wrong abstraction ·
+  designing for deletion.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> SICP (free online edition), chapters 1–2 on
+    abstraction barriers<br>
+    <em>Why this one:</em> it treats abstraction as something with a <em>cost and a boundary</em> rather
+    than as a virtue, which is the mature version of the idea and rarely taught.
+    <br><br>
+    <b>DEEPER (optional)</b> — Parnas, “On the Criteria To Be Used in Decomposing Systems into Modules”
+    (1972, free PDF). Fifty years old, still the clearest statement of why you hide what is likely to
+    change.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Change the requirement and count the damage</span>
+    Take the cache from N3 and write down, before touching anything, how many files and functions you
+    would have to modify to make each of these changes: eviction policy becomes pluggable; entries gain a
+    time-to-live; the cache moves to another process; two threads use it.
+    <br><br>
+    Now actually make them, one at a time, and count what you really touched. The gap between your
+    estimate and reality <em>is</em> your current design skill, measured.
+    <br><br>
+    Then do the thing nobody does: build the same cache twice, once with the eviction policy behind an
+    interface and once inlined, and honestly assess which was better <strong>before</strong> the
+    requirement changed. The inlined one usually wins on clarity — which is why premature abstraction is
+    so tempting and so costly.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>design quality is not a property of code, it is a
+    relationship between code and the changes that actually arrive.</mark> You cannot evaluate it in the
+    present tense.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Systems Thinking (coupling is structure, and structure produces behaviour) ·
+  Business (Conway's law — architecture mirrors the organisation) · Economics (option value of deferred
+  decisions).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+  <p class="sub">Nine phenomena. Each one is a wrong prediction waiting to happen.</p>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Mutate an object inside a set; it vanishes</td><td>The eq/hash contract</td></tr>
+      <tr><td>N2</td><td>A default argument that accumulates across calls</td><td>Binding vs mutation</td></tr>
+      <tr><td>N3</td><td>A cache that must evict something</td><td>Composing two structures</td></tr>
+      <tr><td>N4</td><td>A filesystem walk that never terminates</td><td>The tree was a graph</td></tr>
+      <tr><td>N5</td><td>Two objects keeping each other alive</td><td>Reachability, not scope</td></tr>
+      <tr><td>N6</td><td>Two threads, two million increments, wrong answer</td><td>Atomicity</td></tr>
+      <tr><td>N7</td><td>Half a message arrives</td><td>Streams have no boundaries</td></tr>
+      <tr><td>N8</td><td>A property test finds an input you never imagined</td><td>The unimagined space</td></tr>
+      <tr><td>N9</td><td>Estimating change cost, then measuring it</td><td>Design is about the future</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">How this connects to your projects track</span>
+    These nine are the concept layer. <a href="../tracks/Projects/README.md">Projects</a> is the delivery
+    mechanism — a single system that grows until it hits each of these breakages in turn is better than
+    nine separate exercises, because the concepts arrive with context attached.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next domain</th><th>What it inherits from here</th></tr></thead>
+    <tbody>
+      <tr><td><a href="operating-systems.html">Operating Systems</a></td><td>N5 and N6 become processes, scheduling and virtual memory</td></tr>
+      <tr><td><a href="databases.html">Databases</a></td><td>N1 becomes keys; N3 becomes indexes; N6 becomes isolation levels</td></tr>
+      <tr><td><a href="networking.html">Networking</a></td><td>N7 is the direct bridge — framing is where the two domains meet</td></tr>
+      <tr><td>Distributed Systems</td><td>N6 plus the possibility that the other party is gone forever</td></tr>
+      <tr><td>Data Engineering</td><td>N7 schema evolution and N3 layout are the daily work</td></tr>
+      <tr><td>Business</td><td>N9 — Conway's law makes design an organisational question</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 08 · Software Engineering · depth setting: deep</footer>
+
+</body>
+</html>

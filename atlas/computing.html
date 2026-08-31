@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Computing — Atlas domain 07</title>
+<meta name="description" content="What a computer actually is: representation, architecture, memory, execution, cost. With phenomena that force each concept." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Representation</a>
+  <a href="#n2">2 · Logic to machine</a>
+  <a href="#n3">3 · Architecture</a>
+  <a href="#n4">4 · Memory hierarchy</a>
+  <a href="#n5">5 · Stack &amp; heap</a>
+  <a href="#n6">6 · Execution models</a>
+  <a href="#n7">7 · Cost &amp; complexity</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Computing</p>
+
+<div class="hero">
+  <div class="kicker">Domain 07 · Cluster C3 · gated by digital logic + discrete maths</div>
+  <h1>Computing</h1>
+  <p class="dropcap">This domain answers one question: <em>what is actually happening when a machine
+  computes?</em> Everything above it in the stack — software engineering, operating systems, databases,
+  distributed systems — is an abstraction built to hide something in here. You cannot reason about the
+  abstractions until you know what they are hiding.</p>
+  <div class="why">
+    <b>The single idea.</b> A computer is a machine that can only do two things: <mark>move bits between
+    places, and combine bits according to fixed rules.</mark> Every other capability — text, images,
+    money, intelligence — is a convention layered on top of those two operations. Most confusion in
+    software comes from forgetting that the convention is a convention.
+  </div>
+  <div class="tags">
+    <span class="tag">#representation</span>
+    <span class="tag t2">#architecture</span>
+    <span class="tag t3">#memory</span>
+    <span class="tag">#execution</span>
+    <span class="tag t2">#cost</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists, and what it is not</h2>
+  <p class="sub">Not computer science. Not programming. The machine underneath both.</p>
+
+  <p>Programming teaches you to instruct a machine. Computing teaches you what the machine <em>is</em>,
+  which is what lets you predict its behaviour instead of being surprised by it. The difference shows
+  up the day a program is correct but 200× too slow, or produces 0.30000000000000004, or crashes at a
+  recursion depth you did not know existed.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td>Digital logic (gates, flip-flops) · Discrete maths (binary, logic)</td><td>Software Engineering · Operating Systems · Networking · Databases · everything in C3</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Depth setting for this domain</span>
+    Commander-level, with one exception: <strong>the memory hierarchy</strong> deserves genuine depth,
+    because it silently explains most performance behaviour you will ever encounter in your professional
+    work, and almost nobody learns it properly.
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+  <p class="sub">Seven nodes. The arrows are real — each one is needed by the next.</p>
+
+<pre>COMPUTING
+│
+├── 1 · REPRESENTATION ................. how meaning is encoded in bits
+│   ├── Positional number systems, binary, hex
+│   ├── Signed integers &amp; two's complement
+│   ├── Overflow and wraparound
+│   ├── Floating point (IEEE 754)
+│   └── Text: ASCII, Unicode, UTF-8
+│
+├── 2 · FROM LOGIC TO A MACHINE ....... how physics becomes arithmetic
+│   ├── Gates, truth tables, boolean algebra
+│   ├── Adders and the ALU
+│   ├── Flip-flops, registers, state
+│   └── The clock and sequential logic
+│
+├── 3 · ARCHITECTURE .................. how instructions get executed
+│   ├── The fetch-decode-execute cycle
+│   ├── Registers and the instruction set
+│   ├── Pipelining and why branches hurt
+│   └── The machine is not sequential anymore
+│
+├── 4 · MEMORY HIERARCHY  [DEPTH] ..... why the same code runs 100× slower
+│   ├── Latency numbers that matter
+│   ├── Cache lines, locality, prefetching
+│   ├── Row-major vs column-major traversal
+│   └── Why data layout beats algorithmic cleverness
+│
+├── 5 · STACK &amp; HEAP ................... where values actually live
+│   ├── Stack frames and the call stack
+│   ├── Heap allocation and fragmentation
+│   ├── Pointers and references
+│   └── Stack overflow as a physical limit
+│
+├── 6 · EXECUTION MODELS .............. what runs your source
+│   ├── Compilation, interpretation, JIT
+│   ├── Bytecode and virtual machines
+│   ├── Static vs dynamic dispatch
+│   └── What the compiler is allowed to change
+│
+└── 7 · COST &amp; COMPLEXITY ............. reasoning about scale
+    ├── Asymptotic notation, honestly
+    ├── Constants and why they win at small n
+    ├── Amortised analysis
+    └── Measuring instead of guessing</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Representation</h2>
+  <p class="sub">How meaning is encoded in bits — and what leaks when the encoding is imperfect.</p>
+
+  <p><b>WHAT IT IS.</b> A bit has no meaning. A group of bits means something only because a convention
+  says so. Representation is the study of those conventions: how numbers, text, colours and times are
+  encoded, and precisely where each encoding breaks.</p>
+
+  <p><b>WHY IT EXISTS.</b> Hardware can only hold two states reliably. Everything humans care about must
+  therefore be squeezed into finite sequences of two-state cells — and <em>finite</em> is the operative
+  word. Every representation bug in history comes from the gap between an infinite idea and a finite
+  encoding.</p>
+
+  <p><b>DEPENDENCIES.</b> Positional notation. Nothing else.</p>
+
+  <p><b>SUBTOPICS.</b> Binary and hex · two's complement · integer overflow · IEEE 754 floating point ·
+  ASCII, Unicode, UTF-8 and the difference between a character, a code point and a byte.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> Dive Into Systems, chapters 1–4 ·
+    <em>Creator:</em> Matthews, Newhall, Webb<br>
+    <em>Why this one:</em> it is genuinely free, written for people who program but have never looked
+    underneath, and it treats representation as something you <em>observe</em> rather than memorise.
+    <br><br>
+    <b>DEEPER (optional)</b> — “What Every Computer Scientist Should Know About Floating-Point
+    Arithmetic” (Goldberg, free PDF). Read only after the hands-on below makes you angry enough to want it.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The number that will not behave</span>
+    Open a Python REPL and evaluate <code>0.1 + 0.2</code>. It is not <code>0.3</code>. Now find out why
+    — not by reading, by <em>looking</em>: print the exact stored value with
+    <code>Decimal(0.1)</code>, and print the raw bits of the float. Then answer three questions with
+    experiments: <em>which</em> decimals are exact in binary and which are not; what
+    <code>0.1 + 0.2 == 0.3</code> should be replaced with; and how big an integer can get before a float
+    can no longer distinguish it from its neighbour.
+    <br><br>
+    Then find the real-world consequence: the Patriot missile timing failure of 1991, and the Vancouver
+    Stock Exchange index that drifted downward for two years. Both are this bug, in production, with
+    consequences.
+    <br><br>
+    <em>The realisation to reach:</em> floating point is not “imprecise maths”. It is an exact system
+    for a different set of numbers than the one you assumed.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Finance (never store money in a float) · Physics (measurement precision) ·
+  Databases (numeric types) · AI (why training uses reduced precision on purpose).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> From logic to a machine</h2>
+  <p class="sub">The bridge from physics to arithmetic — the one layer that feels like magic until you build it.</p>
+
+  <p><b>WHAT IT IS.</b> How switching elements combine into gates, gates into adders, adders into an
+  arithmetic unit, and how feedback turns a circuit into something with <em>memory</em>.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because “the computer adds two numbers” has to be a physical event. This node
+  is where you stop believing computing is magic, permanently. It is worth doing once, quickly, and
+  never again.</p>
+
+  <p><b>DEPENDENCIES.</b> Boolean logic. Basic electronics helps but is not required.</p>
+
+  <p><b>SUBTOPICS.</b> Truth tables · AND/OR/NOT/XOR · half and full adders · multiplexers · latches and
+  flip-flops · registers · the clock.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Project course · <em>Title:</em> Nand2Tetris, Part 1 (projects 1–3) ·
+    <em>Creator:</em> Nisan &amp; Schocken · <em>Cost:</em> course materials, simulator and projects are free<br>
+    <em>Why this one:</em> you build a working computer from a single NAND gate upward, in a simulator,
+    with no hardware. This is the rare case where <strong>the doing is the learning</strong> and reading
+    an equivalent chapter would teach you nothing.
+    <br><br>
+    <b>DEEPER (optional)</b> — Ben Eater's 8-bit breadboard computer series (free, YouTube). Watch if you
+    want to see it in physical wire rather than simulation.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Build an adder, then discover memory</span>
+    In the Nand2Tetris simulator, build a half adder from NAND gates, then a full adder, then a 16-bit
+    adder. You will notice something uncomfortable: <em>everything you have built forgets instantly.</em>
+    Output depends only on present input. There is no yesterday.
+    <br><br>
+    Now wire the output of a gate back into its own input. Something new happens — the circuit holds a
+    value after the input goes away. <mark>You have just built memory out of nothing but feedback.</mark>
+    Sit with that for a moment; it is the same feedback loop that appears in Systems Thinking, biology
+    and monetary policy.
+    <br><br>
+    <em>The realisation to reach:</em> state is not a thing you store. State is a loop.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Electrical &amp; Electronics (the physical switch) · Systems Thinking (feedback
+  creates memory) · Operating Systems (registers are the machine's only true variables).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Architecture</h2>
+  <p class="sub">How a sequence of stored numbers becomes behaviour.</p>
+
+  <p><b>WHAT IT IS.</b> The organisation of a processor: registers, the instruction set, and the cycle
+  that fetches an instruction, decodes it, executes it, and moves on. Plus the uncomfortable modern
+  truth that this cycle is no longer sequential.</p>
+
+  <p><b>WHY IT EXISTS.</b> The stored-program idea — that instructions live in the same memory as data —
+  is what makes a computer general rather than a fixed appliance. It is also why software can be a virus,
+  why buffer overflows can execute code, and why a compiler can exist at all.</p>
+
+  <p><b>DEPENDENCIES.</b> N1 (representation), N2 (registers and clocks).</p>
+
+  <p><b>SUBTOPICS.</b> Fetch-decode-execute · the program counter · instruction sets and RISC vs CISC ·
+  pipelining · branch prediction · speculative execution and why it created security holes.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> Dive Into Systems, chapters 5–8 ·
+    <em>Creator:</em> Matthews, Newhall, Webb<br>
+    <em>Why this one:</em> it connects assembly to the C and Python you already write, so the machine
+    stops being a separate subject and becomes an explanation of code you have already run.
+    <br><br>
+    <b>DEEPER (optional)</b> — MIT OCW 6.004 <em>Computation Structures</em> (free lecture materials),
+    only if you want to design rather than understand.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Make the CPU guess wrong</span>
+    Write a program that sums the elements of a large array, but only those above a threshold — so there
+    is an <code>if</code> inside the loop. Run it twice: once on a <em>sorted</em> array, once on a
+    <em>shuffled</em> array with identical values. Same data, same total, same number of operations.
+    <br><br>
+    The sorted version will be several times faster. Nothing about your algorithm changed. Now find out
+    what did: the processor was predicting which way the branch would go, and shuffling made it wrong
+    half the time, throwing away work it had already speculatively started.
+    <br><br>
+    <em>The realisation to reach:</em> your instructions are a <em>suggestion</em>. The machine reorders,
+    predicts and speculates — and its guesses are part of your program's performance.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering (why micro-optimising the wrong thing fails) ·
+  Operating Systems (interrupts, privilege levels) · Everyday Technology (the processor in every device).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> The memory hierarchy <span class="pill pL">depth</span></h2>
+  <p class="sub">The most useful node in this entire domain, and the most commonly skipped.</p>
+
+  <p><b>WHAT IT IS.</b> Memory is not one thing. It is a stack of increasingly large, increasingly slow
+  stores — registers, L1, L2, L3, RAM, SSD, network — where each level is roughly an order of magnitude
+  slower than the one above. Performance is mostly determined by which level your data is actually in.</p>
+
+  <p><b>WHY IT EXISTS.</b> Fast memory is expensive and physically small; large memory is far away and
+  light takes time to travel. The hierarchy is the engineering compromise, and <em>caching</em> is how the
+  compromise is hidden from you — until it isn't.</p>
+
+  <p><b>DEPENDENCIES.</b> N3.</p>
+
+  <p><b>SUBTOPICS.</b> Latency at each level · cache lines and why memory arrives in blocks · temporal and
+  spatial locality · prefetching · row-major vs column-major · cache-friendly data layout · false sharing.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper + interactive reference · <em>Title:</em> “What Every Programmer Should Know
+    About Memory” (Ulrich Drepper, free PDF), read alongside the <em>Latency Numbers Every Programmer
+    Should Know</em> interactive chart<br>
+    <em>Why this one:</em> the paper is the definitive free treatment, and the latency chart converts
+    abstract ratios into intuition you will use weekly for the rest of your career.
+    <br><br>
+    <b>DEEPER (optional)</b> — Dive Into Systems, chapter 11.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find the cache cliff with your own hands</span>
+    Allocate a large array. Walk it with a stride — touch every element, then every 2nd, 4th, 8th, 16th,
+    up to 4096 — and time each pass. Plot time-per-element against stride.
+    <br><br>
+    You will not get a smooth curve. You will get a <strong>cliff</strong>, then a plateau. The location
+    of that cliff tells you your machine's cache line size, in bytes, and you will have measured a
+    physical property of your own hardware without a datasheet.
+    <br><br>
+    Then the second experiment: sum a 2D matrix row-by-row, and again column-by-column. Identical
+    arithmetic, identical element count. One is many times slower. Explain the gap in terms of what
+    arrives in a cache line.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>the layout of your data is often more important than the
+    complexity of your algorithm.</mark> An O(n log n) algorithm with terrible locality routinely loses
+    to an O(n²) one with good locality at real-world sizes.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases (why columnar storage exists — the same experiment, at disk scale) ·
+  Data Engineering (Parquet is this node applied) · Distributed Systems (the hierarchy simply extends
+  across the network) · Economics (caching as inventory near demand).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Stack and heap</h2>
+  <p class="sub">Where values actually live, and why that answer changes how you think about variables.</p>
+
+  <p><b>WHAT IT IS.</b> Two regions with different rules. The stack is a fast, automatically managed
+  region that grows and shrinks with function calls. The heap is a large, manually or
+  garbage-collector-managed region where things live for as long as something refers to them.</p>
+
+  <p><b>WHY IT EXISTS.</b> Function-local values have a known, nested lifetime — so they can be managed
+  with a pointer that moves up and down. Values whose lifetime is unknown at compile time cannot, so they
+  need a different region and a different discipline.</p>
+
+  <p><b>DEPENDENCIES.</b> N3, N4.</p>
+
+  <p><b>SUBTOPICS.</b> Stack frames · the call stack and stack traces · the heap and fragmentation ·
+  pointers and references · what a “variable” actually is in Python versus C.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online textbook · <em>Title:</em> Dive Into Systems, chapters 6 and 12 ·
+    <em>Why this one:</em> it shows the two regions with actual memory diagrams tied to code you run.
+    <br><br>
+    <b>DEEPER (optional)</b> — the Python Language Reference on the execution model, which will answer a
+    question you already partly explored in your object-model track: what a name really is.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Find the floor of your own call stack</span>
+    Write a recursive function that does nothing but call itself with a depth counter, and run it until it
+    dies. Record the depth. Now add a large local array inside the function and run it again — the depth
+    drops sharply. You have just measured stack frame size experimentally.
+    <br><br>
+    Then take a recursive function that overflows, and convert it into an iterative one with an explicit
+    list acting as the stack. It now handles depths thousands of times greater.
+    <br><br>
+    <em>The realisation to reach:</em> recursion is not a different kind of computation. It is
+    <mark>a loop that borrows a data structure the machine already had</mark> — and that structure is
+    small and finite. Once you see this, the entire recursion-versus-iteration debate becomes a memory
+    question rather than a style question.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering (references, aliasing, mutability) · Operating Systems
+  (memory layout of a process, virtual memory) · Distributed Systems (why deep call chains become the
+  network's problem).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Execution models</h2>
+  <p class="sub">What actually runs when you run your source file.</p>
+
+  <p><b>WHAT IT IS.</b> The spectrum from ahead-of-time compilation to pure interpretation, with bytecode
+  virtual machines and just-in-time compilation in between — and the trade-offs each point makes between
+  startup time, peak speed, portability and introspection.</p>
+
+  <p><b>WHY IT EXISTS.</b> Source code is for humans. Something must translate it. <em>When</em> that
+  translation happens is the whole design space, and it explains why Python is slow, why Java starts
+  slowly but runs fast, and why C gives you speed and segfaults in the same breath.</p>
+
+  <p><b>DEPENDENCIES.</b> N3, N5.</p>
+
+  <p><b>SUBTOPICS.</b> Compilation vs interpretation · bytecode and VMs · JIT · static vs dynamic dispatch ·
+  what optimising compilers are permitted to do · undefined behaviour.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Official documentation + tool · <em>Title:</em> Python's <code>dis</code> module
+    documentation, used as a laboratory rather than read as a reference<br>
+    <em>Why this one:</em> free, already installed, and it lets you see the bytecode of code you wrote
+    thirty seconds ago. Reading about execution models teaches far less than disassembling your own
+    function.
+    <br><br>
+    <b>DEEPER (optional)</b> — Compiler Explorer (godbolt.org, free) to watch C become assembly, and to
+    watch the optimiser delete code you thought mattered.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Watch the compiler delete your work</span>
+    Write the same trivial loop — sum 1 to 100 million — in Python and in C. Time both. The gap will be
+    enormous, and the reason is not that “C is faster”: disassemble both and look.
+    <br><br>
+    Then, on Compiler Explorer, compile the C version with optimisation on. The loop <em>disappears</em>.
+    The compiler solved it at compile time and emitted a constant. Now try to write a benchmark the
+    compiler cannot optimise away, and notice how hard that is.
+    <br><br>
+    <em>The realisation to reach:</em> the machine does not execute your code. It executes a program that
+    is <em>observably equivalent</em> to your code — and “observably” is a specification with edges you
+    should know about.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering (why benchmarks lie) · AI (compilation to GPU kernels) ·
+  Operating Systems (loading, linking, the ELF format).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> Cost and complexity</h2>
+  <p class="sub">Reasoning about scale — honestly, including the parts asymptotic notation hides.</p>
+
+  <p><b>WHAT IT IS.</b> A vocabulary for how resource use grows with input size, plus the discipline of
+  knowing when that vocabulary is the wrong tool.</p>
+
+  <p><b>WHY IT EXISTS.</b> So you can predict whether something will survive a hundred times more data
+  <em>before</em> you have a hundred times more data. This is the single most valuable predictive skill in
+  software.</p>
+
+  <p><b>DEPENDENCIES.</b> N4 (because constants come from the memory hierarchy) · basic algebra.</p>
+
+  <p><b>SUBTOPICS.</b> Big-O, big-Θ and what each actually claims · constants and small-n reality ·
+  amortised analysis · space-time trade-offs · why measuring beats reasoning past a point.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free course · <em>Title:</em> MIT OCW 6.006 <em>Introduction to Algorithms</em>,
+    lectures 1–3 only · <em>Why this one:</em> free, rigorous, and the first three lectures give you the
+    reasoning framework without committing you to a full algorithms course you do not need yet.
+    <br><br>
+    <b>DEEPER (optional)</b> — the rest of 6.006, when a real problem demands a real algorithm.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Predict the wall, then hit it</span>
+    Write a function with an obvious O(n²) shape — for example, checking for duplicates by comparing every
+    pair. <strong>Before running anything, commit a written prediction:</strong> at what input size will
+    this take more than ten seconds on your machine?
+    <br><br>
+    Now measure at increasing n and find the real wall. Most people are wrong by one to two orders of
+    magnitude, in both directions, and the reason is instructive: constants and cache behaviour dominate
+    until n gets large, and then they suddenly do not.
+    <br><br>
+    Then write the O(n) version with a hash set, and find the crossover n where it starts winning. It is
+    higher than you expect — sometimes several thousand — because hashing has constants too.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>asymptotic complexity tells you who wins eventually, never who
+    wins today.</mark> Both questions matter, and only one of them is answerable from a whiteboard.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Software Engineering (data structure choice) · Databases (query planning is
+  automated complexity reasoning) · Probability (average vs worst case) · Economics (marginal cost).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+  <p class="sub">If you did nothing but these seven, in this order, you would have the domain.</p>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td><code>0.1 + 0.2 ≠ 0.3</code></td><td>Finite encoding of infinite ideas</td></tr>
+      <tr><td>N2</td><td>A gate wired into itself remembers</td><td>State is a feedback loop</td></tr>
+      <tr><td>N3</td><td>Sorted array runs faster than shuffled</td><td>The CPU speculates</td></tr>
+      <tr><td>N4</td><td>The stride cliff; row vs column traversal</td><td>Layout beats cleverness</td></tr>
+      <tr><td>N5</td><td>Measuring your own maximum recursion depth</td><td>Recursion is a memory question</td></tr>
+      <tr><td>N6</td><td>The optimiser deletes your benchmark</td><td>Equivalence, not literal execution</td></tr>
+      <tr><td>N7</td><td>Predicting the O(n²) wall, then missing</td><td>Constants rule the real world</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Why these and not exercises</span>
+    Every one of them is a <strong>surprise</strong> — a place where a reasonable prediction turns out
+    wrong. That is deliberate. A concept introduced to explain something that just startled you is
+    retained; a concept introduced because it is next in a chapter is not.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+  <p class="sub">The arrows out of Computing.</p>
+
+  <table>
+    <thead><tr><th>Next domain</th><th>What it inherits from here</th></tr></thead>
+    <tbody>
+      <tr><td><a href="software-engineering.html">Software Engineering</a></td><td>Stack and heap become references and mutability; cost models become data structure choice</td></tr>
+      <tr><td><a href="operating-systems.html">Operating Systems</a></td><td>Registers and interrupts become processes; the hierarchy becomes virtual memory</td></tr>
+      <tr><td><a href="databases.html">Databases</a></td><td>The memory hierarchy, extended to disk, is the entire reason indexes exist</td></tr>
+      <tr><td><a href="networking.html">Networking</a></td><td>The hierarchy extended again — the network is just the slowest level</td></tr>
+      <tr><td>Everyday Technology</td><td>Every device contains this; the TV trace passes straight through this node</td></tr>
+      <tr><td>Electrical &amp; Electronics</td><td>Backwards: N2 is where the two domains touch</td></tr>
+      <tr><td>AI</td><td>Reduced-precision training is N1; GPU memory bandwidth is N4</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 07 · Computing</footer>
+
+</body>
+</html>

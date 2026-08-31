@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Data Engineering — Atlas domain 14</title>
+<meta name="description" content="Batch and streaming, columnar storage, CDC, orchestration, modelling and data quality — the second deep domain." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="index.html" class="on">Atlas</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#why">Why this domain exists</a>
+  <a href="#tree">The tree</a>
+  <h4>Nodes</h4>
+  <a href="#n1">1 · Batch vs streaming</a>
+  <a href="#n2">2 · Storage formats</a>
+  <a href="#n3">3 · Ingestion &amp; CDC</a>
+  <a href="#n4">4 · Transformation &amp; orchestration</a>
+  <a href="#n5">5 · Modelling</a>
+  <a href="#n6">6 · Quality &amp; contracts</a>
+  <a href="#n7">7 · The platform landscape</a>
+  <a href="#n8">8 · Cost, lineage, governance</a>
+  <h4>Exit</h4>
+  <a href="#handson">The hands-on spine</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Atlas</a><span>/</span>Data Engineering</p>
+
+<div class="hero">
+  <div class="kicker">Domain 14 · Cluster C3 · gated by Databases + Distributed Systems + Infrastructure · <span class="pill pL">deep</span></div>
+  <h1>Data Engineering</h1>
+  <p class="dropcap">The second domain in the Atlas set to genuine depth. Data engineering is not "ETL" and
+  it is not a set of tools — it is the discipline of moving data between systems that disagree about
+  structure, timing and truth, <em>without silently losing or duplicating any of it</em>, at a cost someone
+  is willing to pay.</p>
+  <div class="why">
+    <b>The single idea.</b> Every pipeline is a <mark>distributed system whose failures are silent</mark>.
+    A web service that breaks returns a 500 and someone is paged. A pipeline that breaks produces
+    <em>plausible numbers that are wrong</em>, and nobody notices for a quarter. Everything in this domain
+    is a defence against that specific asymmetry.
+  </div>
+  <div class="tags">
+    <span class="tag">#columnar</span>
+    <span class="tag t2">#cdc</span>
+    <span class="tag t3">#idempotency</span>
+    <span class="tag">#modelling</span>
+    <span class="tag t2">#contracts</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> Why this domain exists</h2>
+  <p class="sub">Because the system that records a fact is almost never the system that needs to reason about it.</p>
+
+  <p>A transactional database is optimised for writing one row correctly under concurrency. Answering
+  <em>"what happened across all rows last quarter, sliced six ways"</em> is a different workload with
+  opposite requirements, and running it against production will take production down. That single conflict
+  created this entire field.</p>
+
+  <table class="nw">
+    <thead><tr><th>Gated by</th><th>Gates</th></tr></thead>
+    <tbody>
+      <tr><td><a href="databases.html">Databases</a> N2, N4, N6 · <a href="distributed-systems.html">Distributed Systems</a> N2, N6, N7 · <a href="infrastructure-cloud.html">Infrastructure</a> N2, N7</td><td>AI (training data, feature stores) · Business (analytics, metrics) · Economics (measurement)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Environment for this domain</span>
+    Use <strong>DuckDB</strong> for nearly everything. It is free, single-file, reads Parquet and CSV
+    natively, and is fast enough that you can experiment on tens of millions of rows on a laptop. It
+    removes the cluster from the learning loop, which is the single biggest obstacle to actually doing
+    this domain's hands-on work.
+  </div>
+</section>
+
+<section id="tree">
+  <h2><span class="num">01</span> The tree</h2>
+
+<pre>DATA ENGINEERING
+│
+├── 1 · BATCH vs STREAMING ........... the shape of time in your pipeline
+│   ├── Bounded vs unbounded data
+│   ├── Event time vs processing time
+│   ├── Windows and watermarks
+│   └── Late data and what to do about it
+│
+├── 2 · STORAGE FORMATS  [DEPTH] ..... why analytics uses columns
+│   ├── Row vs columnar layout
+│   ├── Parquet: encoding, compression, statistics
+│   ├── Predicate pushdown &amp; column pruning
+│   ├── Partitioning and the small-files problem
+│   └── Open table formats: Iceberg, Delta
+│
+├── 3 · INGESTION &amp; CDC .............. getting data out without breaking the source
+│   ├── Pull vs push
+│   ├── Full snapshot vs incremental
+│   ├── Change data capture from the WAL
+│   └── The log as the universal integration primitive
+│
+├── 4 · TRANSFORMATION &amp; ORCHESTRATION  making it dependable
+│   ├── DAGs and dependency scheduling
+│   ├── Idempotency and re-runnability
+│   ├── Backfills
+│   └── ELT vs ETL
+│
+├── 5 · MODELLING .................... shaping data for questions
+│   ├── Dimensional modelling, facts and dimensions
+│   ├── Slowly changing dimensions
+│   ├── Grain, and why getting it wrong is fatal
+│   └── Semantic layers and metric definitions
+│
+├── 6 · QUALITY &amp; CONTRACTS .......... defence against silent wrongness
+│   ├── Tests on data, not just code
+│   ├── Freshness, volume, distribution, schema
+│   ├── Data contracts
+│   └── Reconciliation
+│
+├── 7 · THE PLATFORM LANDSCAPE ....... warehouse, lake, lakehouse
+│
+└── 8 · COST, LINEAGE &amp; GOVERNANCE ... who can see what, and what it costs</pre>
+</section>
+
+<section id="n1">
+  <h2><span class="num">N1</span> Batch versus streaming</h2>
+  <p class="sub">The shape of time in your pipeline — and the distinction that resolves most confusion in this field.</p>
+
+  <p><b>WHAT IT IS.</b> Batch processes a bounded dataset with a known end. Streaming processes an
+  unbounded one that never ends, which forces you to decide <em>when a result is final</em> even though
+  more data may still arrive.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the world produces events continuously but questions are asked at
+  moments. The gap between those two facts is where event time, windows, watermarks and late data all
+  come from.</p>
+
+  <p><b>DEPENDENCIES.</b> Distributed Systems N2 (there is no global now).</p>
+
+  <p><b>SUBTOPICS.</b> Bounded and unbounded data · event time versus processing time versus ingestion
+  time · tumbling, sliding and session windows · watermarks as a heuristic guess about completeness ·
+  late-arriving data · the lambda and kappa architectures · why "real time" almost always means "a few
+  seconds, and we chose that".</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free article · <em>Title:</em> "Streaming 101" and "Streaming 102" (Tyler Akidau),
+    freely available<br>
+    <em>Why this one:</em> free, and it is the clearest existing treatment of event time versus processing
+    time. It reframes batch as a <em>special case</em> of streaming rather than as a different technology,
+    which permanently simplifies the field.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Count events per hour, then receive yesterday's data</span>
+    Generate a day of events with timestamps. Compute a simple hourly count in batch. Correct, easy, done.
+    <br><br>
+    Now stream the same events and compute the same counts incrementally — but deliberately deliver 5% of
+    them out of order, some arriving hours after their event time, as a mobile client with poor
+    connectivity genuinely does. Your hourly counts are now wrong, and they were <em>already reported</em>.
+    <br><br>
+    Work through the three possible responses and implement each: <strong>drop</strong> late events (fast,
+    lossy, and the count never matches the batch answer); <strong>wait</strong> longer before finalising
+    (correct, but every result is delayed by the worst case); <strong>restate</strong> the earlier window
+    (correct and current, but every downstream consumer must handle a number that changes after
+    publication).
+    <br><br>
+    Then measure the completeness curve: what fraction of a given hour's events have arrived after 1
+    minute, 5 minutes, an hour, a day? <mark>That curve is your watermark, and it is a business decision
+    disguised as a technical one.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> there is no correct answer to "how long do I wait?" — only a
+    trade-off between latency and completeness that someone must choose explicitly, and that someone is
+    usually you.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Distributed Systems N2 · Probability N4 (the lateness distribution is heavy-tailed)
+  · Business (a restated metric destroys trust faster than a late one).</p>
+</section>
+
+<section id="n2">
+  <h2><span class="num">N2</span> Storage formats <span class="pill pL">depth</span></h2>
+  <p class="sub">The clearest example in the Atlas of layout beating cleverness.</p>
+
+  <p><b>WHAT IT IS.</b> How analytical data is physically arranged on disk — grouped by column rather than
+  by row — and the encoding, compression and statistics that this arrangement makes possible.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because an analytical query touches few columns and many rows, while row storage
+  forces you to read every column of every row. Columnar layout reads only what is needed, compresses far
+  better because similar values sit together, and can skip entire blocks using stored statistics.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="computing.html#n4">Computing N4</a> · <a href="databases.html#n2">Databases N2</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Row groups, column chunks and pages · dictionary and run-length encoding · min/max
+  statistics per block · predicate pushdown · column pruning · partitioning schemes · the small-files
+  problem · compaction · open table formats and why they exist — atomic commits over object storage.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free specification + free engine · <em>Title:</em> The Apache Parquet format
+    specification, explored using DuckDB<br>
+    <em>Why this one:</em> both are free, and Parquet's spec is short enough to read in one sitting. Pairing
+    the spec with an engine that lets you query files directly means you can verify every claim in the spec
+    with a measurement.
+    <br><br>
+    <b>DEEPER (optional)</b> — the Apache Iceberg specification, for how atomic commits and time travel are
+    achieved on storage that has no transactions.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · The same data, ten times smaller and a hundred times faster</span>
+    Take a real dataset of at least ten million rows and twenty columns — government open data works well.
+    Save it as CSV. Note the size. Convert it to Parquet with DuckDB in one line. <strong>Note the size
+    again</strong> — typically five to ten times smaller, with no information lost.
+    <br><br>
+    Now query one column with a filter, over both formats, and time it. The gap will be enormous. Explain
+    it in three parts, verifying each: <em>column pruning</em> (you read 1 column of 20, so 95% less data),
+    <em>compression</em> (similar values adjacent compress far better), and <em>predicate pushdown</em>
+    (min/max statistics let whole row groups be skipped without decompression).
+    <br><br>
+    Then prove the last one directly: sort the data by your filter column, rewrite, and re-run the query.
+    It gets dramatically faster again, because the statistics are now selective. <mark>Physically sorting
+    data changes query performance without changing a single byte of logical content.</mark>
+    <br><br>
+    Finally, create the failure mode everyone hits: partition the same dataset into 10,000 tiny files.
+    Query it. It is now <em>slower than the CSV</em>, because per-file overhead dominates. Compact the
+    files and watch it recover. Find the file size where performance peaks — usually a few hundred
+    megabytes.
+    <br><br>
+    <em>The realisation to reach:</em> this is <a href="computing.html#n4">Computing N4's stride cliff</a>
+    at yet another scale. Sequential access to what you need, and never reading what you do not, is the
+    whole of storage performance from L1 cache to object storage.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Computing N4 · Databases N2 · Infrastructure N7 (storage and scan cost are billed)
+  · AI (training data formats).</p>
+</section>
+
+<section id="n3">
+  <h2><span class="num">N3</span> Ingestion and change data capture</h2>
+  <p class="sub">Getting data out of a source system without harming it, and without missing anything.</p>
+
+  <p><b>WHAT IT IS.</b> The mechanisms for extracting data from operational systems — periodic queries,
+  event streams, or reading the database's own replication log — and the trade-offs each makes.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the naive approach — query the production database on a schedule —
+  breaks in three predictable ways: it loads the source, it misses deletes, and it misses intermediate
+  states between polls.</p>
+
+  <p><b>DEPENDENCIES.</b> Databases N4 (the WAL) · Distributed Systems N7 (idempotency).</p>
+
+  <p><b>SUBTOPICS.</b> Full snapshot versus incremental extraction · high-watermark columns and why
+  <code>updated_at</code> is unreliable · hard deletes and the tombstone problem · CDC from the
+  write-ahead log · log-based integration and the log as a universal primitive · schema drift at the
+  source · exactly-once delivery as an illusion, and effectively-once via idempotent writes.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free article · <em>Title:</em> "The Log: What every software engineer should know about
+    real-time data's unifying abstraction" (Jay Kreps), freely available<br>
+    <em>Why this one:</em> free, and it is the piece that reframes databases, replication, streaming and
+    integration as <em>one idea</em> — an ordered log — rather than four. It will change how you see the
+    previous three domains as well.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Lose rows three different ways, then stop losing them</span>
+    Set up a source table and a naive incremental extractor that pulls rows where
+    <code>updated_at &gt; last_run</code>. Run it on a schedule while a writer modifies the source.
+    <br><br>
+    Now break it three ways, deliberately, and count the damage each time. <em>Delete a row</em> — your
+    warehouse still contains it, forever, and no query will ever reveal the discrepancy. <em>Update a row
+    twice between polls</em> — you captured only the final state, so any analysis of intermediate states is
+    silently wrong. <em>Have two transactions commit out of timestamp order</em> — one is missed entirely,
+    because your watermark advanced past it.
+    <br><br>
+    That third one is the subtle killer, and it is a direct consequence of
+    <a href="distributed-systems.html#n2">Distributed Systems N2</a>. Reproduce it deliberately, then
+    reason about how long a safety margin would need to be.
+    <br><br>
+    Now do it properly: enable logical replication on PostgreSQL and consume the WAL. Every insert, update
+    and delete appears as an ordered event with no polling and no load on the source. Delete a row and
+    watch the tombstone arrive.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>a table is a compressed summary of a log, and you have been
+    reading the summary while needing the log.</mark> Once seen, this reframes replication, event sourcing,
+    Kafka and CDC as one mechanism.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases N4 · Distributed Systems N2, N7 · Accounting (a ledger is a log, and
+  a balance is its summary — the same insight, four hundred years earlier).</p>
+</section>
+
+<section id="n4">
+  <h2><span class="num">N4</span> Transformation and orchestration</h2>
+  <p class="sub">Making a pipeline something you can re-run without fear.</p>
+
+  <p><b>WHAT IT IS.</b> Expressing derived datasets as a dependency graph, and the scheduler that runs each
+  step when its inputs are ready, retries failures, and allows historical reprocessing.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because pipelines fail constantly — upstream is late, a schema changed, a node
+  died — and the only sustainable answer is to make every step safely re-runnable. <strong>Idempotency is
+  not a nice property here; it is the entire design constraint.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> N1, N3 · Distributed Systems N7 · Software Engineering N4 (DAGs are graphs).</p>
+
+  <p><b>SUBTOPICS.</b> DAGs and dependency resolution · idempotent writes and partition overwrite ·
+  backfills and reprocessing history · ETL versus ELT and why ELT won · incremental versus full refresh ·
+  data freshness SLAs · testing transformations · the cost of a full backfill.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> dbt's documentation on materialisations,
+    incremental models and testing — free<br>
+    <em>Why this one:</em> free, and dbt encodes the current consensus on transformation practice
+    — idempotency, testing, and lineage as first-class concerns — clearly enough that the concepts transfer
+    even if you never use the tool.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Run the same job twice and get the wrong answer</span>
+    Build a three-step pipeline: raw events → daily aggregates → a summary table. Have step two
+    <em>append</em> to its output.
+    <br><br>
+    Now run it twice for the same day. Every number doubles. This is the most common bug in the entire
+    field, it produces plausible output, and no error is raised anywhere.
+    <br><br>
+    Fix it with a partition overwrite — delete-and-insert the day's partition atomically — and verify that
+    running it five times produces identical results. You have implemented idempotency, and the operational
+    consequence is enormous: <mark>retries become safe, so failures stop being emergencies.</mark>
+    <br><br>
+    Then hit the harder problem. Change the business logic of step two and backfill two years of history.
+    Discover that the source data no longer contains a column you now depend on, that one month's data was
+    already deleted, and that the backfill would cost more compute than a month of normal operation.
+    <br><br>
+    Finally, make step one fail deliberately and observe whether steps two and three run anyway on stale
+    input. If they do, you have found the difference between a scheduler and an orchestrator.
+    <br><br>
+    <em>The realisation to reach:</em> a pipeline is not code that runs, it is code that must be able to
+    run <em>again</em>, for any date, at any time, and produce the same answer. Every architectural
+    decision here follows from that.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Distributed Systems N7 · Infrastructure N2 (orchestration is reconciliation) ·
+  Software Engineering N8 (testing).</p>
+</section>
+
+<section id="n5">
+  <h2><span class="num">N5</span> Modelling for analytics</h2>
+  <p class="sub">Shaping data around questions rather than around transactions.</p>
+
+  <p><b>WHAT IT IS.</b> Organising warehouse data into facts (events, measurements) and dimensions
+  (the entities that describe them), at a deliberately chosen level of detail.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a normalised transactional schema is optimised for writing consistently
+  and is hostile to the question "revenue by region by month by product". Dimensional modelling optimises
+  for the opposite, accepting redundancy in exchange for query simplicity.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="databases.html#n6">Databases N6</a> · N2.</p>
+
+  <p><b>SUBTOPICS.</b> Facts and dimensions · grain, and why choosing it wrong is unrecoverable · star and
+  snowflake schemas · slowly changing dimensions, especially type 2 · conformed dimensions · additive,
+  semi-additive and non-additive measures · surrogate keys · the semantic layer and single metric
+  definitions.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free articles · <em>Title:</em> The Kimball Group's freely published design tips and
+    dimensional modelling techniques on their website<br>
+    <em>Why this one:</em> free, canonical, and organised as short problem-specific notes rather than a
+    monolith — which suits a domain where you need one pattern at a time.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Ask "what was true then?" and watch your model fail</span>
+    Model something with real history — sales by salesperson by region. Build the obvious star schema:
+    a sales fact, a salesperson dimension, a region dimension. Answer "revenue by region last year". Easy.
+    <br><br>
+    Now a salesperson moves from the West region to the East. Update the dimension row — the natural
+    thing to do. Re-run last year's report. <strong>Every historical sale that person made has silently
+    moved to the East region.</strong> Last year's numbers just changed, and nothing warned you.
+    <br><br>
+    This is why slowly changing dimensions type 2 exists. Implement it: instead of updating, insert a new
+    row with validity dates and a surrogate key, and have facts reference the key that was current at the
+    time. Re-run the report and watch history hold still.
+    <br><br>
+    Then confront grain. Build a fact table at order level, and be asked for revenue by <em>product</em>.
+    You cannot answer without changing the grain to line-item — and every downstream consumer of the
+    order-level table breaks when you do. <mark>Grain is the one decision in this node that is not
+    reversible cheaply.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> analytical models must represent <em>what was believed at a point in
+    time</em>, not just what is currently true — and transactional schemas, which overwrite, throw that
+    information away by default.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Databases N6 · Accounting (a ledger never overwrites, for exactly this reason) ·
+  Business (metric definitions are political) · Indian History (the same problem — what did the record
+  mean when it was written).</p>
+</section>
+
+<section id="n6">
+  <h2><span class="num">N6</span> Quality and contracts</h2>
+  <p class="sub">The domain's defining problem: failures that produce plausible numbers.</p>
+
+  <p><b>WHAT IT IS.</b> Automated assertions about data itself — freshness, volume, distribution, schema,
+  referential integrity — plus explicit agreements with upstream producers about what they will not change
+  without warning.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a broken pipeline that raises an error is a good day. The bad day is a
+  pipeline that runs successfully on data that changed meaning, and reports numbers that are wrong,
+  confidently, to people making decisions.</p>
+
+  <p><b>DEPENDENCIES.</b> N4 · Probability N4–N5 (distribution tests are statistical) · Software
+  Engineering N8.</p>
+
+  <p><b>SUBTOPICS.</b> The four test families: freshness, volume, distribution, schema · uniqueness and
+  referential integrity · anomaly detection and its false-positive problem · data contracts and schema
+  registries · producer versus consumer responsibility · reconciliation against source · circuit-breaking
+  a pipeline versus publishing bad data.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> Great Expectations documentation on expectation
+    types, and dbt's tests documentation — both free<br>
+    <em>Why this one:</em> free, and reading the <em>catalogue</em> of possible assertions is the fastest
+    way to discover the failure modes you had not thought to check for. The list itself is the education.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Break the data without breaking the pipeline</span>
+    Build a working pipeline with a dashboard on top. Now introduce four faults, one at a time. Every one
+    of them must leave the pipeline <strong>green</strong>.
+    <br><br>
+    <em>Upstream changes a currency from rupees to lakhs.</em> Numbers drop by a factor of 100,000 and the
+    schema is unchanged. <em>A join silently becomes one-to-many.</em> Row counts inflate and revenue
+    triples. <em>An upstream system stops sending one category of event.</em> The pipeline succeeds on a
+    subset. <em>A nullable column starts arriving null.</em> Averages shift and nothing errors.
+    <br><br>
+    Now write the assertions that catch each: row-count-within-expected-range, distribution comparison
+    against a trailing window, uniqueness on the join key, and null-rate thresholds. Re-run the four faults
+    and verify each is caught.
+    <br><br>
+    Then face the false-positive problem from <a href="probability.html#n2">Probability N2</a>: set your
+    anomaly thresholds tight and count how often they fire on normal variation. <mark>A data quality system
+    that cries wolf is worse than none, because it trains people to click through.</mark>
+    <br><br>
+    <em>The realisation to reach:</em> the pipeline's exit code tells you whether the <em>code</em> worked.
+    Nothing except an explicit assertion tells you whether the <em>data</em> is right — and those are
+    completely different questions.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Probability N2 (alert precision), N5 (distribution tests) · Software Engineering
+  N8 · Business (trust in numbers is the actual product of a data team).</p>
+</section>
+
+<section id="n7">
+  <h2><span class="num">N7</span> The platform landscape</h2>
+  <p class="sub">Warehouse, lake, lakehouse — three answers to one question about coupling.</p>
+
+  <p><b>WHAT IT IS.</b> The architectural families for storing and querying analytical data, distinguished
+  chiefly by whether storage and compute are coupled and whether the format is open.</p>
+
+  <p><b>WHY IT EXISTS.</b> Warehouses gave transactions and performance but locked data into a vendor's
+  format. Lakes gave open formats and cheap storage but lost transactions and performance. Lakehouses are
+  the attempt to have both, via open table formats that add atomic commits over object storage.</p>
+
+  <p><b>DEPENDENCIES.</b> N2 · Databases N1–N4 · Infrastructure N7.</p>
+
+  <p><b>SUBTOPICS.</b> Coupled versus separated storage and compute · MPP query execution · object storage
+  as a substrate and its lack of atomicity · open table formats — snapshots, manifests, time travel ·
+  the semantic layer · streaming-first architectures · what each option actually locks you into.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> "Lakehouse: A New Generation of Open Platforms that Unify
+    Data Warehousing and Advanced Analytics" (Armbrust et al., free)<br>
+    <em>Why this one:</em> free, and it states the historical problem and the trade-offs directly rather
+    than as marketing. Read it as an argument you are allowed to disagree with.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Give object storage a transaction it does not have</span>
+    Write a dataset to a folder of Parquet files. Now update it while another process is reading. The
+    reader sees a mixture of old and new files — <strong>a torn read</strong>, exactly the
+    <a href="databases.html#n4">atomicity problem from Databases N4</a>, on storage that has no
+    transactions at all.
+    <br><br>
+    Now solve it the way open table formats do: never modify files in place. Write new files, then
+    atomically swap a small pointer file naming the current set. Readers resolve the pointer once and see a
+    consistent snapshot. You have just rebuilt the core of Iceberg, and it is the same
+    <a href="operating-systems.html#n4">write-temp-then-rename idiom</a> from OS N4.
+    <br><br>
+    Then get time travel free: keep old pointer files and you can query the dataset as of yesterday.
+    <br><br>
+    <em>The realisation to reach:</em> <mark>the same atomic-pointer-swap trick appears at every layer of
+    this Atlas</mark> — filesystem rename, database commit, table format snapshot, blue-green deploy. One
+    idea, four disguises.
+  </div>
+
+  <p><b>CONNECTS TO.</b> OS N4 · Databases N4 · Infrastructure N3 (immutability) · Business (vendor
+  lock-in has a price).</p>
+</section>
+
+<section id="n8">
+  <h2><span class="num">N8</span> Cost, lineage and governance</h2>
+  <p class="sub">Who can see what, where a number came from, and what it cost to produce.</p>
+
+  <p><b>WHAT IT IS.</b> The operational surround: tracking which datasets derive from which, controlling
+  access to sensitive fields, and understanding the cost of storage and query.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because platforms make querying easy and therefore make spending easy, and
+  because personal data carries legal obligations that are enforced with fines. Both are engineering
+  constraints, not paperwork.</p>
+
+  <p><b>DEPENDENCIES.</b> N4, N7 · Infrastructure N7.</p>
+
+  <p><b>SUBTOPICS.</b> Column-level lineage · impact analysis before a schema change · access control and
+  column masking · PII classification · retention and the right to erasure · query cost attribution ·
+  the economics of separated storage and compute · data residency requirements.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free primary document · <em>Title:</em> India's Digital Personal Data Protection Act,
+    2023 — the actual statute, read directly<br>
+    <em>Why this one:</em> free, and it is short. Summaries of data protection law are consistently worse
+    than the text, and reading the obligations directly makes it obvious why deletion and lineage are
+    engineering features rather than policy documents.
+  </div>
+
+  <div class="life">
+    <span class="lbl">HANDS-ON · Delete one person, completely</span>
+    Take your pipeline and receive a lawful erasure request for a single individual. Now actually do it.
+    <br><br>
+    Trace every place that person's data exists: the source table, the raw landing zone, every intermediate
+    dataset, the aggregates, the backups, the object storage snapshots, and — the one everyone forgets —
+    the <a href="#n7">time-travel history</a> that lets you query yesterday's version.
+    <br><br>
+    You will find that the architecture that made your pipeline reliable and re-runnable is precisely what
+    makes deletion nearly impossible. <mark>Immutability and the right to erasure are in direct
+    conflict</mark>, and resolving it requires a design decision made <em>before</em> the request arrives —
+    usually crypto-shredding or a tokenisation boundary.
+    <br><br>
+    Then do the cost half: pick your most expensive query, compute its scan volume, and estimate its cost
+    per run at public prices. Multiply by its schedule. Most people find one dashboard nobody looks at
+    costing more per year than a developer's laptop.
+    <br><br>
+    <em>The realisation to reach:</em> governance is not paperwork bolted on afterwards. It is a set of
+    constraints that must be present in the architecture from the first table, because retrofitting them
+    is sometimes genuinely impossible.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Infrastructure N7 · Indian Politics &amp; Government (the DPDP Act) · Geopolitics
+  (data residency and sovereignty) · Business (data as an asset with a carrying cost).</p>
+</section>
+
+<section id="handson">
+  <h2><span class="num">::</span> The hands-on spine</h2>
+
+  <table class="nw">
+    <thead><tr><th>Node</th><th>The phenomenon</th><th>What it forces</th></tr></thead>
+    <tbody>
+      <tr><td>N1</td><td>Yesterday's events arriving today</td><td>Watermarks are a business decision</td></tr>
+      <tr><td>N2</td><td>10× smaller, 100× faster, same data</td><td>Layout beats cleverness</td></tr>
+      <tr><td>N3</td><td>A deleted row that lives forever downstream</td><td>A table is a summary of a log</td></tr>
+      <tr><td>N4</td><td>Running the same job twice doubles every number</td><td>Idempotency is the design constraint</td></tr>
+      <tr><td>N5</td><td>A salesperson moves and last year's report changes</td><td>Models must hold history still</td></tr>
+      <tr><td>N6</td><td>Four faults, pipeline green every time</td><td>Exit codes say nothing about data</td></tr>
+      <tr><td>N7</td><td>A torn read on object storage, fixed by a pointer swap</td><td>One idea, four disguises</td></tr>
+      <tr><td>N8</td><td>Deleting one person from an immutable system</td><td>Governance is architecture</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">The through-line of this domain</span>
+    Six of the eight phenomena above are <strong>silent</strong> — the pipeline succeeds and the numbers are
+    wrong. That asymmetry is what makes data engineering a distinct discipline rather than a subtype of
+    backend engineering, and it is why so much of the work is defensive.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next domain</th><th>What it inherits</th></tr></thead>
+    <tbody>
+      <tr><td><a href="artificial-intelligence.html">Artificial Intelligence</a></td><td>Training data pipelines, feature stores, and the fact that data quality bounds model quality</td></tr>
+      <tr><td>Business</td><td>N5 and N6 — every reported metric is the output of choices made in this domain</td></tr>
+      <tr><td>Economics</td><td>Measurement is upstream of all empirical economics, with the same grain and definition problems</td></tr>
+      <tr><td>Accounting</td><td>N3 and N5 — the ledger solved the immutability and history problem four centuries earlier</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+
+<footer>Atlas · domain 14 · Data Engineering · depth setting: deep</footer>
+
+</body>
+</html>
