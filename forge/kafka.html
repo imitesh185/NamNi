@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L3 · Apache Kafka — Forge</title>
+<meta name="description" content="Kafka internals for senior interviews: the log, producers, consumer groups, rebalancing, replication, delivery semantics — with four laboratories." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#why">The one question</a>
+  <a href="#env">The environment</a>
+  <a href="#map">Internal dependency map</a>
+  <h4>Nodes</h4>
+  <a href="#k1">K1 · Architecture</a>
+  <a href="#k2">K2 · The storage engine</a>
+  <a href="#k3">K3 · Producers</a>
+  <a href="#k4">K4 · Consumers</a>
+  <a href="#k5">K5 · Consumer groups</a>
+  <a href="#k6">K6 · Rebalancing</a>
+  <a href="#k7">K7 · Replication</a>
+  <a href="#k8">K8 · Delivery semantics</a>
+  <a href="#k9">K9 · Performance &amp; lag</a>
+  <a href="#k10">K10 · Failure modes</a>
+  <a href="#k11">K11 · Ecosystem</a>
+  <a href="#k12">K12 · When not to use Kafka</a>
+  <h4>Laboratories</h4>
+  <a href="#lab09">09 · Partitioning</a>
+  <a href="#lab10">10 · Rebalancing</a>
+  <a href="#lab11">11 · Replication</a>
+  <a href="#lab12">12 · Delivery Semantics</a>
+  <h4>Exit</h4>
+  <a href="#defence">Interview defence</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Forge</a><span>/</span>L3 Kafka</p>
+
+<div class="hero">
+  <div class="kicker">Branch L3 · deepen · independent of L2 — take either first</div>
+  <h1>Apache Kafka</h1>
+  <p class="dropcap">Kafka questions in senior interviews are almost never about the API. They are about
+  <em>what happens when something breaks</em> — a consumer dies, a broker fails, a partition count changes,
+  a producer outpaces a consumer. This branch is organised around producing those failures deliberately and
+  watching what the clients actually do.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>The partition is the unit of everything.</mark> Ordering is per-partition.
+    Parallelism is bounded by partition count. Assignment, replication, offsets and lag are all
+    partition-scoped. Nearly every Kafka behaviour that surprises people follows from taking that sentence
+    completely literally.
+  </div>
+  <div class="tags">
+    <span class="tag">#partitions</span>
+    <span class="tag t2">#rebalancing</span>
+    <span class="tag t3">#isr</span>
+    <span class="tag">#delivery-semantics</span>
+    <span class="tag t2">#lag</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> The one question this branch exists to answer</h2>
+  <p class="sub">Kafka's version of the slow-job question, and it has the same shape.</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“Consumer lag on one partition has been climbing for two hours while the others are fine.
+    Walk me through your diagnosis.”</b>
+    It tests whether you can separate <em>producer-side</em> causes from <em>consumer-side</em> ones, whether
+    you know that a single lagging partition means something structurally different from all of them
+    lagging, and whether you reach for the key distribution before reaching for more consumers.
+  </div>
+
+  <p>There is a second question, and it is the one that most reliably exposes shallow knowledge:</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“You have <code>acks=all</code>. Have you lost data?”</b>
+    <mark>The correct answer is “it depends on <code>min.insync.replicas</code>, and on whether unclean
+    leader election is enabled”</mark> — because <code>acks=all</code> with
+    <code>min.insync.replicas=1</code> guarantees almost nothing, and most people who quote
+    <code>acks=all</code> have never checked the second setting.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The failure mode of this branch</span>
+    Learning Kafka from configuration blog posts. <strong>Settings without mechanisms produce cargo
+    cult.</strong> <mark>Every configuration in this branch should be understood as a position on a
+    trade-off curve you have personally measured</mark> — which is exactly why all four labs are built
+    around breaking a running cluster.
+  </div>
+</section>
+
+<section id="env">
+  <h2><span class="num">01</span> The environment</h2>
+  <p class="sub">A single broker teaches almost nothing here. This is the one non-negotiable setup cost.</p>
+
+  <table class="nw">
+    <thead><tr><th>Component</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>3-broker cluster in Docker</b>, KRaft mode</td><td>Replication, ISR, leader election and broker failure all require killing a broker while the others survive. Impossible with one.</td></tr>
+      <tr><td><b>Replication factor 3</b> on all test topics</td><td>So <code>min.insync.replicas</code> has room to matter</td></tr>
+      <tr><td><b>A CLI</b> — <code>kcat</code> plus the bundled <code>kafka-*</code> scripts</td><td><code>kafka-consumer-groups --describe</code> is the single most used diagnostic in this branch</td></tr>
+      <tr><td><b>A cluster UI</b> — AKHQ, Kafbat/Kafka UI or Redpanda Console, all free</td><td>Watching partition assignment shift during a rebalance in real time is worth far more than reading about it</td></tr>
+      <tr><td><b>JMX metrics scraped</b> to Prometheus + Grafana, or just polled to a CSV</td><td>Lag, ISR shrink/expand and request latency over time — the labs need time series, not snapshots</td></tr>
+      <tr><td><b>A network fault tool</b> — <code>tc netem</code> or pausing containers</td><td>Partial failure and slow followers, not just clean kills</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Three habits to establish before the first lab</span>
+    <strong>Always run <code>kafka-consumer-groups --describe</code> before and after every experiment</strong>
+    — assignment plus lag per partition is the ground truth.
+    <strong>Log every produced and consumed record with its partition, offset and timestamp</strong>, so
+    you can reconstruct ordering and detect duplicates by counting rather than by impression.
+    <strong>Keep a per-partition counter on the consumer side</strong> — <mark>almost every conclusion in
+    this branch is reached by comparing counts, not by watching logs scroll.</mark>
+  </div>
+</section>
+
+<section id="map">
+  <h2><span class="num">02</span> Internal dependency map</h2>
+
+<pre>K1 ARCHITECTURE ──→ K2 THE STORAGE ENGINE
+        │                    │
+        ├──→ K3 PRODUCERS ───┤
+        │                    │
+        └──→ K4 CONSUMERS ───┤
+                 │           │
+                 ↓           ↓
+        K5 CONSUMER GROUPS   K7 REPLICATION
+                 │                 │
+                 ↓                 │
+        K6 REBALANCING             │
+                 │                 │
+                 └────→ K8 DELIVERY SEMANTICS ←──┘
+                              │
+                              ↓
+                    K9 PERFORMANCE &amp; LAG
+                              │
+                              ↓
+                    K10 FAILURE MODES ......... synthesis
+                              │
+        K11 ECOSYSTEM         ↓
+                    K12 WHEN NOT TO USE KAFKA</pre>
+
+  <div class="note">
+    <span class="lbl">Reading this map</span>
+    <strong>K8 is the convergence point.</strong> Delivery semantics is not a separate topic — it is what
+    you get when producer configuration (K3), consumer offset handling (K4) and replication (K7) are
+    combined. <mark>That is why it cannot be understood before all three, and why most people's
+    understanding of "exactly-once" is vague.</mark>
+  </div>
+</section>
+
+<section id="k1">
+  <h2><span class="num">K1</span> Architecture</h2>
+  <p class="sub">A distributed, partitioned, replicated commit log — and every word in that phrase is load-bearing.</p>
+
+  <p><b>WHAT IT IS.</b> A cluster of brokers, each hosting partitions of topics. Every partition is an
+  append-only ordered log with a single leader and zero or more follower replicas. A controller manages
+  metadata and leadership.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because point-to-point integration between <em>n</em> systems requires
+  <em>n²</em> connections, and because most consumers want to read data more than once, at their own pace,
+  possibly weeks later. <strong>The log solves both by decoupling producers from consumers in time as well
+  as in space.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="substrate.html#b8">L0 distributed minimum</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Brokers, topics, partitions, replicas · the log as the core abstraction · the
+  controller and its responsibilities · KRaft versus ZooKeeper and what actually changed · metadata
+  propagation · why Kafka is not a queue and not a database · the difference between a topic and a
+  partition in every operational sense.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> the Apache Kafka documentation,
+    <strong>the "Design" section specifically</strong><br>
+    <em>Why this one:</em> free, and unusually good — it is one of the few project documentations written
+    as a design rationale rather than a reference. <mark>The Design section explains why each decision was
+    made, which is exactly what interviews probe.</mark>
+    <br><br>
+    <b>DEEPER</b> — Jay Kreps, "The Log: What every software engineer should know about real-time data's
+    unifying abstraction" (free). It reframes databases, replication and integration as one idea.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Find the log on disk</span>
+    Create a topic with 3 partitions and produce a few thousand records. Then go into the broker container
+    and look at the data directory. <strong>You will find one directory per partition replica, containing
+    <code>.log</code>, <code>.index</code> and <code>.timeindex</code> files.</strong>
+    <br><br>
+    Dump a segment with <code>kafka-dump-log</code> and read the actual records with their offsets.
+    <mark>Kafka stops being a service and becomes a set of files you can look at</mark> — and that shift is
+    worth doing on day one of this branch.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#k2">K2</a> · <a href="../atlas/data-engineering.html#n3">Data Engineering
+  N3</a> (a table is a summary of a log) · <a href="../atlas/databases.html#n4">Databases N4</a> (the WAL is
+  the same structure).</p>
+</section>
+
+<section id="k2">
+  <h2><span class="num">K2</span> The storage engine</h2>
+  <p class="sub">Why Kafka is fast, and why the answer is mostly "it does not fight the operating system".</p>
+
+  <p><b>WHAT IT IS.</b> Each partition is a sequence of segment files with sparse offset and time indexes.
+  Reads and writes are sequential. The OS page cache does the caching, and data moves from disk to socket
+  without passing through application memory.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because sequential disk access is orders of magnitude faster than random access,
+  and because <strong>the operating system already has a well-tuned cache</strong> — so the fastest design
+  is one that uses it rather than duplicating it in the JVM heap.</p>
+
+  <p><b>DEPENDENCIES.</b> K1 · <a href="../atlas/operating-systems.html#n3">OS N3</a> (page cache) ·
+  <a href="../atlas/operating-systems.html#n5">OS N5</a> (zero-copy is a syscall story).</p>
+
+  <p><b>SUBTOPICS.</b> Segments, rolling and the active segment · the sparse offset index and why it is
+  sparse · the time index · retention by time and by size, and that retention deletes whole segments ·
+  <strong>log compaction</strong> — tombstones, the cleaner, and compacted topics as a changelog · page
+  cache and why Kafka heap should stay small · zero-copy transfer and what disables it · tiered storage.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> <em>Kafka: The Definitive Guide</em>, 2nd edition — free PDF
+    from Confluent — the storage internals chapter<br>
+    <em>Why this one:</em> free, written largely by Kafka committers, and the storage chapter covers
+    segments, indexes and compaction with the operational consequences attached.
+    <br><br>
+    <b>DEEPER</b> — the original Kafka paper (LinkedIn, 2011), free. Short, and it states the sequential-IO
+    and page-cache argument in its original form.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Make compaction happen and watch a key survive</span>
+    Create a compacted topic. Produce the same key ten times with different values, plus a hundred other
+    keys. Force segment rolling with a small segment size and trigger the cleaner.
+    <br><br>
+    <strong>Dump the log before and after.</strong> Only the latest value for each key survives — and the
+    offsets are now non-contiguous, which is a detail that surprises people.
+    <mark>You have just watched a topic become a table.</mark>
+    <br><br>
+    Then produce a null value as a tombstone and watch the key disappear entirely after the delete
+    retention window. <em>That is how CDC deletes propagate</em>, and it connects directly to L5.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#k7">K7</a> · <a href="../atlas/operating-systems.html#n3">OS N3</a> ·
+  L5 CDC · <a href="../atlas/databases.html#n2">Databases N2</a> (LSM compaction is the same idea).</p>
+</section>
+
+<section id="k3">
+  <h2><span class="num">K3</span> Producers</h2>
+  <p class="sub">Where durability, latency, throughput and ordering are all decided by four settings.</p>
+
+  <p><b>WHAT IT IS.</b> A client that batches records per partition, optionally compresses them, sends them
+  to the partition leader, and waits for a configurable degree of acknowledgement.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because sending one record at a time over the network is catastrophically
+  inefficient. <strong>Almost all producer configuration is a position on the batching trade-off</strong> —
+  wait longer, send more per request, get higher throughput and worse latency.</p>
+
+  <p><b>DEPENDENCIES.</b> K1, K2.</p>
+
+  <p><b>SUBTOPICS.</b> The default partitioner and key hashing · sticky partitioning for keyless records ·
+  <code>linger.ms</code> and <code>batch.size</code> as the throughput/latency dial · compression and where
+  the CPU is paid · <strong><code>acks</code> 0/1/all</strong> and the durability curve ·
+  <code>retries</code> and the duplicate they create · <strong><code>max.in.flight.requests</code> and how
+  it silently breaks ordering on retry</strong> · the idempotent producer, its sequence numbers and its
+  per-partition scope · transactions and the transaction coordinator · <code>buffer.memory</code> and
+  producer-side backpressure.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> the Kafka producer configuration reference,
+    read in full once — it is shorter than it looks<br>
+    <em>Why this one:</em> free, and the producer config page is where the trade-offs are stated precisely.
+    <mark>Reading the actual definition of <code>max.in.flight.requests.per.connection</code> is how most
+    people discover that their ordering guarantee was never real.</mark>
+    <br><br>
+    <b>DEEPER</b> — KIP-98 (exactly-once delivery) and KIP-679 (sticky partitioner). Free, and the KIPs are
+    the design documents — they state the problem before the solution.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab09">Laboratory 09</a> covers partitioning and ordering;
+  <a href="#lab12">Laboratory 12</a> covers idempotence and transactions.</p>
+
+  <div class="trap">
+    <span class="lbl">The fact that catches most candidates</span>
+    <strong>With retries enabled and <code>max.in.flight &gt; 1</code>, a failed batch can be re-sent
+    <em>after</em> a later batch succeeded — reordering records within a single partition.</strong>
+    <mark>Ordering per partition is not a Kafka guarantee, it is a consequence of your producer
+    configuration</mark>, and the idempotent producer is what makes it hold at in-flight up to 5.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#k7">K7</a> (acks means nothing without ISR) · <a href="#k8">K8</a> ·
+  <a href="#k9">K9</a>.</p>
+</section>
+
+<section id="k4">
+  <h2><span class="num">K4</span> Consumers</h2>
+  <p class="sub">A poll loop and an offset — and almost every consumer bug is one of those two.</p>
+
+  <p><b>WHAT IT IS.</b> A client that fetches batches from assigned partitions, processes them, and records
+  its position by committing an offset.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the broker deliberately does not track per-consumer delivery.
+  <strong>Pushing the position tracking to the consumer is what allows replay, multiple independent
+  consumer groups, and a broker that stays simple and fast.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> K1, K2.</p>
+
+  <p><b>SUBTOPICS.</b> The poll loop and why it must be called regularly · <code>fetch.min.bytes</code>,
+  <code>fetch.max.wait.ms</code> and consumer-side batching · <code>max.poll.records</code> ·
+  <strong>offset commits</strong> — auto versus manual, sync versus async, and where each loses or
+  duplicates data · the <code>__consumer_offsets</code> topic · <code>auto.offset.reset</code> and the
+  silent data-loss trap when a consumer is down past retention · <strong><code>max.poll.interval.ms</code>
+  and the silent eviction</strong> when processing takes too long · seeking and replay.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free book · <em>Title:</em> <em>Kafka: The Definitive Guide</em>, 2nd edition — the
+    consumer chapter<br>
+    <em>Why this one:</em> free, and it walks the commit strategies with their exact failure modes — which
+    record is lost or duplicated in each — rather than describing them abstractly.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Lose data with auto-commit, then duplicate it</span>
+    Run a consumer with auto-commit enabled and a processing step that takes a second per batch.
+    <strong>Kill it mid-batch.</strong> Restart. Depending on where the auto-commit fell, you either
+    reprocessed records or skipped them entirely — and <mark>you have no way to know which without
+    counting.</mark>
+    <br><br>
+    Now switch to manual commit <em>after</em> processing and repeat: you get duplicates but never loss.
+    Then commit <em>before</em> processing: you get loss but never duplicates.
+    <strong>Those are the only two options, and you must choose one.</strong>
+    <br><br>
+    Then trigger the silent eviction: set <code>max.poll.interval.ms</code> low and make one batch take
+    longer. The consumer is removed from the group <em>while still running</em>, its partitions are
+    reassigned, and its commit is rejected. <em>This is one of the most confusing production incidents in
+    Kafka and it has no obvious error message.</em>
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#k5">K5</a> · <a href="#k6">K6</a> · <a href="#k8">K8</a>.</p>
+</section>
+
+<section id="k5">
+  <h2><span class="num">K5</span> Consumer groups</h2>
+  <p class="sub">How parallelism is coordinated, and why partition count is a ceiling.</p>
+
+  <p><b>WHAT IT IS.</b> A set of consumers sharing a group id, among which partitions are distributed so
+  that each partition is consumed by exactly one member. A broker acting as group coordinator runs the
+  membership protocol.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because scaling consumption requires dividing the work, and dividing it requires
+  agreement about who owns what. <strong>The partition is the indivisible unit, which is why more consumers
+  than partitions leaves some idle</strong> — a fact that governs capacity planning.</p>
+
+  <p><b>DEPENDENCIES.</b> K4.</p>
+
+  <p><b>SUBTOPICS.</b> The group coordinator and its election · the join-group and sync-group protocol ·
+  the group leader computing the assignment client-side · assignment strategies — range, round-robin,
+  sticky, cooperative-sticky — and what each optimises · why range assignment creates imbalance across
+  multiple topics · static group membership · multiple groups on one topic and independent offsets.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> the Kafka consumer group protocol
+    documentation, with <code>kafka-consumer-groups --describe</code> as the live instrument<br>
+    <em>Why this one:</em> free, and <mark>the describe output is the single most useful diagnostic command
+    in Kafka operations</mark> — current assignment, current offset, log end offset and lag per partition,
+    in one table.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Find the ceiling</span>
+    Create a topic with 4 partitions. Start 2 consumers, then 4, then 6, in the same group. Measure
+    throughput at each step and run <code>--describe</code> each time.
+    <br><br>
+    <strong>Throughput rises to 4 consumers and then stops. Consumers 5 and 6 are assigned nothing and idle
+    permanently.</strong> <mark>Partition count is a hard ceiling on consumer parallelism</mark>, which is
+    why partition count is a capacity decision made at topic-creation time and is painful to change later —
+    as <a href="#lab09">Lab 09</a> demonstrates.
+    <br><br>
+    Then start a <em>second</em> group on the same topic and watch both consume everything independently
+    with separate offsets. That is the fan-out property, and it is the reason Kafka replaced point-to-point
+    integration.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#k6">K6</a> · <a href="#k9">K9</a> ·
+  <a href="../atlas/distributed-systems.html#n6">Distributed Systems N6</a>.</p>
+</section>
+
+<section id="k6">
+  <h2><span class="num">K6</span> Rebalancing</h2>
+  <p class="sub">The most operationally consequential mechanism in Kafka, and the one most often misconfigured.</p>
+
+  <p><b>WHAT IT IS.</b> The protocol by which partition ownership is redistributed when group membership or
+  topic metadata changes.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because consumers fail and scale, and partitions must always have exactly one
+  owner. <strong>The cost is that under the classic protocol, <em>every</em> consumer stops consuming while
+  the reassignment happens</strong> — a stop-the-world pause proportional to the slowest member.</p>
+
+  <p><b>DEPENDENCIES.</b> K5.</p>
+
+  <p><b>SUBTOPICS.</b> Triggers: membership change, subscription change, partition count change · eager
+  rebalancing and the revoke-everything step · <strong>cooperative incremental rebalancing</strong> and
+  what it revokes instead · <code>session.timeout.ms</code>, <code>heartbeat.interval.ms</code> and
+  <code>max.poll.interval.ms</code> and their interactions · <strong>rebalance storms</strong> — causes and
+  the feedback loop that sustains them · static membership and rolling restarts without rebalance ·
+  the <code>onPartitionsRevoked</code> hook and committing before losing ownership.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free design document · <em>Title:</em> <strong>KIP-429</strong> — Kafka Consumer
+    Incremental Rebalance Protocol — freely available<br>
+    <em>Why this one:</em> free, and it is the clearest existing explanation of the problem, because a KIP
+    <em>must</em> state the deficiency before proposing the fix.
+    <mark>It shows you exactly what was wrong with eager rebalancing, which is the thing an interview asks
+    about.</mark>
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab10">Laboratory 10 — Rebalancing</a>. This node is not learnable by
+  reading.</p>
+
+  <div class="trap">
+    <span class="lbl">The rebalance storm, stated as a loop</span>
+    Processing slows → a consumer exceeds <code>max.poll.interval.ms</code> → it is evicted → rebalance →
+    all consumers pause → backlog grows → batches get larger → processing takes longer →
+    <strong>another consumer is evicted.</strong>
+    <mark>This is a reinforcing feedback loop, and it does not stop when the original slowdown ends</mark> —
+    the same metastable failure structure as
+    <a href="../atlas/distributed-systems.html#n7">Distributed Systems N7</a>.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#k9">K9</a> · <a href="#k10">K10</a> ·
+  <a href="../atlas/systems-thinking.html#n2">Systems Thinking N2</a>.</p>
+</section>
+
+<section id="k7">
+  <h2><span class="num">K7</span> Replication</h2>
+  <p class="sub">Where durability is actually determined — and where <code>acks=all</code> stops being enough.</p>
+
+  <p><b>WHAT IT IS.</b> Each partition has a leader and followers. Followers fetch from the leader. The set
+  of replicas sufficiently caught up is the in-sync replica set. The high watermark is the highest offset
+  replicated to all ISR members, and consumers may not read beyond it.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a broker will fail, and an acknowledged write must survive it. The design
+  choice — <strong>ISR rather than a fixed quorum</strong> — trades some availability characteristics for
+  the ability to tolerate <em>n−1</em> failures with <em>n</em> replicas.</p>
+
+  <p><b>DEPENDENCIES.</b> K1, K2, K3 ·
+  <a href="../atlas/distributed-systems.html#n3">Distributed Systems N3</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Leader and follower fetch protocol · the ISR and how a replica falls out ·
+  <code>replica.lag.time.max.ms</code> · <strong>the high watermark</strong> and why consumers cannot read
+  uncommitted records · <code>min.insync.replicas</code> and its interaction with <code>acks=all</code> ·
+  <strong>unclean leader election</strong> as a deliberate availability-over-durability switch · leader
+  election and the controller's role · preferred leader and partition balance · rack awareness · what
+  happens to producers when ISR drops below the minimum.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> the Kafka documentation's replication
+    section within Design<br>
+    <em>Why this one:</em> free, and it explains explicitly why ISR was chosen over majority-vote quorum —
+    <mark>which is a real distributed systems design argument, and answering "why not Raft?" well is a
+    strong differentiator.</mark>
+    <br><br>
+    <b>DEEPER</b> — Jack Vanlightly's freely published analyses of Kafka replication and its failure edges.
+    Rigorous and unusually honest about the corner cases.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab11">Laboratory 11 — Replication &amp; Broker Failure</a>.</p>
+
+  <div class="trap">
+    <span class="lbl">The configuration trio that must be understood together</span>
+    <strong><code>acks</code> · <code>min.insync.replicas</code> · <code>unclean.leader.election.enable</code></strong>
+    <br><br>
+    <code>acks=all</code> with <code>min.insync.replicas=1</code> means the leader alone acknowledges —
+    <mark>identical durability to <code>acks=1</code>, with worse latency.</mark> And unclean leader
+    election set to true means an out-of-sync replica can become leader,
+    <strong>silently discarding acknowledged writes.</strong> These three are one setting with three parts.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#k8">K8</a> · <a href="#k10">K10</a> ·
+  <a href="../atlas/distributed-systems.html#n3">Distributed Systems N3</a>.</p>
+</section>
+
+<section id="k8">
+  <h2><span class="num">K8</span> Delivery semantics</h2>
+  <p class="sub">The convergence point — and where "exactly-once" gets stated honestly.</p>
+
+  <p><b>WHAT IT IS.</b> The end-to-end guarantee about how many times a record is processed, produced by
+  combining producer acknowledgement, consumer offset handling and replication.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a network cannot distinguish a lost request from a lost response, so
+  every retry is potentially a duplicate. <strong>At-least-once plus idempotence is the only construction
+  that survives contact with reality</strong>, and "exactly-once" is the name given to that construction
+  when the system provides it for you.</p>
+
+  <p><b>DEPENDENCIES.</b> K3, K4, K7 · <a href="../atlas/distributed-systems.html#n1">Distributed Systems
+  N1</a>.</p>
+
+  <p><b>SUBTOPICS.</b> At-most-once and where its data loss occurs · at-least-once and its duplicates ·
+  the idempotent producer — producer id, sequence numbers, per-partition scope, and what it does
+  <em>not</em> cover · <strong>transactions</strong> — the coordinator, the transaction log, markers ·
+  <code>isolation.level=read_committed</code> and the LSO · read-process-write as one atomic unit ·
+  <strong>why end-to-end exactly-once requires the sink to cooperate</strong> · idempotency keys as the
+  general answer when it cannot.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free design document · <em>Title:</em> <strong>KIP-98</strong> — Exactly Once Delivery
+    and Transactional Messaging — freely available<br>
+    <em>Why this one:</em> free, and it is the primary source.
+    <mark>It is explicit about the scope: Kafka-to-Kafka</mark> — which is precisely the boundary most
+    candidates get wrong when they claim their pipeline is exactly-once.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab12">Laboratory 12 — Delivery Semantics</a>.</p>
+
+  <div class="life">
+    <span class="lbl">The honest answer to "does Kafka give exactly-once?"</span>
+    <strong>Within Kafka, yes</strong> — for a read-process-write cycle where the output is also Kafka,
+    transactions make it atomic. <strong>To an external sink, no</strong> — unless that sink participates,
+    either by being idempotent on a key you supply or by supporting a two-phase commit.
+    <mark>"Effectively-once, via at-least-once delivery plus an idempotent sink" is the answer that
+    demonstrates you have actually built one.</mark>
+  </div>
+
+  <p><b>CONNECTS TO.</b> L4 stream semantics (this is its foundation) · L5 pipelines (idempotent writes) ·
+  <a href="../atlas/distributed-systems.html#n7">Distributed Systems N7</a>.</p>
+</section>
+
+<section id="k9">
+  <h2><span class="num">K9</span> Performance and lag</h2>
+  <p class="sub">Throughput, latency, and the metric every on-call engineer watches.</p>
+
+  <p><b>WHAT IT IS.</b> The levers that trade throughput against latency, and consumer lag as the primary
+  operational signal of the whole system's health.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because lag is the one number that reflects producers, consumers, partitions,
+  rebalances and downstream systems simultaneously — which makes it both the best alert and the most
+  ambiguous one. <strong>Diagnosing lag correctly requires separating the causes.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> K3, K4, K5, K6.</p>
+
+  <p><b>SUBTOPICS.</b> The batching trade-off on both sides · compression choice and its CPU cost ·
+  <strong>partition count</strong> — why more is not better: more open files, more memory, longer leader
+  election, longer rebalance, more end-to-end latency · lag measurement and its per-partition nature ·
+  <strong>the four distinct causes of lag</strong> — slow processing, insufficient consumers, skewed
+  partitions, and rebalance churn — each with a different fix · hot partitions and key design ·
+  throughput ceilings and where they actually sit.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free engineering writing · <em>Title:</em> Confluent's freely published benchmarking and
+    partition-count guidance, read alongside your own JMX measurements<br>
+    <em>Why this one:</em> free, and it states the partition-count trade-off in both directions with
+    numbers. <mark>Most guidance only warns about too few partitions; the cost of too many is the part that
+    distinguishes a considered answer.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">The four-cause lag diagnosis, to internalise as a reflex</span>
+    <strong>1.</strong> Is lag on <em>all</em> partitions or <em>one</em>? One → skew or a stuck consumer.
+    All → capacity or downstream.
+    <strong>2.</strong> Is the consumer's processing rate steady? Falling → downstream slowdown.
+    <strong>3.</strong> Are there rebalances in the log? Frequent → churn, not capacity — and
+    <mark>adding consumers makes it worse.</mark>
+    <strong>4.</strong> Is producer rate elevated? If yes, it is not a consumer problem at all.
+    <br><br>
+    <em>Adding consumers is the reflex response and it is the correct fix in only one of the four cases.</em>
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#k6">K6</a> · <a href="#k10">K10</a> · L2 skew (the identical
+  phenomenon) · <a href="../atlas/probability.html#n6">Probability N6</a> (a queue near saturation).</p>
+</section>
+
+<section id="k10">
+  <h2><span class="num">K10</span> Failure modes</h2>
+  <p class="sub">Synthesis — the incidents you will be asked to have opinions about.</p>
+
+  <p><b>WHAT IT IS.</b> The catalogue of ways a Kafka deployment fails in production, with the symptom, the
+  mechanism and the response for each.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because senior interviews are largely operational, and because
+  <strong>the symptom rarely names the cause</strong> — consumer lag can mean six different things, and a
+  broker that is "up" can be entirely unable to serve its partitions.</p>
+
+  <p><b>DEPENDENCIES.</b> K1–K9.</p>
+
+  <table>
+    <thead><tr><th>Symptom</th><th>Mechanism</th><th>First response</th></tr></thead>
+    <tbody>
+      <tr><td>Lag climbing on one partition only</td><td>Hot key, or one stuck consumer</td><td>Check key distribution and that member's health — not scale-out</td></tr>
+      <tr><td>Group repeatedly rebalancing</td><td><code>max.poll.interval</code> exceeded → eviction loop</td><td>Reduce <code>max.poll.records</code> or raise the interval; do <em>not</em> add consumers</td></tr>
+      <tr><td>Producers blocking or erroring</td><td>ISR below <code>min.insync.replicas</code>, or buffer full</td><td>Check ISR size and broker health before touching the producer</td></tr>
+      <tr><td>Acknowledged data missing after a failover</td><td>Unclean leader election, or <code>acks</code>/ISR misconfiguration</td><td>Audit the three-setting trio; this is a config bug, not a Kafka bug</td></tr>
+      <tr><td>Consumer restarts and reprocesses everything</td><td>Offsets expired, or <code>auto.offset.reset=earliest</code> after retention</td><td>Check offset retention against the outage duration</td></tr>
+      <tr><td>Consumer restarts and skips data</td><td><code>auto.offset.reset=latest</code> with no committed offset</td><td>The most dangerous default in Kafka</td></tr>
+      <tr><td>Broker up but partitions unavailable</td><td>Disk full, or the log directory failed offline</td><td>Check offline partition count and disk, not the process</td></tr>
+      <tr><td>Ordering violated within a key</td><td>Retries with in-flight &gt; 1, or a partition count change</td><td>Enable idempotence; treat partition count as immutable</td></tr>
+      <tr><td>Cluster slow after adding partitions</td><td>More files, more metadata, longer elections</td><td>Partition count is not free in either direction</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free engineering blogs · <em>Title:</em> published Kafka incident write-ups from
+    engineering teams that operate it at scale — freely available<br>
+    <em>Why this one:</em> free, and <mark>a post-incident write-up gives you the symptom-to-cause path in
+    the order it was actually discovered</mark>, which is exactly the shape of an interview answer.
+  </div>
+
+  <p><b>CONNECTS TO.</b> All previous nodes ·
+  <a href="../atlas/infrastructure-cloud.html#n6">Infrastructure N6</a> (incident practice).</p>
+</section>
+
+<section id="k11">
+  <h2><span class="num">K11</span> Ecosystem</h2>
+  <p class="sub">Kept deliberately short — two components you must be able to discuss, not master.</p>
+
+  <p><b>Kafka Connect.</b> A framework for source and sink connectors with offset management, scaling and
+  restart handled for you. Worth knowing: <em>why</em> it exists (every team writing bespoke ingestion is
+  the problem it solves), how it handles offsets, single-message transforms, and its dead letter queue
+  behaviour. <strong>It is also the natural entry point to L5 CDC via log-based source connectors.</strong></p>
+
+  <p><b>Schema Registry.</b> Centralised schema storage with compatibility enforcement.
+  <mark>This is the single most important component for <a href="reliability.html#r5">L6 data contracts</a></mark>
+  — backward, forward and full compatibility are precise definitions of what a producer may change without
+  breaking consumers, and they are the mechanism behind a data contract.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> the Kafka Connect documentation and the
+    Confluent Schema Registry compatibility-types page<br>
+    <em>Why this one:</em> free, and the compatibility-types page is a precise, short definition of
+    breaking versus non-breaking change — which you will reuse directly in L6.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Break compatibility on purpose</span>
+    Register an Avro schema, produce with it, then attempt to register a version that removes a required
+    field. <strong>The registry rejects it under backward compatibility.</strong> Then try adding an
+    optional field with a default — accepted.
+    <br><br>
+    <mark>You have just watched a data contract being enforced by a machine rather than a document</mark>,
+    and that distinction is the whole argument of L6.
+  </div>
+
+  <p><b>CONNECTS TO.</b> L5 CDC · L6 contracts · <a href="../atlas/data-engineering.html#n3">Data
+  Engineering N3</a>.</p>
+</section>
+
+<section id="k12">
+  <h2><span class="num">K12</span> When not to use Kafka</h2>
+  <p class="sub">Judgment, and a question asked more often than people expect.</p>
+
+  <table>
+    <thead><tr><th>Situation</th><th>Why Kafka loses</th><th>Reach for</th></tr></thead>
+    <tbody>
+      <tr><td>Per-message routing, priorities, or selective acknowledgement</td><td>Kafka has no per-message ack and no priority — the log is ordered and positional</td><td>A traditional message broker</td></tr>
+      <tr><td>Task queue with variable-duration jobs</td><td>One slow message blocks its whole partition</td><td>A work queue with per-message ack</td></tr>
+      <tr><td>Request/response between services</td><td>Kafka is one-way and durable; you would be building RPC on a log</td><td>Direct RPC or HTTP</td></tr>
+      <tr><td>Low-volume events, small team, no existing cluster</td><td>Operational cost dwarfs the benefit</td><td>A managed queue, or a table with a poller</td></tr>
+      <tr><td>Point lookups by key</td><td>Kafka is not indexed for random access</td><td>A key-value store, fed <em>by</em> Kafka</td></tr>
+      <tr><td>Strict global ordering across all events</td><td>Ordering is per-partition; global ordering means one partition and no parallelism</td><td>Reconsider the requirement — it is usually per-entity ordering that is actually needed</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The strongest version of this answer</span>
+    <strong>Lead with the last row.</strong> <mark>"Most requests for global ordering are actually requests
+    for per-entity ordering, which Kafka gives you for free by keying on the entity — and if it genuinely
+    is global, Kafka can only provide it with a single partition, which forfeits all parallelism"</mark>
+    demonstrates that you interrogate requirements rather than accept them, which is a senior signal.
+  </div>
+</section>
+
+<section id="lab09">
+  <h2><span class="num">09</span> Laboratory — Partitioning &amp; Ordering</h2>
+  <p class="sub">The foundational Kafka lab. Everything else assumes what this one teaches.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Order-status events for each customer must be processed in the order they occurred.
+    Cancellations must not overtake confirmations.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A topic with 6 partitions on the 3-broker cluster. A producer emitting
+    <code>order_created</code>, <code>order_paid</code>, <code>order_cancelled</code> per order,
+    <strong>with no key</strong>. A consumer group that records, per order id, the sequence of statuses it
+    observed and flags any that arrived out of order. Also a per-partition record counter.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE — three of them, in escalating subtlety</span>
+    <strong>1.</strong> With no key, records for one order land on different partitions and are consumed by
+    different members. <mark>Ordering is violated immediately and obviously.</mark>
+    <br><br>
+    <strong>2.</strong> Add the customer id as the key. Ordering now holds. <strong>Now increase the
+    partition count from 6 to 12 while producing.</strong> The hash changes, existing keys move, and
+    <mark>ordering breaks across the boundary — for a change that looks purely like scaling.</mark>
+    <br><br>
+    <strong>3.</strong> Restore 6 partitions and correct keys. Now set <code>retries=5</code>,
+    <code>max.in.flight.requests.per.connection=5</code>, disable idempotence, and inject transient broker
+    errors. <strong>Ordering is violated <em>within a single partition</em></strong> — which most engineers
+    believe is impossible.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Partition as the ordering unit → keys and the default partitioner →
+  hash-modulo and why partition count is effectively immutable → consistent hashing as the alternative Kafka
+  chose <em>not</em> to make → in-flight requests and retry reordering → the idempotent producer as the fix
+  → sticky partitioning for keyless records → hot keys as the cost of keying.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>No key · random key · customer key · single constant key</td><td>Distribution vs ordering: the core trade-off</td></tr>
+      <tr><td>2</td><td>Plot records-per-partition for each distribution</td><td>Keying costs you evenness</td></tr>
+      <tr><td>3</td><td>Power-law customer keys (one customer at 10%)</td><td>Hot partition; lag on one partition only</td></tr>
+      <tr><td>4</td><td>Increase partitions mid-run and track key→partition mapping</td><td>Why partition count is a one-way door</td></tr>
+      <tr><td>5</td><td>Write a custom partitioner isolating hot keys to dedicated partitions</td><td>The practical mitigation, and its cost</td></tr>
+      <tr><td>6</td><td>Retries + in-flight 5, idempotence off, with injected errors</td><td>Intra-partition reordering — the surprise</td></tr>
+      <tr><td>7</td><td>Repeat 6 with <code>enable.idempotence=true</code></td><td>Sequence numbers restoring order at high in-flight</td></tr>
+      <tr><td>8</td><td>Compare keyless throughput with sticky partitioner on and off</td><td>Batching efficiency vs record-level round-robin</td></tr>
+      <tr><td>9</td><td>Consumers &gt; partitions</td><td>The parallelism ceiling, measured</td></tr>
+      <tr><td>10</td><td>Two independent groups on one topic</td><td>Fan-out and independent offsets</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Records per partition per key strategy; count of ordering violations per
+  experiment; per-partition lag; producer throughput and p99 latency.
+  <strong>The artifact is a table of key-strategy against ordering-violations against partition-balance</strong>
+  — <mark>which shows in one view that ordering and even distribution are in direct tension.</mark></p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Every ordering bug in a keyed pipeline is experiment 4 or 6. The
+  partition-count change is a genuine production trap — it looks like routine capacity work and silently
+  breaks a guarantee downstream systems depend on. <em>The correct operational answer is that partition
+  count is immutable once keys carry semantics; you create a new topic instead.</em></p>
+
+  <p><b>PORTFOLIO VALUE.</b> High. A partitioning laboratory with a pluggable key-distribution generator, an
+  ordering-violation detector and a results table is a compact, complete and unusual artifact.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#k5">K5</a> · <a href="#k9">K9</a> hot partitions ·
+  <a href="#lab10">Lab 10</a> · L2 skew — the same phenomenon in a different system.</p>
+
+  <div class="note">
+    <span class="lbl">The data structures this lab forces</span>
+    <strong>Consistent hashing</strong> — experiment 4 makes you feel exactly why <code>hash % n</code> is
+    catastrophic on resize, which is the motivating problem for it.
+    <strong>A bounded min-heap</strong> — to find the top-K hot keys from a live stream without buffering
+    everything, which is how you would actually detect experiment 3 in production.
+  </div>
+</section>
+
+<section id="lab10">
+  <h2><span class="num">10</span> Laboratory — Consumer Rebalancing</h2>
+  <p class="sub">The lab that produces the most "I did not know it did that" moments.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> You need to scale consumers up and down, and deploy new versions, without interrupting
+    processing. Currently every deployment causes a visible processing gap.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A topic with 12 partitions and steady production. A consumer group of 3 members
+    using the <strong>default eager assignment</strong>, each logging every partition assignment and
+    revocation with a timestamp, and emitting a heartbeat record every 100 ms so processing gaps are
+    measurable to the millisecond.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    Add a fourth consumer. <strong>All three existing consumers stop processing entirely</strong> while the
+    group re-forms — a stop-the-world pause visible as a gap in every consumer's heartbeat stream.
+    <mark>Nine partitions that did not need to move were revoked and reassigned anyway.</mark>
+    <br><br>
+    Then the second failure, which is worse: set <code>max.poll.interval.ms</code> to a few seconds and make
+    processing occasionally slower than that. <strong>The group enters a rebalance loop it does not exit
+    from</strong>, and throughput collapses to near zero while every consumer appears healthy.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> The group coordinator and the join/sync protocol → eager rebalancing's
+  revoke-all step → assignment strategies and their different disruption profiles → cooperative incremental
+  rebalancing → session timeout vs heartbeat vs poll interval → rebalance storms as a reinforcing loop →
+  static membership → committing in <code>onPartitionsRevoked</code>.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Add a consumer; measure the processing gap on every member</td><td>Stop-the-world cost, quantified in ms</td></tr>
+      <tr><td>2</td><td>Remove a consumer gracefully vs <code>SIGKILL</code></td><td>Graceful leave vs session-timeout detection delay</td></tr>
+      <tr><td>3</td><td>Compare range, round-robin, sticky and cooperative-sticky</td><td>How many partitions actually move in each</td></tr>
+      <tr><td>4</td><td>Switch to cooperative-sticky; repeat experiment 1</td><td>The gap largely disappears — the headline result</td></tr>
+      <tr><td>5</td><td>Rolling restart of all 3 consumers, with and without static membership</td><td>Static membership eliminating rebalance entirely</td></tr>
+      <tr><td>6</td><td>Induce a rebalance storm; then attempt to fix it by adding consumers</td><td>The intervention that makes it worse</td></tr>
+      <tr><td>7</td><td>Fix the storm properly: lower <code>max.poll.records</code></td><td>Reducing batch time is the actual lever</td></tr>
+      <tr><td>8</td><td>Vary session timeout and heartbeat interval independently</td><td>Detection speed vs false-eviction sensitivity</td></tr>
+      <tr><td>9</td><td>Commit in <code>onPartitionsRevoked</code> vs not, and count duplicates</td><td>The revocation hook as a correctness mechanism</td></tr>
+      <tr><td>10</td><td>Increase partition count while the group is running</td><td>Metadata change triggers rebalance too</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Processing gap per consumer per event, in milliseconds; number of partitions
+  revoked versus number that needed to move; rebalance frequency; duplicate count per strategy; and lag
+  during and after each rebalance. <strong>Plot the heartbeat gaps as a timeline</strong> —
+  <mark>the visual difference between eager and cooperative is dramatic and is the single most compelling
+  artifact in this branch.</mark></p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> This is the most common source of unexplained latency spikes in
+  Kafka-based systems. Deployments cause rebalances; autoscaling causes rebalances; a slow downstream
+  dependency causes evictions which cause rebalances. <em>The rebalance storm in particular is an incident
+  where every instinct — add capacity — is exactly wrong.</em></p>
+
+  <p><b>PORTFOLIO VALUE.</b> Very high. A rebalancing simulator with a measured comparison of assignment
+  strategies and a reproducible storm is a distinctive artifact, and the timeline plot communicates the
+  result in five seconds.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#k9">K9</a> lag causes · <a href="#k10">K10</a> ·
+  <a href="../atlas/distributed-systems.html#n7">Distributed Systems N7</a> · L4 stateful processing, where
+  rebalance also moves state.</p>
+</section>
+
+<section id="lab11">
+  <h2><span class="num">11</span> Laboratory — Replication &amp; Broker Failure</h2>
+  <p class="sub">Where you find out what your durability settings actually purchased.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Your producer receives a successful acknowledgement. A broker then fails. Is the record
+    still there?
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A topic with replication factor 3 across the 3-broker cluster. A producer that
+    <strong>records the offset of every acknowledged send to an external file</strong>. A consumer that
+    reads the topic completely after each failure event. <mark>The measurement is a set difference:
+    acknowledged offsets minus readable offsets.</mark> Any non-empty result is acknowledged data loss.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    Set <code>acks=1</code>. Produce continuously. <strong>Kill the leader broker for a partition
+    mid-stream.</strong> After failover, compute the set difference.
+    <mark>Records that were acknowledged no longer exist</mark> — the leader confirmed before any follower
+    had them, and it died with them.
+    <br><br>
+    Then the more instructive failure: set <code>acks=all</code> but leave
+    <code>min.insync.replicas=1</code>. Repeat. <strong>You lose data again</strong>, because "all" means
+    "all in-sync replicas" and the ISR had shrunk to just the leader.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Leader and follower fetch → the ISR and how replicas fall out → the high
+  watermark and read visibility → <code>acks</code> and <code>min.insync.replicas</code> as one combined
+  setting → producer blocking when ISR is insufficient → unclean leader election as an explicit
+  durability-for-availability trade → controller-driven leader election.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Full matrix: acks ∈ {0,1,all} × min.insync ∈ {1,2,3}, kill leader each time</td><td>The complete durability table — measured, not recited</td></tr>
+      <tr><td>2</td><td>Measure producer throughput and p99 for each cell of the matrix</td><td>The cost side of the durability curve</td></tr>
+      <tr><td>3</td><td>Slow one follower with <code>tc netem</code> and watch it leave the ISR</td><td>ISR shrink under partial failure, not just crash</td></tr>
+      <tr><td>4</td><td>With min.insync=3, take one broker down and try to produce</td><td>Producer blocks — availability sacrificed for durability, deliberately</td></tr>
+      <tr><td>5</td><td>Observe the high watermark lagging the log end offset under load</td><td>Why consumers cannot read the newest records</td></tr>
+      <tr><td>6</td><td>Force an out-of-sync replica to become leader with unclean election enabled</td><td>Deliberate, silent, acknowledged-data loss</td></tr>
+      <tr><td>7</td><td>Repeat 6 with unclean election disabled</td><td>The partition goes offline instead — the other choice</td></tr>
+      <tr><td>8</td><td>Kill and restart a broker; watch the follower catch up and rejoin the ISR</td><td>Recovery, and how long it takes</td></tr>
+      <tr><td>9</td><td>Measure end-to-end latency at acks=1 vs acks=all</td><td>What durability costs in milliseconds</td></tr>
+      <tr><td>10</td><td>Kill the controller broker specifically</td><td>Controller failover and metadata unavailability</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Acknowledged-but-missing record count per configuration; ISR size over time;
+  high watermark versus log end offset; producer error type and duration when ISR is insufficient; failover
+  duration. <strong>The artifact is the durability matrix</strong> — a grid of
+  <em>acks</em> × <em>min.insync</em> with measured loss, throughput and latency in each cell.
+  <mark>That single table answers half the Kafka durability questions you will ever be asked.</mark></p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Payments and financial systems live in this table. The
+  <code>acks=all</code> with <code>min.insync.replicas=1</code> misconfiguration is genuinely common and
+  provides no durability benefit over <code>acks=1</code> while costing latency —
+  <em>and it survives review precisely because "acks=all" looks correct.</em></p>
+
+  <p><b>PORTFOLIO VALUE.</b> Very high, particularly for payments-shaped companies. A measured durability
+  matrix with a reproducible harness is exactly the artifact that demonstrates you reason about correctness
+  quantitatively.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#k8">K8</a> · <a href="#k10">K10</a> ·
+  <a href="../atlas/distributed-systems.html#n3">Distributed Systems N3</a> ·
+  <a href="../atlas/distributed-systems.html#n8">N8 CAP</a> — experiment 4 <em>is</em> a CAP choice, made
+  by configuration.</p>
+</section>
+
+<section id="lab12">
+  <h2><span class="num">12</span> Laboratory — Delivery Semantics</h2>
+  <p class="sub">Where "exactly-once" becomes a precise claim with a stated scope.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Consume payment events, aggregate a running total per account, and write the result.
+    The total must be correct after any crash, at any point.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A read-process-write consumer: read from an input topic, compute a running sum,
+    produce to an output topic, commit the offset. At-least-once configuration. A verifier that
+    independently computes the true total from the input topic and compares.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE — both directions</span>
+    <strong>Crash after producing but before committing.</strong> On restart the records are reprocessed and
+    re-produced. <mark>The total is too high, and the output topic contains duplicates.</mark>
+    <br><br>
+    <strong>Now commit before processing instead.</strong> Crash in the same place. The total is now too
+    low — records were skipped. <em>You have demonstrated that with no further mechanism, you must choose
+    which way to be wrong.</em>
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> At-most-once and at-least-once as the only two naive options → the
+  idempotent producer and its per-partition scope → transactions spanning produce and offset commit →
+  <code>read_committed</code> and the last stable offset → why the offset commit must be <em>inside</em>
+  the transaction → the boundary at an external sink → idempotency keys as the general answer →
+  effectively-once as the honest name.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Commit after processing; crash 20 times; count duplicates</td><td>At-least-once, quantified</td></tr>
+      <tr><td>2</td><td>Commit before processing; crash 20 times; count losses</td><td>At-most-once, quantified</td></tr>
+      <tr><td>3</td><td>Enable idempotent producer only; repeat experiment 1</td><td>It does <em>not</em> fix reprocessing — a common misconception</td></tr>
+      <tr><td>4</td><td>Wrap produce + offset commit in a transaction; repeat</td><td>Exactly-once within Kafka</td></tr>
+      <tr><td>5</td><td>Consume the output with <code>read_uncommitted</code> vs <code>read_committed</code></td><td>Aborted transactions are visible to one and not the other</td></tr>
+      <tr><td>6</td><td>Kill the consumer mid-transaction; observe the abort and LSO behaviour</td><td>Transaction coordinator recovery</td></tr>
+      <tr><td>7</td><td>Measure throughput with and without transactions</td><td>The cost of exactly-once</td></tr>
+      <tr><td>8</td><td>Replace the sink with an external database, keep transactions on</td><td>The guarantee breaks at the boundary — the key result</td></tr>
+      <tr><td>9</td><td>Add an idempotency key and upsert; repeat crashes</td><td>Effectively-once to an external system</td></tr>
+      <tr><td>10</td><td>Same, but with a non-idempotent sink such as an append-only log</td><td>Why sink cooperation is not optional</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Computed total versus true total after every crash; duplicate and missing record
+  counts; throughput with and without transactions; and, in experiment 8, precisely where the guarantee
+  stops holding. <strong>The artifact is a semantics table</strong> — configuration against
+  duplicates, losses, throughput and scope.
+  <mark>Experiment 8 is the one to be able to describe from memory</mark>, because it is where most
+  candidates over-claim.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Every financial pipeline. The claim "our pipeline is exactly-once" is
+  usually true only within Kafka and false end-to-end, and <em>being the person who states the boundary
+  precisely is a strong senior signal</em> — particularly at payments companies where the question is not
+  academic.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> High. A crash-injection harness with a verifier and a measured semantics table
+  is directly relevant to payments and financial-data roles.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <strong><a href="stream-semantics.html">L4 stream semantics</a></strong>
+  — this lab is its direct prerequisite · L5 idempotent pipelines ·
+  <a href="../atlas/distributed-systems.html#n7">Distributed Systems N7</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The data structure this lab forces</span>
+    Experiment 9 requires deduplication against an unbounded stream of idempotency keys. A hash set grows
+    forever. <strong>You need bounded state</strong> — a time-windowed set, or a Bloom filter with an
+    accepted false-positive rate, or a keyed store with TTL.
+    <mark>That is precisely the state-management problem
+    <a href="stream-semantics.html#w7">L4 formalises</a></mark>, arrived at here through necessity.
+  </div>
+</section>
+
+<section id="defence">
+  <h2><span class="num">::</span> Interview defence</h2>
+  <p class="sub">The node each question probes, and what separates a strong answer from a correct one.</p>
+
+  <table>
+    <thead><tr><th>The question</th><th>Node</th><th>What a strong answer contains</th></tr></thead>
+    <tbody>
+      <tr><td>How are partitions assigned to consumers?</td><td><a href="#k5">K5</a></td><td>Coordinator, join/sync, and that the <em>group leader</em> computes the assignment client-side — not the broker</td></tr>
+      <tr><td>What happens when a consumer dies?</td><td><a href="#k6">K6</a></td><td>Session timeout detection, rebalance, reassignment; and the distinction between graceful leave and timeout</td></tr>
+      <tr><td>What causes consumer lag?</td><td><a href="#k9">K9</a></td><td>The four causes, and the diagnostic that separates them. Never "add consumers" as the opening move</td></tr>
+      <tr><td>How does replication work?</td><td><a href="#k7">K7</a></td><td>ISR, high watermark, and <em>why ISR rather than majority quorum</em></td></tr>
+      <tr><td>How do acks affect durability and latency?</td><td><a href="#k7">K7</a></td><td>The three-setting trio. <mark>Mentioning <code>min.insync.replicas</code> unprompted is the differentiator</mark></td></tr>
+      <tr><td>Does Kafka give exactly-once?</td><td><a href="#k8">K8</a></td><td>Yes Kafka-to-Kafka via transactions; no to an external sink without cooperation. State the scope</td></tr>
+      <tr><td>What happens if partition count changes?</td><td><a href="#k3">K3</a>, <a href="#lab09">Lab 09</a></td><td>Key→partition mapping changes; ordering breaks across the boundary; treat it as immutable</td></tr>
+      <tr><td>Producers outpacing consumers — what happens?</td><td><a href="#k9">K9</a></td><td>Lag grows, retention becomes the deadline, and data is lost when lag exceeds retention. Not backpressure — Kafka does not push back</td></tr>
+      <tr><td>How would you rebalance with minimal disruption?</td><td><a href="#k6">K6</a></td><td>Cooperative-sticky, static membership, and tuned poll interval — with the measured gap difference</td></tr>
+      <tr><td>How do you diagnose throughput problems?</td><td><a href="#k9">K9</a></td><td>Separate producer-side, broker-side and consumer-side; check batching, compression, partition count and ISR health</td></tr>
+      <tr><td>Why is Kafka fast?</td><td><a href="#k2">K2</a></td><td>Sequential IO, page cache, zero-copy, batching. <em>Not</em> "it is in-memory" — it is emphatically on disk</td></tr>
+      <tr><td>When would you not use Kafka?</td><td><a href="#k12">K12</a></td><td>Per-message ack, priorities, request/response; and the global-ordering interrogation</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The move that distinguishes a senior answer here</span>
+    <strong>Name the configuration and its counterpart.</strong>
+    <mark>Almost every Kafka guarantee is produced by two or three settings acting together</mark> — acks
+    with min.insync, retries with in-flight and idempotence, session timeout with poll interval. Quoting one
+    setting alone is the most common way a confident answer turns out to be shallow.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next</th><th>What it inherits from L3</th></tr></thead>
+    <tbody>
+      <tr><td><b><a href="stream-semantics.html">L4 stream semantics</a></b></td><td>Direct dependency. You now have a real event stream, and <a href="#lab12">Lab 12</a> is the prerequisite for <a href="stream-semantics.html#w9">end-to-end exactly-once</a></td></tr>
+      <tr><td>L5 pipelines</td><td>CDC via log-based connectors; compacted topics as changelogs; idempotent writes</td></tr>
+      <tr><td>L6 reliability</td><td><a href="#k11">Schema Registry compatibility modes</a> are the enforcement mechanism behind data contracts</td></tr>
+      <tr><td>L7 system design</td><td>Every ingestion design is a partitioning, retention and delivery-semantics decision — argued with numbers from these labs</td></tr>
+      <tr><td>L2 Spark</td><td>Sideways: hot partitions here are skew there. Same phenomenon, same power-law cause, different system</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Branch complete when</span>
+    You can be handed an unfamiliar Kafka incident — lag, loss, reordering, or a rebalance loop — and
+    produce a ranked list of causes with the specific metric or command that would confirm each,
+    <strong>before touching any configuration.</strong>
+    <mark>And when you can state any durability claim as a combination of settings rather than a single
+    one.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · L3 · Apache Kafka</footer>
+
+</body>
+</html>

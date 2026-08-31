@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Forge — master data engineering knowledge tree</title>
+<meta name="description" content="A dependency-ordered curriculum for data engineering to data platform engineering, built around focused labs." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#what">What this is</a>
+  <a href="#shape">What 5 years changes</a>
+  <a href="#target">What they actually test</a>
+  <a href="#excluded">What is excluded</a>
+  <h4>The Tree</h4>
+  <a href="#tree">Master tree</a>
+  <a href="#l0">L0 · Substrate</a>
+  <a href="#l1">L1 · Architecture &amp; modelling</a>
+  <a href="#l2">L2 · Spark</a>
+  <a href="#l3">L3 · Kafka</a>
+  <a href="#l4">L4 · Stream semantics</a>
+  <a href="#l5">L5 · Pipelines</a>
+  <a href="#l6">L6 · Reliability</a>
+  <a href="#l7">L7 · System design</a>
+  <a href="#l8">L8 · Platform</a>
+  <h4>Support</h4>
+  <a href="#dsa">DSA on demand</a>
+  <a href="#support">Other supporting</a>
+  <h4>Navigation</h4>
+  <a href="#order">Traversal order</a>
+  <a href="#labs">The lab portfolio</a>
+  <a href="#next">What happens next</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span>Forge</p>
+
+<div class="hero">
+  <div class="kicker">Master tree · data engineering → data platform engineering</div>
+  <h1>The Forge</h1>
+  <p class="dropcap">Where the <a href="../atlas/index.html">Atlas</a> buys breadth at commander-level, this
+  buys <em>depth in one profession</em> — deep enough to defend architectural decisions under hostile
+  questioning, and deep enough that the answer to "why did you do it that way" is a mechanism rather than a
+  convention.</p>
+  <div class="why">
+    <b>The organising principle.</b> Every branch is entered through a <mark>system that breaks in a
+    specific, reproducible way</mark>. The concept is the fix, not the starting point. This is the same
+    discipline as <a href="../tracks/Projects/README.md">your projects track</a> — claim, measurement,
+    surprise — applied to the tools you already use professionally but may not have taken apart.
+  </div>
+  <div class="tags">
+    <span class="tag">#spark-internals</span>
+    <span class="tag t2">#kafka-internals</span>
+    <span class="tag t3">#stream-semantics</span>
+    <span class="tag">#platform</span>
+    <span class="tag t2">#labs-not-courses</span>
+  </div>
+</div>
+
+<section id="what">
+  <h2><span class="num">00</span> What this is, and what it is not</h2>
+  <p class="sub">A dependency graph with a lab attached to every load-bearing node.</p>
+
+  <table>
+    <thead><tr><th>This is</th><th>This is not</th></tr></thead>
+    <tbody>
+      <tr><td>A dependency graph — arrows only where a concept genuinely blocks another</td><td>A syllabus in textbook order</td></tr>
+      <tr><td>~18 focused labs, each teaching one mechanism</td><td>One giant capstone that teaches nothing precisely</td></tr>
+      <tr><td>Internals, failure modes and debugging for Spark and Kafka</td><td>API tours and tutorial walkthroughs</td></tr>
+      <tr><td>Data structures introduced when a pipeline problem demands one</td><td>A parallel DSA curriculum</td></tr>
+      <tr><td>Portfolio artifacts as a by-product of the labs</td><td>Portfolio projects built to look impressive</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The bar this is calibrated to</span>
+    <strong>Not "can you use Spark" — "can you explain why your job took 40 minutes, show me in the UI
+    where the time went, and tell me what you would change first and why."</strong>
+    <mark>That question separates five years of usage from five years of understanding</mark>, and it is
+    the actual difference the target companies are screening for.
+  </div>
+</section>
+
+<section id="shape">
+  <h2><span class="num">01</span> What five years of experience changes</h2>
+  <p class="sub">The tree is shaped differently for you than it would be for someone starting out.</p>
+
+  <p>You have almost certainly <em>used</em> most of L1 and much of L2 and L5. What experience does not
+  reliably produce is <strong>internals</strong>, because production work rewards making things work rather
+  than understanding why they work. So each branch below carries a status:</p>
+  <table class="nw">
+    <thead><tr><th>Status</th><th>Meaning</th><th>How to treat it</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill pL">own</span></td><td>You likely hold this at working level</td><td>Verify by explaining it cold, then skip. Do not re-learn.</td></tr>
+      <tr><td><span class="pill pC">deepen</span></td><td>You use it; the internals are probably fuzzy</td><td>This is where most of your time goes. Labs, not reading.</td></tr>
+      <tr><td><span class="pill pC">new</span></td><td>Genuinely likely to be new territory</td><td>Enter through the lab, not the documentation.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">The verification move, used once per branch</span>
+    Before starting any branch, <strong>write the one-paragraph explanation from memory, closed-book.</strong>
+    Where it comes out fluent and specific, mark it <em>own</em> and move on. Where it comes out vague or
+    reaches for vocabulary instead of mechanism, that is <em>deepen</em>.
+    <mark>Two months is only enough if you refuse to re-cover ground you already hold.</mark>
+  </div>
+</section>
+
+<section id="target">
+  <h2><span class="num">02</span> What those companies actually test</h2>
+  <p class="sub">This shapes the weighting of the whole tree, so it comes before the tree.</p>
+
+  <p>The target set is not homogeneous, and knowing the difference tells you which branches carry the most
+  weight.</p>
+
+  <table>
+    <thead><tr><th>Company shape</th><th>What the data problem actually is</th><th>Branches weighted heaviest</th></tr></thead>
+    <tbody>
+      <tr><td><b>Payments</b> — Visa, Mastercard</td><td>Correctness under failure, auditability, reconciliation, regulated retention, extreme reliability at moderate latency</td><td>L4 exactly-once · L3 delivery semantics &amp; replication · L6 quality and lineage · L1 modelling for audit</td></tr>
+      <tr><td><b>Consumer scale</b> — Flipkart, Myntra</td><td>Clickstream volume, real-time personalisation, sale-day spikes, cost per query, skew from celebrity items</td><td>L2 skew and shuffle · L3 partitioning and lag · L4 windows · L8 cost and multi-tenancy</td></tr>
+      <tr><td><b>Product SaaS</b> — HubSpot and similar</td><td>Multi-tenant data, schema evolution driven by product change, self-service analytics, developer experience</td><td>L6 contracts and schema evolution · L8 platform and self-service · L5 orchestration · L1 modelling</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The common core across all three</span>
+    <strong>Spark internals, Kafka internals, stream-processing semantics, and data system design.</strong>
+    <mark>Those four branches are where a five-year candidate is separated from a two-year candidate</mark>,
+    and they are where this tree concentrates its depth. Everything else is either supporting or
+    differentiating for a specific company shape.
+  </div>
+</section>
+
+<section id="excluded">
+  <h2><span class="num">03</span> What is deliberately excluded</h2>
+  <p class="sub">Two months is only affordable because of what it refuses.</p>
+
+  <table class="nw">
+    <thead><tr><th>Excluded</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>LeetCode-style algorithm grinding</td><td>Not the screen for a senior DE at these companies. DSA appears only where a pipeline problem demands it.</td></tr>
+      <tr><td>General OS / compiler / networking coursework</td><td>Pulled in narrowly — page cache, fds, memory — only where Spark or Kafka behaviour depends on it.</td></tr>
+      <tr><td>Cloud certification syllabi</td><td>Vendor-specific and expiring. Cloud appears as architecture and cost, not as a service catalogue.</td></tr>
+      <tr><td>ML and MLOps beyond feature platforms</td><td>Adjacent, large, and not what you are being hired for.</td></tr>
+      <tr><td>Frontend, mobile, general backend microservices</td><td>Out of scope entirely.</td></tr>
+      <tr><td>Breadth across every orchestrator and warehouse product</td><td>One of each, understood deeply. Products are interchangeable once the mechanism is held.</td></tr>
+      <tr><td>Hadoop MapReduce, Hive internals, HDFS operations</td><td>Historically important, rarely tested now. Referenced only where it explains a Spark design decision.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="tree">
+  <h2><span class="num">04</span> The master tree</h2>
+  <p class="sub">Arrows are genuine. A branch sits below another only where it truly cannot be understood first.</p>
+
+<pre>DATA PLATFORM ENGINEERING
+│
+├── L0 · THE SUBSTRATE ......................... only what genuinely gates
+│   ├── Storage &amp; file formats
+│   │   ├── Row vs columnar physical layout
+│   │   ├── Parquet: row groups, column chunks, pages, encodings
+│   │   ├── Footer statistics, predicate pushdown, column pruning
+│   │   ├── Compression codecs and splittability
+│   │   └── Avro, ORC, and when each wins
+│   ├── Open table formats
+│   │   ├── Snapshots, manifests, metadata trees
+│   │   ├── ACID over object storage via atomic pointer swap
+│   │   ├── Time travel, schema evolution, partition evolution
+│   │   └── Compaction and the small-files problem
+│   ├── Distributed systems minimum for data
+│   │   ├── Partial failure and the undecidable timeout
+│   │   ├── At-most / at-least / effectively-once
+│   │   ├── Idempotency as the only durable answer
+│   │   └── Why coordination is expensive
+│   ├── SQL &amp; database internals that matter to DE
+│   │   ├── Query planning, statistics, cardinality estimation
+│   │   ├── Join algorithms: hash, sort-merge, broadcast, nested loop
+│   │   ├── B-tree vs LSM and their write/read asymmetry
+│   │   ├── MVCC, isolation, and what your source DB guarantees
+│   │   └── The WAL — the thing CDC actually reads
+│   └── Python for data engineering
+│       ├── Iterators, generators, and streaming without loading
+│       ├── Memory behaviour and profiling
+│       ├── Serialization cost and why it dominates
+│       └── GIL, multiprocessing, asyncio — when each applies
+│
+├── L1 · DATA ARCHITECTURE &amp; MODELLING ......... the shape of the truth
+│   ├── The data lifecycle
+│   │   └── generation → ingestion → storage → transformation → serving
+│   ├── OLTP vs OLAP and why they cannot be one system
+│   ├── Warehouse · Lake · Lakehouse
+│   │   ├── Coupled vs separated storage and compute
+│   │   ├── Open format vs proprietary and what it locks in
+│   │   └── Where each genuinely wins
+│   ├── Batch · streaming · micro-batch
+│   │   └── Lambda and Kappa, and why most teams end up hybrid anyway
+│   ├── Dimensional modelling
+│   │   ├── Grain — the one irreversible decision
+│   │   ├── Facts: transactional, periodic snapshot, accumulating
+│   │   ├── Dimensions, conformed dimensions, degenerate dimensions
+│   │   ├── Star vs snowflake and the real trade-off
+│   │   ├── SCD types 1–6 and when each is correct
+│   │   └── Bridge tables, junk dimensions, late-arriving dimensions
+│   ├── Normalisation, Data Vault, One Big Table
+│   ├── Physical design
+│   │   ├── Partitioning strategy and partition pruning
+│   │   ├── Clustering, sorting, Z-ordering
+│   │   └── File sizing and the small-files problem, again
+│   └── Semantic and metric layers
+│
+├── L2 · APACHE SPARK  [DEEP] .................. batch compute, taken apart
+│   ├── Architecture
+│   │   ├── Driver, executors, cluster manager
+│   │   ├── Application → job → stage → task
+│   │   └── Deployment modes and where the driver lives
+│   ├── Execution model
+│   │   ├── Lazy evaluation and the logical plan
+│   │   ├── Narrow vs wide transformations
+│   │   ├── What creates a stage boundary
+│   │   └── DAG scheduling and task scheduling
+│   ├── The shuffle  ← the single most important sub-branch
+│   │   ├── Shuffle write, spill, and the sort
+│   │   ├── Shuffle read and fetch failures
+│   │   ├── External shuffle service, push-based shuffle
+│   │   └── Why shuffle dominates almost every slow job
+│   ├── Partitioning
+│   │   ├── Input partitioning and split sizes
+│   │   ├── repartition vs coalesce and what each actually does
+│   │   ├── Hash vs range partitioning
+│   │   └── Bucketing and shuffle avoidance
+│   ├── Catalyst
+│   │   ├── Parse → analyse → optimise → physical plan → codegen
+│   │   ├── Rule-based rewrites: pushdown, pruning, constant folding
+│   │   ├── Cost-based optimisation and statistics
+│   │   └── Reading explain output as a diagnostic instrument
+│   ├── Tungsten
+│   │   ├── Off-heap memory and binary row format
+│   │   ├── Whole-stage code generation
+│   │   └── Vectorised reading
+│   ├── Adaptive Query Execution
+│   │   ├── Coalescing shuffle partitions
+│   │   ├── Skew join splitting
+│   │   └── Runtime join strategy switching
+│   ├── Memory management
+│   │   ├── Unified execution and storage memory
+│   │   ├── Spill behaviour
+│   │   └── The five distinct causes of OOM
+│   ├── Joins
+│   │   ├── Broadcast hash, sort-merge, shuffle hash
+│   │   ├── Broadcast threshold and when it backfires
+│   │   └── Hints, and when to override the optimiser
+│   ├── Skew
+│   │   ├── Detecting it in the UI rather than guessing
+│   │   ├── Salting, isolated map joins, AQE skew handling
+│   │   └── Why skew is the normal case
+│   ├── Caching and persistence — including when it hurts
+│   ├── Structured Streaming (deepened at L4)
+│   ├── Debugging: Spark UI, event logs, metrics, plan reading
+│   └── When NOT to use Spark
+│
+├── L3 · APACHE KAFKA  [DEEP] .................. the log, taken apart
+│   ├── Architecture
+│   │   ├── Brokers, controller, KRaft vs ZooKeeper
+│   │   ├── Topics, partitions, replicas
+│   │   └── The commit log as the core abstraction
+│   ├── Storage engine
+│   │   ├── Segments, index files, sparse indexing
+│   │   ├── Retention by time and size
+│   │   ├── Log compaction and tombstones
+│   │   ├── Page cache and zero-copy transfer
+│   │   └── Tiered storage
+│   ├── Producers
+│   │   ├── Partitioner and key hashing
+│   │   ├── Batching: linger.ms, batch.size, and the latency trade
+│   │   ├── Compression and where it is paid for
+│   │   ├── acks 0 / 1 / all and the durability-latency curve
+│   │   ├── Idempotent producer and sequence numbers
+│   │   ├── max.in.flight and its effect on ordering
+│   │   └── Transactions and the transaction coordinator
+│   ├── Consumers
+│   │   ├── The poll loop and fetch behaviour
+│   │   ├── Offsets, commit strategies, auto vs manual
+│   │   ├── auto.offset.reset and the data-loss trap
+│   │   └── max.poll.interval and the silent eviction
+│   ├── Consumer groups
+│   │   ├── Group coordinator and the join/sync protocol
+│   │   ├── Assignment strategies: range, round-robin, sticky, cooperative-sticky
+│   │   └── Static membership
+│   ├── Rebalancing
+│   │   ├── Eager (stop-the-world) vs cooperative incremental
+│   │   ├── Session timeout, heartbeat, poll interval interactions
+│   │   ├── Rebalance storms and their causes
+│   │   └── Operational trade-offs
+│   ├── Replication
+│   │   ├── Leader, followers, ISR
+│   │   ├── High watermark and what a consumer may read
+│   │   ├── min.insync.replicas and the acks interaction
+│   │   └── Unclean leader election — the deliberate data-loss switch
+│   ├── Delivery semantics
+│   │   ├── At-most-once, at-least-once, exactly-once
+│   │   ├── Transactions and read_committed
+│   │   └── Why end-to-end exactly-once needs the sink to cooperate
+│   ├── Performance
+│   │   ├── Throughput vs latency levers
+│   │   ├── Partition count: the trade-off in both directions
+│   │   ├── Consumer lag: measurement, causes, remedies
+│   │   └── Hot partitions and key design
+│   ├── Ecosystem: Connect, Schema Registry
+│   └── When NOT to use Kafka
+│
+├── L4 · STREAM PROCESSING SEMANTICS ........... the hard part of streaming
+│   ├── Time
+│   │   ├── Event time vs processing time vs ingestion time
+│   │   └── Why the distinction is the whole subject
+│   ├── Windows
+│   │   ├── Tumbling, sliding, session, global
+│   │   └── Window assignment and firing
+│   ├── Watermarks
+│   │   ├── A heuristic guess about completeness
+│   │   ├── Allowed lateness
+│   │   └── The latency vs completeness trade-off, stated as a decision
+│   ├── Late data
+│   │   ├── Drop, restate, or side-output
+│   │   └── What each does to downstream consumers
+│   ├── State
+│   │   ├── Keyed state and state stores
+│   │   ├── RocksDB, checkpointing, and recovery
+│   │   ├── State TTL and unbounded state growth
+│   │   └── State size as the dominant operational problem
+│   ├── Streaming joins
+│   │   ├── Stream-stream with time bounds
+│   │   ├── Stream-table and temporal joins
+│   │   └── Why an unbounded join is a memory leak
+│   ├── End-to-end exactly-once
+│   │   ├── Checkpoint + idempotent sink
+│   │   ├── Two-phase commit sinks
+│   │   └── Effectively-once as the honest name
+│   ├── Backpressure
+│   │   ├── Detection and propagation
+│   │   └── Buffering, shedding, and scaling as responses
+│   └── Spark Structured Streaming vs Flink — the real differences
+│
+├── L5 · PIPELINES &amp; ORCHESTRATION ............. making it dependable
+│   ├── DAGs, scheduling, dependencies, sensors
+│   ├── Idempotency and partition-overwrite semantics
+│   ├── Backfills: correctness, cost, ordering, source drift
+│   ├── ETL vs ELT and why ELT won
+│   ├── Incremental models and change detection
+│   ├── CDC ingestion patterns
+│   │   ├── Log-based vs query-based
+│   │   ├── Snapshot + stream stitching
+│   │   └── Deletes, tombstones, and out-of-order updates
+│   ├── Orchestrator internals — scheduler, executor, task lifecycle
+│   ├── Transformation frameworks and materialisation strategies
+│   └── Testing pipelines and testing data
+│
+├── L6 · RELIABILITY &amp; GOVERNANCE .............. defence against silent wrongness
+│   ├── Data quality
+│   │   ├── Freshness, volume, distribution, schema, uniqueness
+│   │   ├── Referential integrity across systems
+│   │   └── Anomaly detection and its false-positive economics
+│   ├── Data contracts
+│   │   ├── Producer obligations and consumer expectations
+│   │   ├── Schema registry and compatibility modes
+│   │   └── Breaking vs non-breaking change, precisely defined
+│   ├── Observability
+│   │   ├── Pipeline metrics that matter
+│   │   ├── Data SLAs and SLOs
+│   │   └── Incident response for silent failures
+│   ├── Lineage
+│   │   ├── Table-level vs column-level
+│   │   └── Impact analysis before a schema change
+│   ├── Governance
+│   │   ├── Access control and column masking
+│   │   ├── PII classification and retention
+│   │   └── Deletion in an immutable architecture
+│   └── Cost attribution and query economics
+│
+├── L7 · DATA SYSTEM DESIGN .................... the interview and the job
+│   ├── The method
+│   │   └── requirements → data characteristics → options → trade-offs
+│   │       → design → failure modes → cost
+│   ├── Clickstream and event ingestion at scale
+│   ├── Real-time analytics serving
+│   ├── CDC replication to a warehouse
+│   ├── Financial transaction analytics with audit requirements
+│   ├── Feature platform for ML
+│   ├── Large-scale reporting and semantic layer
+│   └── Multi-tenant SaaS data architecture
+│
+└── L8 · DATA PLATFORM ENGINEERING ............. the destination
+    ├── Platform as product — users, golden paths, adoption
+    ├── Self-service ingestion
+    ├── Compute platform: multi-tenancy, isolation, quotas
+    ├── Storage layer and table format standardisation
+    ├── Metadata and catalog as the substrate for everything else
+    ├── Developer experience: local dev, CI/CD for data, testing
+    ├── Access control at platform scale
+    ├── Cost management and chargeback
+    └── Migration and deprecation without breaking hundreds of consumers</pre>
+</section>
+
+<section id="l0">
+  <h2><span class="num">L0</span> <a href="substrate.html">The substrate</a> <span class="pill pL">expanded</span></h2>
+  <p class="sub"><span class="pill pC">deepen</span> Small on purpose. Only what genuinely gates something above it. <a href="substrate.html">Full branch →</a></p>
+
+  <p><b>WHY IT MATTERS.</b> Four things in L0 explain a disproportionate share of everything above:
+  <strong>columnar layout</strong> explains why analytics is fast, <strong>the WAL</strong> is what CDC
+  reads, <strong>atomic pointer swap</strong> is how table formats get ACID on storage that has none, and
+  <strong>idempotency</strong> is the only durable answer to partial failure.</p>
+
+  <p><b>PREREQUISITES.</b> None. This is the floor.</p>
+
+  <p><b>LAB FAMILY.</b> Format forensics — take a real dataset and measure what each layout, encoding and
+  sort order actually costs. Then rebuild a table format's atomic commit from scratch and prove it survives
+  concurrent readers.</p>
+
+  <div class="note">
+    <span class="lbl">Connects out</span>
+    Columnar layout → <a href="#l2">L2 Spark I/O</a> · WAL → <a href="#l5">L5 CDC</a> · atomic swap →
+    <a href="#l6">L6 correctness</a> · idempotency → <a href="#l4">L4 exactly-once</a> and
+    <a href="#l5">L5 backfills</a>.
+  </div></section>
+
+<section id="l1">
+  <h2><span class="num">L1</span> <a href="modelling.html">Data architecture &amp; modelling</a> <span class="pill pL">expanded</span></h2>
+  <p class="sub"><span class="pill pL">own</span> mostly — with two sub-branches marked <span class="pill pC">deepen</span>. <a href="modelling.html">Full branch →</a></p>
+
+  <p><b>WHY IT MATTERS.</b> This is where five years of experience shows most, and also where it is
+  most often shallow in one specific place: <strong>grain</strong>. Choosing the wrong grain is the only
+  modelling decision that is genuinely unrecoverable, and most engineers have never had to articulate why.</p>
+
+  <p><b>PREREQUISITES.</b> L0 storage formats, for the physical design sub-branch.</p>
+
+  <p><b>THE TWO TO DEEPEN.</b> <em>Slowly changing dimensions beyond type 2</em> — most people know type 2
+  and stop, and types 4 and 6 come up in interviews precisely because they separate people who read a blog
+  from people who have modelled a real business. And <em>physical design</em> — partitioning, clustering,
+  file sizing — because it is where modelling meets L2 performance.</p>
+
+  <p><b>LAB FAMILY.</b> A modelling case study where the requirement changes four times, and each change
+  exposes a different failure of the naive model. The fourth change forces temporal modelling.</p>
+</section>
+
+<section id="l2">
+  <h2><span class="num">L2</span> <a href="spark.html">Apache Spark</a> <span class="pill pL">expanded</span></h2>
+  <p class="sub"><span class="pill pC">deepen</span> — the largest branch, and the highest-yield one. <a href="spark.html">Full branch →</a></p>
+
+  <p><b>WHY IT MATTERS.</b> Every interview at every company in your target set will go deep here, and the
+  questions are almost always the same shape: <em>this job is slow, why, and what do you change?</em>
+  Answering that requires the shuffle, the memory model, the plan, and the UI — in that order.</p>
+
+  <p><b>PREREQUISITES.</b> L0 (formats, distributed minimum, Python memory). Nothing else.</p>
+
+  <p><b>THE SPINE OF THIS BRANCH.</b> <strong>The shuffle.</strong> Stage boundaries, skew, join strategy,
+  AQE, memory pressure and spill all radiate from it.
+  <mark>If you understand shuffle completely, most of the rest of Spark follows.</mark></p>
+
+  <p><b>LAB FAMILY.</b> Four separate laboratories: shuffle and skew; the query optimiser as an
+  observable object; memory and spill; and join strategy selection. Each is entered by building something
+  that is slow for a reason you must discover in the UI rather than be told.</p>
+
+  <div class="trap">
+    <span class="lbl">The trap in this branch</span>
+    Reading about Catalyst and AQE without watching them act.
+    <strong>Every concept here has an observable consequence in the Spark UI or in an explain plan</strong>
+    — and the interview question is always "how would you see that", not "what is that".
+  </div>
+</section>
+
+<section id="l3">
+  <h2><span class="num">L3</span> <a href="kafka.html">Apache Kafka</a> <span class="pill pL">expanded</span></h2>
+  <p class="sub"><span class="pill pC">deepen</span> — second largest, and the one with the most operational questions. <a href="kafka.html">Full branch →</a></p>
+
+  <p><b>WHY IT MATTERS.</b> Kafka questions in senior interviews are overwhelmingly about
+  <strong>failure and operation</strong>, not about the API: what happens when a consumer dies, what causes
+  lag, what does acks=all actually guarantee, why did partition count change break ordering, what is a
+  rebalance storm.</p>
+
+  <p><b>PREREQUISITES.</b> L0 distributed minimum. Independent of L2 — these two branches do not gate each
+  other and can be taken in either order.</p>
+
+  <p><b>THE SPINE OF THIS BRANCH.</b> <strong>The partition as the unit of everything</strong> — ordering,
+  parallelism, assignment, replication and lag are all partition-scoped, and nearly every Kafka behaviour
+  that surprises people follows from that.</p>
+
+  <p><b>LAB FAMILY.</b> Four laboratories: partitioning and key distribution; consumer group rebalancing;
+  replication and broker failure; delivery semantics and duplicate injection. Every one is built around
+  deliberately breaking a running cluster and observing what the clients do.</p>
+</section>
+
+<section id="l4">
+  <h2><span class="num">L4</span> <a href="stream-semantics.html">Stream processing semantics</a> <span class="pill pL">expanded</span></h2>
+  <p class="sub"><span class="pill pC">new</span> for most people, including experienced ones. <a href="stream-semantics.html">Full branch →</a></p>
+
+  <p><b>WHY IT MATTERS.</b> This is the branch that most reliably separates candidates.
+  <strong>Almost everyone can describe a Kafka consumer; far fewer can explain what a watermark is
+  actually guessing about</strong>, or what "exactly-once" requires from a sink, or why their unbounded
+  stream-stream join is a memory leak.</p>
+
+  <p><b>PREREQUISITES.</b> L3 (you need a real event stream), L0 idempotency. L2 only if implementing in
+  Structured Streaming rather than Flink.</p>
+
+  <p><b>THE ENTRY PROBLEM.</b> Build an hourly aggregation over a stream where 5% of events arrive late.
+  <mark>Your counts are wrong, and they were already reported.</mark> Everything in this branch — event
+  time, windows, watermarks, allowed lateness, restatement — arrives as a response to that single
+  reproducible failure.</p>
+
+  <p><b>LAB FAMILY.</b> Three laboratories: the watermark and late-data lab; the stateful processing and
+  state-growth lab; and the end-to-end exactly-once lab where you kill the job mid-stream and prove no
+  loss and no duplication by count.</p>
+</section>
+
+<section id="l5">
+  <h2><span class="num">L5</span> <a href="pipelines.html">Pipelines &amp; orchestration</a> <span class="pill pL">expanded</span></h2>
+  <p class="sub"><span class="pill pL">own</span> in practice — <span class="pill pC">deepen</span> on CDC and backfills. <a href="pipelines.html">Full branch →</a></p>
+
+  <p><b>WHY IT MATTERS.</b> You have built pipelines for five years. The two places experience frequently
+  leaves gaps are <strong>CDC correctness</strong> — deletes, out-of-order updates, watermark advancing
+  past a slow transaction — and <strong>backfill economics</strong>, where the interview question is about
+  reprocessing two years of history when the source schema has changed twice since.</p>
+
+  <p><b>PREREQUISITES.</b> L0 WAL for CDC. L1 modelling for incremental design.</p>
+
+  <p><b>LAB FAMILY.</b> Two laboratories: an idempotency lab where running the same job twice doubles
+  everything until you fix it properly; and a CDC lab where you lose rows three distinct ways before
+  reading the WAL directly.</p>
+</section>
+
+<section id="l6">
+  <h2><span class="num">L6</span> <a href="reliability.html">Reliability &amp; governance</a> <span class="pill pL">expanded</span></h2>
+  <p class="sub"><span class="pill pC">deepen</span> — and the branch that most differentiates for SaaS and payments companies. <a href="reliability.html">Full branch →</a></p>
+
+  <p><b>WHY IT MATTERS.</b> The defining asymmetry of data engineering:
+  <strong>a broken service returns an error, a broken pipeline returns plausible numbers.</strong>
+  Everything here is defence against that, and it is what a company means when it says it wants someone
+  senior.</p>
+
+  <p><b>PREREQUISITES.</b> L5 (you need pipelines to instrument).</p>
+
+  <p><b>LAB FAMILY.</b> Two laboratories: a data quality lab where you introduce four faults that all leave
+  the pipeline green; and a lineage and contracts prototype where a schema change is caught before it ships
+  rather than after it breaks a dashboard.</p>
+</section>
+
+<section id="l7">
+  <h2><span class="num">L7</span> <a href="system-design.html">Data system design</a> <span class="pill pL">expanded</span></h2>
+  <p class="sub"><span class="pill pC">new</span> as a disciplined practice, even if you have designed systems. <a href="system-design.html">Full branch →</a></p>
+
+  <p><b>WHY IT MATTERS.</b> This is the round you will be judged on most heavily for a senior role, and it
+  is a <em>performance</em> as much as a knowledge test — the ability to move from vague requirements to a
+  defended design in 45 minutes, out loud, while being interrupted.</p>
+
+  <p><b>PREREQUISITES.</b> L1 through L6. This branch is a synthesis and cannot usefully come earlier.</p>
+
+  <p><b>WHAT MAKES IT DIFFERENT FROM GENERIC SYSTEM DESIGN.</b> The axes are
+  <strong>throughput, latency, correctness, schema evolution, cost and recovery</strong> — not QPS and load
+  balancers. The questions are about the data's characteristics: volume, velocity, cardinality, skew,
+  lateness, mutability and retention.</p>
+
+  <p><b>LAB FAMILY.</b> Seven written design documents, each following the same structure, each with an
+  explicit failure-mode section. These become portfolio artifacts directly.</p>
+</section>
+
+<section id="l8">
+  <h2><span class="num">L8</span> <a href="platform.html">Data platform engineering</a> <span class="pill pL">expanded</span></h2>
+  <p class="sub"><span class="pill pC">new</span> — the destination, and the thing that changes your title. <a href="platform.html">Full branch →</a></p>
+
+  <p><b>WHY IT MATTERS.</b> The shift from <em>building pipelines</em> to <em>building the thing other
+  people build pipelines on</em>. The mental change is from solving a problem to
+  <strong>solving a class of problems for people you will never meet</strong>, which is a product
+  discipline as much as an engineering one.</p>
+
+  <p><b>PREREQUISITES.</b> All of L1–L7. This is genuinely last.</p>
+
+  <p><b>THE ORGANISING QUESTION.</b> <mark>How does a company let three hundred people work with data
+  without three hundred bespoke pipelines and three hundred conflicting definitions of "active user"?</mark>
+  Every sub-branch — catalog, contracts, self-service, golden paths, chargeback — is an answer to some part
+  of that.</p>
+
+  <p><b>LAB FAMILY.</b> One deliberately scoped mini-platform: an ingestion path that a hypothetical other
+  team can use without talking to you, with a catalog, a contract check, a quality gate and a cost
+  attribution. Small in scale, complete in shape.</p>
+</section>
+
+<section id="dsa">
+  <h2><span class="num">::</span> Data structures, pulled in on demand</h2>
+  <p class="sub">No separate DSA track. Each row is a real pipeline problem where the obvious approach fails.</p>
+
+  <table>
+    <thead><tr><th>The engineering problem</th><th>Why the obvious approach fails</th><th>Structure it forces</th><th>Where it lives</th></tr></thead>
+    <tbody>
+      <tr><td>Deduplicate an unbounded stream</td><td>A set grows without limit and eventually OOMs</td><td>Hash set with TTL → Bloom filter → RocksDB state</td><td>L4 state</td></tr>
+      <tr><td>Top-K hot keys in real time</td><td>Sorting requires all data and is O(n log n) per query</td><td>Bounded min-heap</td><td>L3 hot partitions · L4 windows</td></tr>
+      <tr><td>Count distinct users at scale</td><td>Exact distinct needs every value in memory</td><td>HyperLogLog</td><td>L4 · L7 analytics design</td></tr>
+      <tr><td>Sliding window aggregate per event</td><td>Recomputing the window each event is O(n) per event</td><td>Deque / ring buffer / incremental aggregation</td><td>L4 windows</td></tr>
+      <tr><td>Emit events in event-time order</td><td>Arrival order is not event order</td><td>Min-heap keyed by timestamp, bounded by watermark</td><td>L4 watermarks</td></tr>
+      <tr><td>Join two large datasets</td><td>Nested loop is O(n·m)</td><td>Hash join build/probe · sort-merge join</td><td>L2 joins · L0 DB internals</td></tr>
+      <tr><td>Sort more data than fits in memory</td><td>In-memory sort dies</td><td>External merge sort with spill</td><td>L2 shuffle</td></tr>
+      <tr><td>Assign keys to partitions that can grow</td><td>hash % n reshuffles almost everything on resize</td><td>Consistent hashing with virtual nodes</td><td>L3 partitioning</td></tr>
+      <tr><td>Avoid a disk read for a key that is absent</td><td>Every miss costs an I/O</td><td>Bloom filter</td><td>L0 Parquet · LSM read path</td></tr>
+      <tr><td>Write-heavy ingest with acceptable reads</td><td>B-tree write amplification</td><td>LSM tree with compaction</td><td>L0 · L4 state store</td></tr>
+      <tr><td>p99 latency over a stream of measurements</td><td>Exact quantiles need the full sorted set</td><td>t-digest / HDR histogram</td><td>L6 observability</td></tr>
+      <tr><td>Detect a schema-breaking change before deploy</td><td>Pairwise comparison of every field is fragile</td><td>Tree diff over the schema graph</td><td>L6 contracts</td></tr>
+      <tr><td>Impact analysis across a warehouse</td><td>Manual tracing does not scale past a few tables</td><td>DAG traversal, topological sort</td><td>L6 lineage · L5 orchestration</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">How to use this table</span>
+    <strong>Never study a row before you have hit the problem.</strong>
+    <mark>The failure is what makes the structure memorable, and the trade-off is what makes it
+    defensible in an interview</mark> — "I used a Bloom filter" is weak; "an exact set was 40 GB so I traded
+    a 1% false-positive rate for a 200 MB footprint, and false positives were safe here because the
+    downstream write was idempotent" is not.
+  </div>
+</section>
+
+<section id="support">
+  <h2><span class="num">::</span> The other supporting layers</h2>
+  <p class="sub">Same rule: entered through a failure, never as a prerequisite course.</p>
+
+  <table class="nw">
+    <thead><tr><th>Layer</th><th>Triggered by</th><th>Taken only this far</th></tr></thead>
+    <tbody>
+      <tr><td>Concurrency</td><td>A Python ingestion job that is I/O bound and slow; a consumer that cannot keep up</td><td>GIL, thread pools vs processes, async I/O, batching, backpressure. Not general concurrent programming.</td></tr>
+      <tr><td>Linux &amp; infra</td><td>Kafka throughput that does not match the disk spec; a Spark executor killed by the OS</td><td>Page cache, file descriptors, cgroup memory limits, OOM killer, container resource semantics.</td></tr>
+      <tr><td>Cloud architecture</td><td>Designing anything in L7, and every cost question</td><td>Object storage semantics, egress pricing, managed vs self-run trade-off, region and residency. Not a service catalogue.</td></tr>
+      <tr><td>Distributed systems</td><td>L3 replication, L4 exactly-once</td><td>Partial failure, idempotency, quorum intuition, consistency vocabulary. Not consensus implementation.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="order">
+  <h2><span class="num">::</span> Traversal order, and why</h2>
+  <p class="sub">Ordering, not scheduling. No dates, no hours.</p>
+
+<pre>L0 substrate  ──┬──→ L2 SPARK ────┐
+                │                  ├──→ L7 SYSTEM DESIGN ──→ L8 PLATFORM
+                ├──→ L3 KAFKA ──→ L4 STREAM SEMANTICS ──┤
+                │                                        │
+L1 architecture ┴──→ L5 PIPELINES ──→ L6 RELIABILITY ────┘</pre>
+
+  <table class="nw">
+    <thead><tr><th>Position</th><th>Branch</th><th>Reason for the position</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><a href="substrate.html">L0, aggressively trimmed</a></td><td>Four ideas gate everything above. Do not linger.</td></tr>
+      <tr><td>2</td><td><a href="modelling.html">L1, verification pass only</a></td><td>Confirm what you own; deepen only grain, SCD 4/6 and physical design.</td></tr>
+      <tr><td>3</td><td><b><a href="spark.html">L2 Spark</a></b></td><td>Highest interview yield, and independent of Kafka. Start with the shuffle.</td></tr>
+      <tr><td>4</td><td><b><a href="kafka.html">L3 Kafka</a></b></td><td>Independent of Spark. Could swap with position 3 if your target leans streaming.</td></tr>
+      <tr><td>5</td><td><b><a href="stream-semantics.html">L4 stream semantics</a></b></td><td>Genuinely requires L3, and benefits from L2 if using Structured Streaming.</td></tr>
+      <tr><td>6</td><td><a href="pipelines.html">L5 pipelines</a> — CDC and backfills only</td><td>Skip what you own. CDC needs L0's WAL.</td></tr>
+      <tr><td>7</td><td><a href="reliability.html">L6 reliability</a></td><td>Needs pipelines to instrument. High differentiation for SaaS and payments.</td></tr>
+      <tr><td>8</td><td><a href="system-design.html">L7 system design</a></td><td>Synthesis. Cannot be done credibly before the above.</td></tr>
+      <tr><td>9</td><td><a href="platform.html">L8 platform</a></td><td>The destination. Scoped small, shaped complete.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The one swap worth considering</span>
+    <strong>If your target companies lean streaming and real-time</strong> — consumer scale rather than
+    payments batch — run <mark>L3 → L4 before L2</mark>. Kafka and Spark do not gate each other, and
+    finishing the streaming spine first produces a more coherent portfolio narrative for those roles.
+  </div>
+</section>
+
+<section id="labs">
+  <h2><span class="num">::</span> The lab portfolio</h2>
+  <p class="sub">Twenty focused labs. Each teaches one mechanism and stands alone as an artifact.</p>
+
+  <p>Your proposed list was close; these are the revisions. <strong>Three were merged</strong> because they
+  taught the same mechanism, <strong>four were added</strong> because a mechanism had no lab, and every one
+  is now defined by the failure it produces rather than by the technology it uses.
+  <mark>Two further labs — 19 and 20 — were added during branch expansion</mark>, because L5 and L6 each
+  turned out to contain two distinct reproducible failures rather than one.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Laboratory</th><th>The failure it is built around</th><th>Branch</th></tr></thead>
+    <tbody>
+      <tr><td>01</td><td><a href="substrate.html#lab01">Format Forensics</a></td><td>The same query, ten times slower, on identical data</td><td>L0</td></tr>
+      <tr><td>02</td><td><b><a href="substrate.html#lab02">Atomic Commit on Object Storage</a></b></td><td>A reader sees half the old files and half the new</td><td>L0</td></tr>
+      <tr><td>03</td><td><a href="modelling.html#lab03">The Grain Trap</a></td><td>A requirement change that no amount of SQL can satisfy</td><td>L1</td></tr>
+      <tr><td>04</td><td><b><a href="modelling.html#lab04">Temporal Modelling Lab</a></b></td><td>A salesperson moves region and last year's report changes</td><td>L1</td></tr>
+      <tr><td>05</td><td><b><a href="spark.html#lab05">Spark Shuffle &amp; Skew Laboratory</a></b></td><td>199 tasks finish in seconds, one runs for 40 minutes</td><td>L2</td></tr>
+      <tr><td>06</td><td><b><a href="spark.html#lab06">Catalyst &amp; Plan Reading Laboratory</a></b></td><td>A one-character query change alters runtime by 20×</td><td>L2</td></tr>
+      <tr><td>07</td><td><b><a href="spark.html#lab07">Spark Memory &amp; Spill Laboratory</a></b></td><td>Five different OOMs with five different causes</td><td>L2</td></tr>
+      <tr><td>08</td><td><a href="spark.html#lab08">Join Strategy Laboratory</a></td><td>A broadcast join that kills the driver</td><td>L2</td></tr>
+      <tr><td>09</td><td><b><a href="kafka.html#lab09">Kafka Partitioning Laboratory</a></b></td><td>Ordering guarantees that silently disappear</td><td>L3</td></tr>
+      <tr><td>10</td><td><b><a href="kafka.html#lab10">Rebalancing Laboratory</a></b></td><td>A consumer group that stops consuming entirely for 40 seconds</td><td>L3</td></tr>
+      <tr><td>11</td><td><b><a href="kafka.html#lab11">Replication &amp; Broker Failure Laboratory</a></b></td><td>Acknowledged writes that no longer exist</td><td>L3</td></tr>
+      <tr><td>12</td><td><a href="kafka.html#lab12">Delivery Semantics Laboratory</a></td><td>A counter that is wrong after a retry, then right</td><td>L3</td></tr>
+      <tr><td>13</td><td><b><a href="stream-semantics.html#lab13">Watermark &amp; Late Data Laboratory</a></b></td><td>Correct hourly counts that were already published wrong</td><td>L4</td></tr>
+      <tr><td>14</td><td><b><a href="stream-semantics.html#lab14">Stateful Processing &amp; State Growth Laboratory</a></b></td><td>A job that runs perfectly for six hours and then dies</td><td>L4</td></tr>
+      <tr><td>15</td><td><a href="stream-semantics.html#lab15">End-to-End Exactly-Once Laboratory</a></td><td>Kill mid-stream; prove no loss and no duplication by count</td><td>L4</td></tr>
+      <tr><td>16</td><td><b><a href="pipelines.html#lab16">CDC Correctness Laboratory</a></b></td><td>Rows lost three distinct ways, all silently</td><td>L5</td></tr>
+      <tr><td>17</td><td><b><a href="reliability.html#lab17">Silent Failure Laboratory</a></b></td><td>Four faults that leave every pipeline green</td><td>L6</td></tr>
+      <tr><td>18</td><td><b><a href="platform.html#lab18">Mini Data Platform</a></b></td><td>Another team must ship a pipeline without talking to you</td><td>L8</td></tr>
+      <tr><td>19</td><td><a href="pipelines.html#lab19">Backfill &amp; Idempotency Laboratory</a></td><td>Run it twice and everything doubles; then the backfill causes the outage</td><td>L5</td></tr>
+      <tr><td>20</td><td><a href="reliability.html#lab20">Contracts &amp; Lineage Laboratory</a></td><td>A rename caught before it ships instead of after it breaks a dashboard</td><td>L6</td></tr>
+    </tbody>
+  </table>
+
+  <p>Plus <strong>seven written design documents</strong> from L7, which need no code and are among the
+  strongest portfolio artifacts available for a senior role — because they demonstrate judgment rather than
+  familiarity.</p>
+
+  <div class="note">
+    <span class="lbl">What was merged, added and cut</span>
+    <strong>Merged:</strong> your separate observability and lineage prototypes into lab 17, since both are
+    defences against the same silent-failure asymmetry, and separately they teach less than together.
+    <strong>Added:</strong> format forensics, atomic commit, the grain trap, and join strategy — four
+    mechanisms that had no lab and are all directly interview-tested.
+    <strong>Reframed:</strong> every lab is now named by its failure, because
+    <mark>a lab without a reproducible failure is a tutorial.</mark>
+  </div>
+</section>
+
+<section id="next">
+  <h2><span class="num">::</span> The tree is complete</h2>
+  <p class="sub">All nine branches expanded. What remains is execution, not planning.</p>
+
+  <p>Every branch carries, per node: what it is, why it exists, genuine prerequisites, subtopics, one
+  justified free primary resource with an optional deeper one, and the full lab specification — problem,
+  initial system, the failure to introduce, the concepts that emerge, the experiments, what to observe,
+  the real-world connection, portfolio value, and the next connected topics.</p>
+
+  <table class="nw">
+    <thead><tr><th>Branch</th><th>Nodes</th><th>Laboratories</th><th>Its one idea</th></tr></thead>
+    <tbody>
+      <tr><td><b><a href="substrate.html">L0 · The substrate</a></b></td><td>11</td><td>01, 02</td><td>How the bytes are laid out, and which single operation is atomic</td></tr>
+      <tr><td><b><a href="modelling.html">L1 · Modelling</a></b></td><td>12</td><td>03, 04</td><td>A model is a set of decisions about what you can no longer answer</td></tr>
+      <tr><td><b><a href="spark.html">L2 · Spark</a></b></td><td>13</td><td>05–08</td><td>The shuffle</td></tr>
+      <tr><td><b><a href="kafka.html">L3 · Kafka</a></b></td><td>12</td><td>09–12</td><td>The partition is the unit of everything</td></tr>
+      <tr><td><b><a href="stream-semantics.html">L4 · Stream semantics</a></b></td><td>12</td><td>13–15</td><td>Every concept is a way of deciding when to stop waiting</td></tr>
+      <tr><td><b><a href="pipelines.html">L5 · Pipelines</a></b></td><td>12</td><td>16, 19</td><td>A program that will be run again, on data that has since changed</td></tr>
+      <tr><td><b><a href="reliability.html">L6 · Reliability</a></b></td><td>12</td><td>17, 20</td><td>A broken pipeline returns plausible numbers</td></tr>
+      <tr><td><b><a href="system-design.html">L7 · System design</a></b></td><td>method + 7 designs</td><td>—</td><td>You are being asked what you traded away</td></tr>
+      <tr><td><b><a href="platform.html">L8 · Platform</a></b></td><td>11</td><td>18</td><td>Every capability is a promise you cannot withdraw</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">Scope decision — all nine branches, full depth</span>
+    The timeline is yours to manage and it flexes. <strong>Every branch was therefore expanded to full
+    depth</strong>, including L6 reliability and L8 platform, rather than being truncated to fit a fixed
+    window. <mark>The dependency order in <a href="#order">traversal</a> is what actually matters; the
+    calendar is not part of this document.</mark> Nothing later depends on finishing anything earlier
+    <em>quickly</em> — only on finishing it properly.
+  </div>
+
+  <div class="rule">
+    <span class="lbl">How to use it from here</span>
+    <strong>Open one branch. Read its <em>one question</em> and its <em>environment</em> section. Build the
+    environment before reading any nodes</strong> — the labs are the point, and every branch's environment
+    section exists because the setup determines whether the labs teach anything.
+    <br><br>
+    <mark>Then work the nodes in the order of that branch's internal dependency map, and stop at the first
+    lab.</mark> Reading further before running it converts the branch into an article.
+  </div>
+
+  <div class="note">
+    <span class="lbl">The recurrences worth watching for</span>
+    Four ideas appear in three or more branches, and noticing them is worth more than any single fact.
+    <strong>The power law</strong> — <a href="spark.html#s10">Spark skew</a>,
+    <a href="kafka.html#k9">Kafka hot partitions</a>,
+    <a href="stream-semantics.html#w5">streaming hot keys</a>,
+    <a href="system-design.html#d7">SaaS tenant sizes</a>.
+    <strong>Write-elsewhere-then-flip-one-pointer</strong> —
+    <a href="substrate.html#b6">atomic commit</a>,
+    <a href="pipelines.html#p6">backfills</a>, blue-green deployment.
+    <strong>Event time versus processing time</strong> —
+    <a href="stream-semantics.html#w1">watermarks</a> and
+    <a href="modelling.html#m9">bi-temporal modelling</a>, discovered independently by two traditions.
+    <strong>And "when not to"</strong> — <a href="spark.html#s13">S13</a>,
+    <a href="kafka.html#k12">K12</a>, <a href="stream-semantics.html#w12">W12</a>,
+    <a href="pipelines.html#p12">P12</a>, <a href="platform.html#e11">E11</a>:
+    <mark>five nodes across five branches that are one professional disposition.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · master tree · data engineering → data platform engineering</footer>
+
+</body>
+</html>

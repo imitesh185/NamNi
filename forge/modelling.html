@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L1 · Data architecture &amp; modelling — Forge</title>
+<meta name="description" content="Grain, facts, dimensions, slowly changing dimensions to type 6, Data Vault, physical design and semantic layers — with two laboratories." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#why">The one question</a>
+  <a href="#env">The environment</a>
+  <a href="#map">Internal dependency map</a>
+  <h4>Architecture</h4>
+  <a href="#m1">M1 · The lifecycle</a>
+  <a href="#m2">M2 · OLTP vs OLAP</a>
+  <a href="#m3">M3 · Warehouse · lake · lakehouse</a>
+  <a href="#m4">M4 · Batch · stream · hybrid</a>
+  <h4>Modelling</h4>
+  <a href="#m5">M5 · Grain</a>
+  <a href="#m6">M6 · Facts</a>
+  <a href="#m7">M7 · Dimensions</a>
+  <a href="#m8">M8 · Star vs snowflake</a>
+  <a href="#m9">M9 · SCD types 1–6</a>
+  <a href="#m10">M10 · Vault · 3NF · OBT</a>
+  <h4>Landing</h4>
+  <a href="#m11">M11 · Physical design</a>
+  <a href="#m12">M12 · Semantic layers</a>
+  <h4>Laboratories</h4>
+  <a href="#lab03">03 · The Grain Trap</a>
+  <a href="#lab04">04 · Temporal Modelling</a>
+  <h4>Exit</h4>
+  <a href="#defence">Interview defence</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Forge</a><span>/</span>L1 Modelling</p>
+
+<div class="hero">
+  <div class="kicker">Branch L1 · own mostly · two sub-branches to deepen</div>
+  <h1>Data architecture &amp; modelling</h1>
+  <p class="dropcap">This is where five years of experience shows most — and also where it is most often
+  shallow in one specific place. Almost everyone can build a star schema. Far fewer can state a grain as a
+  sentence before writing any SQL, or explain why <em>type 2 alone</em> does not answer the question the
+  business actually asked.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>A data model is a set of decisions about what you will no longer be able
+    to answer.</mark> Modelling is subtraction. Every aggregation, every conflated dimension, every dropped
+    attribute closes a door — and the grain is the largest door of all, because you can always aggregate up
+    and you can never recover detail you did not keep.
+  </div>
+  <div class="tags">
+    <span class="tag">#grain</span>
+    <span class="tag t2">#dimensional</span>
+    <span class="tag t3">#scd</span>
+    <span class="tag">#temporal</span>
+    <span class="tag t2">#physical-design</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> The one question this branch exists to answer</h2>
+  <p class="sub">It sounds like a formality. It is the whole examination.</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“What is the grain of this table?”</b>
+    A weak answer describes the table. <mark>A strong answer is a single sentence of the form
+    “one row per <em>X</em> per <em>Y</em> per <em>Z</em>”</mark>, followed immediately by the list of
+    questions that grain forecloses. The second half is what almost nobody supplies, and it is the half
+    that demonstrates you understand modelling as an irreversible act.
+  </div>
+
+  <p>The second question is the one that looks like a business trivia question and is actually a
+  four-layer technical one:</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“A salesperson moves from the North region to the South. What happens to last year's report?”</b>
+    The correct first move is <em>to ask a question back</em>: should last year's sale appear under North
+    or South? Both are legitimate, and the business must choose.
+    <mark>And the real answer is usually “both, at different times” — which is why type 2 alone is
+    insufficient and why type 6 exists.</mark>
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The failure mode of this branch</span>
+    Confusing familiarity with depth. <strong>You have built dimensional models for years, which makes
+    this the easiest branch to skim and the easiest to be caught in.</strong>
+    <mark>The two sub-branches that reliably separate people are SCD beyond type 2, and physical design</mark>
+    — the first because most engineers stop at type 2, the second because it is where modelling meets
+    <a href="spark.html">L2</a> performance and most modellers have never measured anything.
+  </div>
+</section>
+
+<section id="env">
+  <h2><span class="num">01</span> The environment</h2>
+  <p class="sub">No cluster. What this branch needs instead is a requirement that changes when you are not expecting it.</p>
+
+  <table class="nw">
+    <thead><tr><th>Component</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>DuckDB</b> or Postgres, plus <b>dbt</b></td><td>Modelling is expressed as SQL under version control. dbt is free, and the tests and documentation features are used directly in <a href="reliability.html">L6</a></td></tr>
+      <tr><td><b>A realistic seed dataset</b> with orders, order lines, customers, products, promotions and a sales hierarchy</td><td>Must contain a many-to-many relationship, a slowly changing attribute and a hierarchy — otherwise half the branch has nothing to model</td></tr>
+      <tr><td><b>A written requirements log, dated</b></td><td><mark>The single most important instrument in this branch</mark></td></tr>
+      <tr><td><b>Saved outputs of every report you produce</b></td><td><a href="#lab04">Lab 04</a> works by diffing a report against its own earlier output. Without the saved copy the central failure is invisible</td></tr>
+      <tr><td><b>An Iceberg or Delta table</b> for the physical-design node</td><td>Partition and clustering experiments need a table format that can evolve, or M11 stays theoretical</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The one methodological rule, and it is not optional</span>
+    <strong>Seal the future requirements in an envelope.</strong> Write all four requirement changes for
+    <a href="#lab03">Lab 03</a> before you start, then do not read change 2 until change 1 is delivered.
+    <br><br>
+    <mark>A modelling lab where you know the future requirements teaches nothing, because you will
+    unconsciously model for them.</mark> The entire value of the exercise is being genuinely unable to
+    answer a question, and that experience cannot be simulated once you have seen the question.
+  </div>
+
+  <div class="note">
+    <span class="lbl">Two habits</span>
+    <strong>State the grain as a sentence, in a comment, at the top of every model file.</strong> It takes
+    ten seconds and it is the single highest-value documentation in a warehouse.
+    <strong>Record what each model cannot answer</strong>, alongside what it can.
+    <mark>The second list is the one that gets you promoted and the one nobody writes.</mark>
+  </div>
+</section>
+
+<section id="map">
+  <h2><span class="num">02</span> Internal dependency map</h2>
+
+<pre>M1 THE DATA LIFECYCLE
+       │
+       ↓
+M2 OLTP vs OLAP ──────→ M3 WAREHOUSE · LAKE · LAKEHOUSE
+       │                            │
+       ↓                            │
+M4 BATCH · STREAM · HYBRID          │
+       │                            │
+       └─────────────┬──────────────┘
+                     ↓
+              M5 GRAIN [spine] ........ the irreversible decision
+                     │
+         ┌───────────┴───────────┐
+         ↓                       ↓
+     M6 FACTS              M7 DIMENSIONS
+         │                       │
+         │              ┌────────┴────────┐
+         │              ↓                 ↓
+         │      M8 STAR vs SNOWFLAKE   M9 SCD TYPES 1–6 [deepen]
+         │                                │
+         └──────────────┬─────────────────┘
+                        ↓
+              M10 3NF · VAULT · OBT
+                        │
+                        ↓
+              M11 PHYSICAL DESIGN [deepen] ←──── L0 B7 compaction
+                        │
+                        ↓
+              M12 SEMANTIC &amp; METRIC LAYERS ..... where the grain presents its bill</pre>
+
+  <div class="note">
+    <span class="lbl">Reading this map</span>
+    <strong>Everything above M5 is context; everything below it is consequence.</strong> The architecture
+    nodes decide where data lives; M5 decides what can ever be asked of it; the rest is elaboration on that
+    single decision.
+    <br><br>
+    <mark>M12 is placed last deliberately.</mark> A semantic layer is the point at which the grain
+    decision presents its bill — you cannot define "sessions per user per week" over a table whose grain is
+    monthly, no matter how good the metric framework is.
+  </div>
+</section>
+
+<section id="m1">
+  <h2><span class="num">M1</span> The data lifecycle</h2>
+  <p class="sub">Generation → ingestion → storage → transformation → serving. Useful mainly for locating blame correctly.</p>
+
+  <p><b>WHAT IT IS.</b> The five stages every piece of data passes through, plus the concerns that run
+  underneath all of them — security, data management, orchestration, architecture and engineering
+  practice.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because <strong>most data failures are attributed to the wrong stage.</strong>
+  A "bad dashboard" is a serving-stage symptom of, almost always, a generation- or ingestion-stage cause —
+  and teams spend weeks in the transformation layer looking for a bug that was never there.</p>
+
+  <p><b>DEPENDENCIES.</b> None.</p>
+
+  <p><b>SUBTOPICS.</b> The five stages and their distinct failure signatures · source systems as things
+  you do not control · the boundary of your responsibility versus the boundary of your blame ·
+  the undercurrents, and why security and data management are not stages · where the data engineer's job
+  sits relative to analytics engineering and platform engineering.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free articles · <em>Title:</em> the <strong>Kimball Group Design Tips archive</strong>
+    and the <strong>dbt Analytics Engineering Guide</strong><br>
+    <em>Why these:</em> both free. <mark>The canonical text here is Kimball's <em>Data Warehouse
+    Toolkit</em>, which is not free</mark> — but the Kimball Group published a free
+    "Dimensional Modeling Techniques" reference covering all forty-plus techniques, plus roughly 180 short
+    Design Tips, and together they cover the same ground with more worked examples.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="pipelines.html">L5</a> · <a href="reliability.html">L6</a> ·
+  <a href="../atlas/data-engineering.html#n1">Data Engineering N1</a>.</p>
+</section>
+
+<section id="m2">
+  <h2><span class="num">M2</span> OLTP versus OLAP</h2>
+  <p class="sub">Not a preference. Four opposing pressures that no single system resolves.</p>
+
+  <p><b>WHAT IT IS.</b> Two workload shapes that pull storage, indexing, concurrency and normalisation in
+  opposite directions at the same time.</p>
+
+  <table>
+    <thead><tr><th>Pressure</th><th>OLTP wants</th><th>OLAP wants</th></tr></thead>
+    <tbody>
+      <tr><td>Access pattern</td><td>Point reads and writes of whole records</td><td>Wide scans of few columns</td></tr>
+      <tr><td>Storage</td><td>Row-oriented, B-tree indexed</td><td>Columnar, sorted, compressed</td></tr>
+      <tr><td>Concurrency</td><td>Thousands of short transactions</td><td>Few long queries that monopolise memory</td></tr>
+      <tr><td>Normalisation</td><td>Normalised, to avoid update anomalies</td><td>Denormalised, to avoid joins</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHY IT MATTERS TO YOU SPECIFICALLY.</b> <mark>The boundary between these two systems is where the
+  entire data engineering profession lives.</mark> CDC, ELT, replication and reverse ETL are all bridges
+  over exactly this gap — which is why the gap is worth being able to describe precisely.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="substrate.html#b1">L0 B1</a> · <a href="substrate.html#b10">L0 B10</a>.</p>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Why you do not run analytics on the primary</span>
+    Run a full-table analytical scan against a Postgres instance that is also serving transactions.
+    <strong>Watch transactional p99 latency rise while the scan runs</strong>, and watch the buffer cache
+    fill with pages the transactional workload did not want.
+    <br><br>
+    <mark>The failure is not that the analytical query is slow — it is that it degrades the system you were
+    not supposed to touch.</mark> That is a measurement, and it is a much better answer than "because it's
+    bad practice".
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#m3">M3</a> · <a href="pipelines.html#p7">L5 CDC</a> ·
+  <a href="../atlas/databases.html#n1">Databases N1</a>.</p>
+</section>
+
+<section id="m3">
+  <h2><span class="num">M3</span> Warehouse, lake, lakehouse</h2>
+  <p class="sub">Three real axes, and one debate that is mostly over.</p>
+
+  <p><b>WHAT IT IS.</b> Three architectures distinguished by whether storage and compute are coupled,
+  whether the format is open or proprietary, and whether schema is enforced on write or on read.</p>
+
+  <div class="rule">
+    <span class="lbl">The honest current position</span>
+    <strong>Separated storage and compute has won and is now universal. Schema-on-read as a philosophy
+    lost, because it produced swamps.</strong> What genuinely remains live is the
+    <em>open format</em> question — and that is an economic argument about lock-in and multi-engine access,
+    <mark>not a performance argument</mark>.
+    <br><br>
+    Being able to say that plainly, rather than reciting three definitions, is the difference between
+    sounding current and sounding like a 2019 blog post.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Coupled versus separated storage and compute, and what separation actually bought ·
+  open format versus proprietary and precisely what each locks in · schema-on-write versus schema-on-read
+  and why the latter degraded into swamps · the medallion / bronze-silver-gold layering as a convention
+  rather than an architecture · <strong>data mesh as an organisational answer</strong>, not a technical one,
+  and therefore mostly an <a href="platform.html">L8</a> topic.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> <strong>"Lakehouse: A New Generation of Open Platforms
+    that Unify Data Warehousing and Advanced Analytics"</strong> (CIDR 2021), free<br>
+    <em>Why this one:</em> free, and it argues the position rather than asserting it — including the
+    concessions, which is where the useful content is. <mark>Read it as an argument to be evaluated, not a
+    description to be memorised</mark>, since the authors have a commercial interest in the conclusion.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · The entire argument for open formats, in one experiment</span>
+    Write one Iceberg table. Query it from DuckDB, from Spark, and from Trino — <strong>without copying
+    anything.</strong>
+    <mark>The fact that you can is the whole case</mark>, and it takes twenty minutes to demonstrate
+    something that is otherwise argued about in slide decks.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="substrate.html#b5">L0 B5</a> · <a href="platform.html#e5">L8</a> ·
+  <a href="#m11">M11</a>.</p>
+</section>
+
+<section id="m4">
+  <h2><span class="num">M4</span> Batch, streaming and the hybrid nobody admits to</h2>
+  <p class="sub">Lambda and Kappa, and why almost every real system is neither.</p>
+
+  <p><b>WHAT IT IS.</b> <strong>Lambda</strong> runs a streaming layer for speed and a batch layer for
+  truth, and reconciles them. <strong>Kappa</strong> says the streaming layer is sufficient and replay
+  handles corrections. Most production systems are lambda while claiming to be kappa.</p>
+
+  <div class="note">
+    <span class="lbl">The reframe that makes "hybrid" stop looking like indecision</span>
+    <strong>The batch layer is not a legacy artifact. It is the correction mechanism for the streaming
+    layer's watermark guess.</strong>
+    <br><br>
+    <a href="stream-semantics.html#w3">L4 W3</a> establishes that a watermark is a heuristic that will
+    sometimes be wrong. <mark>A nightly batch recomputation is precisely the reconciliation that heuristic
+    requires</mark> — which is why finance keeps one and will not give it up, and why "we're moving to
+    pure streaming" usually means "we have not yet met the auditors".
+  </div>
+
+  <p><b>DEPENDENCIES.</b> <a href="stream-semantics.html">L4</a> for the honest version of this node.</p>
+
+  <p><b>SUBTOPICS.</b> Lambda and its duplicated-logic cost · Kappa and its dependence on replayability ·
+  micro-batch as a third option that is usually the right one · <strong>the latency ladder</strong> —
+  daily, hourly, fifteen-minute, one-minute, sub-second — and the cost step between each ·
+  choosing the cheapest rung that meets the requirement.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="stream-semantics.html#w12">L4 W12</a> ·
+  <a href="system-design.html">L7</a>.</p>
+</section>
+
+<section id="m5">
+  <h2><span class="num">M5</span> Grain <span class="pill pC">spine</span></h2>
+  <p class="sub">The only modelling decision that is genuinely unrecoverable.</p>
+
+  <p><b>WHAT IT IS.</b> The precise definition of what one row of a fact table represents, stated as a
+  sentence: <em>"one row per order line, per shipment, per day."</em></p>
+
+  <p><b>WHY IT IS IRREVERSIBLE.</b> <strong>You can always aggregate up. You can never disaggregate
+  down.</strong> Every other modelling mistake costs a rewrite of code you still have; this one costs data
+  you never captured, and no amount of engineering recovers it.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#m2">M2</a>.</p>
+
+  <div class="rule">
+    <span class="lbl">Kimball's four steps, and the one everybody skips</span>
+    <strong>1.</strong> Select the business process. <strong>2.</strong> Declare the grain.
+    <strong>3.</strong> Identify the dimensions. <strong>4.</strong> Identify the facts.
+    <br><br>
+    <mark>Step 2 comes before step 3, and skipping it is the origin of most bad models.</mark> When the
+    grain is declared after the dimensions, it becomes whatever the dimensions happened to imply — which is
+    how mixed-grain fact tables get built by people who would never have built one deliberately.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The most common dimensional modelling bug in the world</span>
+    <strong>Order-header facts and order-line facts in the same table.</strong> The header amount is
+    repeated on every line, so any aggregation that joins to a line-level dimension
+    <mark>double-counts the header values by exactly the number of lines per order</mark> — and the result
+    looks plausible, which is why it survives review.
+    <br><br>
+    The fix is two fact tables at two grains. <a href="#lab03">Lab 03</a> experiment 5 builds the bug on
+    purpose so that you have seen the number be wrong.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Declaring grain as a written sentence · the finest practical grain as the default,
+  and the storage argument against it (which columnar compression has largely dissolved) ·
+  mixed-grain fact tables and their signature · atomic versus aggregated fact tables coexisting ·
+  what a grain forecloses, written down alongside what it enables.</p>
+
+  <div class="life">
+    <span class="lbl">The interview move</span>
+    <strong>When handed any modelling question, state the grain out loud as a sentence before doing
+    anything else.</strong>
+    <mark>It reframes you from "someone who writes SQL" to "someone who models" in about four
+    seconds</mark>, and it is entirely free — the sentence takes no preparation beyond the habit.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab03">Laboratory 03 — The Grain Trap.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="#m6">M6</a> · <a href="#m12">M12</a> — the semantic layer is where an
+  insufficient grain finally becomes undeniable.</p>
+</section>
+
+<section id="m6">
+  <h2><span class="num">M6</span> Facts</h2>
+  <p class="sub">Three types, three questions they answer cheaply, and one rule about ratios.</p>
+
+  <table>
+    <thead><tr><th>Type</th><th>One row per</th><th>What it makes cheap</th></tr></thead>
+    <tbody>
+      <tr><td><b>Transactional</b></td><td>Event</td><td>Everything, at the cost of size. The most flexible and the default</td></tr>
+      <tr><td><b>Periodic snapshot</b></td><td>Entity per period</td><td>"What was the balance at month end" — <mark>and it is the only model that records that nothing happened</mark></td></tr>
+      <tr><td><b>Accumulating snapshot</b></td><td>Process instance, updated in place as milestones complete</td><td>"Average days between picked and shipped" — near-impossible from a transactional fact, trivial here</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>DEPENDENCIES.</b> <a href="#m5">M5</a>.</p>
+
+  <div class="rule">
+    <span class="lbl">The additivity rule, stated as an instruction</span>
+    <strong>Never store a ratio. Store the numerator and the denominator, and compute the ratio at query
+    time.</strong>
+    <br><br>
+    <mark>A ratio cannot be aggregated — the average of percentages is not the percentage of the
+    total</mark> — and somebody will eventually sum or average that column. Storing the components makes
+    the wrong answer impossible rather than merely discouraged, which is the correct place to solve it.
+    <br><br>
+    Additive (most measures) · semi-additive (balances — additive across everything except time) ·
+    non-additive (ratios, percentages, unit prices).
+  </div>
+
+  <p><b>SUBTOPICS.</b> The three fact types and their update semantics · additive, semi-additive and
+  non-additive measures · <strong>factless fact tables</strong> — for events with no measure, and for
+  <em>coverage</em> questions · why "which promoted products sold nothing" is unanswerable without a
+  factless coverage table, and why that is a genuinely non-obvious modelling move · degenerate dimensions
+  living on the fact.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free reference · <em>Title:</em> Kimball Group,
+    <strong>"Dimensional Modeling Techniques"</strong> — the free official technique reference<br>
+    <em>Why this one:</em> free, and it is a numbered list of every pattern in the discipline with a
+    paragraph each. <mark>Skim it whole once; you will discover three or four patterns you have needed and
+    reinvented badly.</mark>
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#m7">M7</a> · <a href="#lab03">Lab 03</a> ·
+  <a href="#m12">M12</a>.</p>
+</section>
+
+<section id="m7">
+  <h2><span class="num">M7</span> Dimensions</h2>
+  <p class="sub">Including the two patterns that quietly produce wrong numbers.</p>
+
+  <p><b>WHAT IT IS.</b> The descriptive context of a fact — who, what, where, when, why — modelled as
+  wide, denormalised tables joined by surrogate keys.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#m5">M5</a>.</p>
+
+  <table>
+    <thead><tr><th>Pattern</th><th>What it solves</th></tr></thead>
+    <tbody>
+      <tr><td><b>Conformed dimension</b></td><td>Makes two fact tables comparable. <mark>Achieving one is an organisational accomplishment, not a technical one</mark></td></tr>
+      <tr><td><b>Degenerate dimension</b></td><td>An identifier with no attributes — the order number — kept on the fact rather than given a table</td></tr>
+      <tr><td><b>Junk dimension</b></td><td>Bundles a dozen low-cardinality flags into one small dimension rather than a dozen columns</td></tr>
+      <tr><td><b>Role-playing dimension</b></td><td>One date dimension, viewed three times as order date, ship date, delivery date</td></tr>
+      <tr><td><b>Bridge table</b></td><td>Many-to-many — a patient with several diagnoses. <strong>And it always requires an explicit double-counting decision</strong></td></tr>
+      <tr><td><b>Late-arriving dimension</b></td><td>A fact referencing a member that does not exist yet — handled with an inferred member, then backfilled</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The bridge table trap</span>
+    Joining a fact to a dimension through a bridge <strong>multiplies the fact rows by the number of
+    bridge entries.</strong> Sum the amount and you have counted each sale once per diagnosis.
+    <br><br>
+    <mark>The fix is an allocation factor on the bridge — weights summing to one — and the choice of
+    weights is a business decision you must not make silently.</mark> Most people do not know this exists,
+    and it produces wrong numbers that look entirely reasonable.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Surrogate keys and why natural keys fail as joins · durable natural keys alongside
+  surrogates (essential for <a href="#m9">M9</a>) · dimension hierarchies, fixed and ragged ·
+  the unknown / inferred member · dimension outriggers and when they are justified · snowflaking a single
+  large shared dimension.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#m8">M8</a> · <a href="#m9">M9</a> · <a href="#lab04">Lab 04</a>.</p>
+</section>
+
+<section id="m8">
+  <h2><span class="num">M8</span> Star versus snowflake</h2>
+  <p class="sub">The real trade-off, which is not the one usually stated.</p>
+
+  <p><b>WHAT IT IS.</b> Star keeps each dimension in one denormalised table. Snowflake normalises
+  dimensions into hierarchies of tables.</p>
+
+  <div class="note">
+    <span class="lbl">The trade-off is not storage</span>
+    <strong>Columnar compression makes the redundancy in a denormalised dimension nearly free</strong> —
+    a repeated category name compresses to almost nothing. So the disk argument, which is the one usually
+    given, is dead.
+    <br><br>
+    <mark>The live trade-off is join count and comprehensibility against update cost.</mark> Star: fewer
+    joins, easier for BI tools and humans, but a hierarchy change may touch millions of rows. Snowflake:
+    cheaper hierarchy updates and a genuinely shared large dimension, at the cost of every query being
+    harder to write and to optimise.
+    <br><br>
+    <strong>Modern answer: star, almost always.</strong> Know the two conditions that flip it, and say
+    them, rather than treating the choice as a matter of taste.
+  </div>
+
+  <p><b>DEPENDENCIES.</b> <a href="#m7">M7</a>.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#m10">M10</a> · <a href="substrate.html#b9">L0 B9</a> — join count is a
+  planner problem, and cardinality estimation degrades with it.</p>
+</section>
+
+<section id="m9">
+  <h2><span class="num">M9</span> Slowly changing dimensions, types 1–6 <span class="pill pC">deepen</span></h2>
+  <p class="sub">Most people know type 2 and stop. The types are not a difficulty ladder.</p>
+
+  <p><b>WHAT IT IS.</b> The family of techniques for handling a dimension attribute that changes over
+  time.</p>
+
+  <div class="rule">
+    <span class="lbl">The reframe that makes all six memorable</span>
+    <strong>They are not levels of sophistication. They are answers to different questions.</strong>
+    <br><br>
+    <em>Do I need history at all?</em> → 0, 1, 2 &nbsp;·&nbsp;
+    <em>How much history — all of it, or just the previous value?</em> → 2 versus 3 &nbsp;·&nbsp;
+    <em>Does type 2 explode my row count?</em> → 4, 5 &nbsp;·&nbsp;
+    <em>Do I need the historical <b>and</b> the current view at the same time?</em> → 6.
+    <br><br>
+    <mark>"Type 2 is the good one" is the belief this node exists to remove.</mark>
+  </div>
+
+  <table>
+    <thead><tr><th>Type</th><th>Mechanism</th><th>Correct when</th></tr></thead>
+    <tbody>
+      <tr><td><b>0</b></td><td>Never change the value</td><td>Original credit score, original acquisition channel</td></tr>
+      <tr><td><b>1</b></td><td>Overwrite</td><td>It is a <em>correction</em>, not a change. A misspelled name</td></tr>
+      <tr><td><b>2</b></td><td>New row, effective dates, current flag</td><td>Anything you will report on historically. The workhorse</td></tr>
+      <tr><td><b>3</b></td><td>Add a "previous value" column</td><td>Exactly one prior state matters — one reorganisation, one rebranding</td></tr>
+      <tr><td><b>4</b></td><td>Mini-dimension: split rapidly-changing attributes into their own dimension</td><td><mark>Type 2 on a 50-attribute customer dimension explodes the row count</mark></td></tr>
+      <tr><td><b>5</b></td><td>Type 4 plus a type 1 outrigger to the current mini-dimension row</td><td>You need the mini-dimension <em>and</em> fast access to current values</td></tr>
+      <tr><td><b>6</b></td><td>Type 2 rows that also carry a current-value column</td><td><strong>Both "as it was" and "as it is now", from one query</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Beyond type 6 — the bi-temporal case, and a bridge worth naming</span>
+    Type 2 records <em>when something was true</em>. It has no mechanism for <em>when you found out</em> —
+    so a retroactive correction ("the move was actually the 1st, not the 15th") cannot be represented
+    without destroying the audit trail.
+    <br><br>
+    Bi-temporal modelling keeps both <strong>valid time</strong> and <strong>transaction time</strong>, and
+    <mark>that is exactly the event-time versus processing-time distinction from
+    <a href="stream-semantics.html#w1">L4 W1</a>, arriving in a completely different branch.</mark>
+    Valid time is when it was true in the world; transaction time is when the system learned it. Naming
+    that equivalence out loud is a strong senior signal, and it is the kind of connection that only appears
+    once you have both branches.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab04">Laboratory 04 — Temporal Modelling.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="pipelines.html#p7">L5 CDC</a> — out-of-order updates are this problem
+  arriving from the source side · <a href="stream-semantics.html#w8">L4 W8</a> — a temporal join is a
+  type 2 lookup expressed in streaming · <a href="reliability.html#r9">L6 audit</a>.</p>
+</section>
+
+<section id="m10">
+  <h2><span class="num">M10</span> Normalisation, Data Vault and One Big Table</h2>
+  <p class="sub">Three patterns that are usually presented as rivals and are actually layers.</p>
+
+  <p><b>WHAT IT IS.</b> Three ways to organise data that is not yet, or no longer, in a star schema.</p>
+
+  <table>
+    <thead><tr><th>Pattern</th><th>Real value proposition</th><th>Real cost</th></tr></thead>
+    <tbody>
+      <tr><td><b>3NF integration layer</b> (Inmon)</td><td>A single integrated, non-redundant enterprise model</td><td>Slow to build, and unusable for BI without marts on top</td></tr>
+      <tr><td><b>Data Vault</b> — hubs, links, satellites</td><td><mark>Auditability and parallel loading with no cross-source dependency</mark> — every source loads independently</td><td>A great many joins. <strong>It is a raw-integration pattern, not a serving pattern</strong></td></tr>
+      <tr><td><b>One Big Table</b></td><td>Zero joins for one known access pattern; columnar pruning makes width free</td><td>Cannot answer a question it was not shaped for</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The sentence that resolves the argument</span>
+    <strong>Model for the query you know; keep the grain fine enough for the ones you do not.</strong>
+    <br><br>
+    <mark>Serving BI directly from a Data Vault is a misunderstanding of what a vault is for</mark>, and
+    saying so — with the reason, which is that hubs and satellites optimise for load-time independence
+    rather than query-time convenience — is a clean way to demonstrate that you know the pattern rather
+    than the name.
+  </div>
+
+  <p><b>DEPENDENCIES.</b> <a href="#m7">M7</a> · <a href="#m8">M8</a>.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free · <em>Title:</em> the published <strong>Data Vault 2.0 standards summaries</strong>
+    and Kimball's free comparison writing on Inmon versus Kimball<br>
+    <em>Why this way:</em> free, and short. <mark>Data Vault is a topic where an hour is enough and a week
+    is a waste</mark> — you need to recognise it, explain what it optimises for, and know that marts go on
+    top. Interviews rarely go deeper.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#m11">M11</a> · <a href="reliability.html#r10">L6 lineage</a>.</p>
+</section>
+
+<section id="m11">
+  <h2><span class="num">M11</span> Physical design <span class="pill pC">deepen</span></h2>
+  <p class="sub">Where modelling meets L0 and L2, and where most modellers have never measured anything.</p>
+
+  <p><b>WHAT IT IS.</b> Partitioning strategy, clustering and sort order, and file sizing — the decisions
+  that determine what a query costs, as opposed to what it can express.</p>
+
+  <div class="rule">
+    <span class="lbl">The division of labour, in one line</span>
+    <strong>The grain decides what you can ask. The physical design decides what it costs.</strong>
+    <mark>Two independent decisions that are constantly conflated</mark>, usually by people who partition
+    on a column nobody filters on and then wonder why it did not help.
+  </div>
+
+  <p><b>DEPENDENCIES.</b> <a href="#m5">M5</a> · <a href="substrate.html#b7">L0 B7</a> ·
+  <a href="substrate.html#b2">L0 B2</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Partition column selection — <strong>in most queries' predicates <em>and</em> low
+  enough cardinality</strong>, both conditions · partition pruning, and confirming it happened rather than
+  assuming · clustering, sorting and Z-ordering as the tool for high-cardinality filter columns ·
+  <strong>sorting as what makes footer statistics selective</strong> · file sizing and the small-files
+  problem · <strong>hidden partitioning</strong> in Iceberg versus Hive-style directories, and the class of
+  bug it eliminates · when to pre-aggregate and when it is premature.</p>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Confirm the pruning, do not assume it</span>
+    Partition a table, then run a query with a predicate on the partition column and
+    <strong>read the plan for the number of partitions actually scanned.</strong>
+    <br><br>
+    <mark>A predicate wrapped in a function, or with a type mismatch, silently disables pruning</mark> —
+    <code>WHERE date_trunc('day', ts) = ...</code> against a <code>ts</code>-partitioned table scans
+    everything, and nothing warns you. Having been caught by this once is worth more than reading about it
+    three times.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="spark.html#s11">L2 S11</a> · <a href="substrate.html#lab01">L0 Lab 01</a> ·
+  <a href="platform.html#e9">L8 cost</a>.</p>
+</section>
+
+<section id="m12">
+  <h2><span class="num">M12</span> Semantic and metric layers</h2>
+  <p class="sub">Where the grain decision presents its bill.</p>
+
+  <p><b>WHAT IT IS.</b> A definition of each business metric expressed once, in version control, from which
+  queries are generated — rather than the same logic copy-pasted into forty dashboards.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because three teams will otherwise produce three definitions of "active user",
+  three numbers, and a meeting. <strong>The problem is not that the numbers differ; it is that nobody can
+  say which is right, because the definitions live in dashboard SQL nobody reads.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#m5">M5</a> · <a href="#m6">M6</a>.</p>
+
+  <div class="note">
+    <span class="lbl">Why this node is in L1 and not L8</span>
+    <strong>A metric layer is a modelling artifact, not a platform feature.</strong> It can only express
+    metrics the underlying grain supports.
+    <mark>You cannot define "sessions per user per week" over a table whose grain is monthly</mark>, and no
+    amount of tooling will rescue that.
+    <br><br>
+    This is the node where an insufficient grain finally becomes undeniable to people outside the data
+    team — which is why <a href="#m5">M5</a> and M12 are the first and last nodes of the same argument.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Metric definitions as code · dimensional consistency across metrics · the pattern
+  behind dbt MetricFlow, Cube and LookML rather than the products · governed versus ad-hoc access ·
+  the certification question — which tables are trustworthy, and who says so · why a semantic layer
+  without <a href="reliability.html#r5">L6 contracts</a> underneath it is decoration.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="reliability.html">L6</a> · <a href="platform.html#e2">L8 golden paths</a> ·
+  <a href="system-design.html#d6">L7 reporting design</a>.</p>
+</section>
+
+<section id="lab03">
+  <h2><span class="num">03</span> Laboratory — The Grain Trap</h2>
+  <p class="sub">A requirement change that no amount of SQL can satisfy.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Model a retail business for reporting. Requirement one: daily sales by store and
+    product. Deliver it.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A fact table at the grain <em>"one row per store per product per day"</em>.
+    Correct, efficient, and exactly what was asked for. Plus <strong>three further requirements, written
+    in advance and sealed</strong> — not to be read until the previous one ships.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE — four sealed requirements</span>
+    <strong>1. "Break it down by promotion."</strong> The daily summary aggregated promotion away.
+    Rebuild at a finer grain and reprocess. Annoying, recoverable.<br>
+    <strong>2. "How many baskets contained both A and B?"</strong>
+    <mark>This is not hard. It is impossible.</mark> Basket composition was destroyed by the grain, and no
+    SQL, no tooling and no amount of time recovers it.<br>
+    <strong>3. "What is average order value?"</strong> You have lines but no order-level fact — and the
+    naive answer double-counts.<br>
+    <strong>4. "What did the report say last March, before the restatement?"</strong> Straight into
+    <a href="#lab04">Lab 04</a>.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Grain as an irreversible decision → the finest practical grain as the
+  default → mixed-grain fact tables and double counting → additivity and the ratio rule → periodic versus
+  accumulating snapshots → factless facts for coverage questions → the real storage cost of fine grain,
+  measured rather than feared.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Model at day-store-product grain; deliver requirement 1. Record rows and query time</td><td>The baseline that is genuinely correct for what was asked</td></tr>
+      <tr><td>2</td><td>Attempt the promotion breakdown. <strong>Write down precisely why it fails</strong></td><td>Recoverable loss — costs a reprocess</td></tr>
+      <tr><td>3</td><td>Rebuild at transaction-line grain. Measure storage and query cost against the summary</td><td><mark>The cost of fine grain is far smaller than people assume, because columnar</mark></td></tr>
+      <tr><td>4</td><td>Attempt basket affinity at each grain</td><td>Unrecoverable loss. The centre of the lab</td></tr>
+      <tr><td>5</td><td>Build a deliberately mixed-grain fact (header + line). Compute revenue</td><td><strong>The double count, and how plausible it looks</strong></td></tr>
+      <tr><td>6</td><td>Split into two facts at two grains; recompute</td><td>The fix, and the cost of the fix</td></tr>
+      <tr><td>7</td><td>Store margin % as a column; average it across products; compare to the true figure</td><td>Non-additivity, demonstrated</td></tr>
+      <tr><td>8</td><td>Answer "stock on hand at month end" from the transaction fact, then from a periodic snapshot</td><td>Why snapshots exist — and that they record <em>nothing happening</em></td></tr>
+      <tr><td>9</td><td>Compute average days between order and shipment from a transactional fact, then from an accumulating snapshot</td><td>The query that is trivial in one model and awful in the other</td></tr>
+      <tr><td>10</td><td>"Which promoted products sold nothing?" Try without, then with, a factless coverage fact</td><td>Absence is not representable by a fact table of events</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Which questions become unanswerable at each grain, and which merely become
+  expensive — the distinction is the whole lab. The storage delta in experiment 3. The magnitude of the
+  double count in experiment 5.</p>
+
+  <p><b>THE ARTIFACT.</b> <strong>A grain decision record</strong>: the grain as a sentence, the questions
+  it answers, the questions it forecloses, and the storage cost of one level finer.
+  <mark>The third column is the one nobody writes, and it is the one that reads as senior.</mark></p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Every "can you just add a breakdown by X" request that turns into a
+  three-week reprocessing project — and the rarer, worse version where the answer is "we cannot, and we
+  never will be able to."</p>
+
+  <p><b>PORTFOLIO VALUE.</b> Medium-high, and different in kind from the others: this is a written artifact
+  demonstrating judgement rather than a system demonstrating skill. Both are needed.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#m6">M6</a> · <a href="#m9">M9</a> ·
+  <a href="#lab04">Lab 04</a> · <a href="#m11">M11</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The data structure this lab forces</span>
+    Basket affinity is a <strong>frequent-itemset problem</strong>, and the obvious pairwise self-join is
+    quadratic in basket size. You are not required to implement Apriori or FP-growth here —
+    <mark>but noticing that the query you were casually asked for is combinatorial is the point</mark>,
+    and it is the same instinct that <a href="index.html#dsa">the DSA table</a> is built to develop.
+  </div>
+</section>
+
+<section id="lab04">
+  <h2><span class="num">04</span> Laboratory — Temporal Modelling</h2>
+  <p class="sub">A salesperson moves region and last year's report changes.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Priya moves from North to South on 15 June. Sales reports must remain correct — and
+    "correct" turns out to have two incompatible meanings that the business has never been asked to choose
+    between.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A type 1 salesperson dimension. The region is overwritten.
+    <strong>Plus a saved copy of last year's regional report, produced before the change</strong> — without
+    which the central failure of this lab is invisible.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    <strong>Re-run last year's report and diff it against the saved copy.</strong>
+    <mark>A number that was published, screenshotted and cited in a board pack is now different, and nobody
+    edited anything.</mark>
+    <br><br>
+    Then fix it with type 2 — and discover the second failure immediately: <strong>"show me all of Priya's
+    sales this year" now returns her as two people</strong>, because a naive group-by on the surrogate key
+    splits her across the effective-date boundary.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Type 1 as destruction of history → type 2 and effective dating →
+  surrogate versus durable natural keys → "as-was" and "as-is" as two legitimate and distinct questions →
+  type 6 → late-arriving facts and dimensions → retroactive correction, which type 2 cannot express →
+  valid time versus transaction time → bi-temporal modelling.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Type 1 overwrite; re-run last year's report; <strong>diff against the saved output</strong></td><td><mark>The published number changed. The whole lab in one diff</mark></td></tr>
+      <tr><td>2</td><td>Type 2 with effective_from / effective_to / is_current; re-run</td><td>History is now stable</td></tr>
+      <tr><td>3</td><td>Aggregate this year by surrogate key</td><td>Priya appears twice. The type 2 side effect nobody warns about</td></tr>
+      <tr><td>4</td><td>Add a durable natural key; aggregate on it</td><td>Both questions answerable — the reason both keys exist</td></tr>
+      <tr><td>5</td><td>"Current region for all historical sales": via a type 6 column, then via a join to <code>is_current</code>. Compare cost</td><td>Type 6 as denormalised convenience with a maintenance cost</td></tr>
+      <tr><td>6</td><td>Late-arriving <em>fact</em>: a 10 June sale arrives on 20 June. Ensure it binds to the 10 June dimension version</td><td>The most common type 2 implementation bug</td></tr>
+      <tr><td>7</td><td>Late-arriving <em>dimension</em>: a sale references an unknown salesperson. Inferred member, then backfill</td><td>Referential integrity without blocking the load</td></tr>
+      <tr><td>8</td><td>Retroactive correction — the move was actually 1 June. Attempt it with type 2 alone</td><td><mark>Type 2 has no mechanism for "when we found out"</mark></td></tr>
+      <tr><td>9</td><td>Implement bi-temporal (valid time + transaction time); redo experiment 8</td><td>Answer both "what is true" and "what did we believe on date D"</td></tr>
+      <tr><td>10</td><td>Type 4 mini-dimension for 20 rapidly-changing attributes; compare row counts to pure type 2</td><td>Why types 4 and 5 exist at all</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> The experiment-1 diff, kept as a file — it is the most persuasive artifact in
+  the lab. Row-count growth of type 2 versus type 4. The query cost of reconstructing an "as of" view.
+  And in experiment 8, exactly which question becomes unanswerable.</p>
+
+  <p><b>THE ARTIFACT.</b> <strong>A temporal decision table</strong> — question type → SCD type required →
+  storage cost → query cost. It converts "which SCD type should we use" from an opinion into a lookup.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Regulated reporting, financial restatement, and every "why did the
+  number change" escalation. <mark>In payments and finance the bi-temporal requirement is not exotic — it
+  is the baseline</mark>, because "what did we believe on the reporting date" is an audit question, not an
+  analytics one.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> High, and specifically high for finance and payments roles. Bi-temporal
+  modelling implemented and explained is a genuine differentiator, because most candidates have not heard
+  the term.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#m9">M9</a> · <a href="#m12">M12</a> ·
+  <a href="pipelines.html#p7">L5 CDC</a> · <a href="reliability.html#r10">L6 audit and lineage</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The bridge this lab earns</span>
+    <strong>Valid time is event time. Transaction time is processing time.</strong>
+    <mark>Bi-temporal modelling and <a href="stream-semantics.html#w1">L4's three times</a> are the same
+    distinction, discovered independently by the warehousing and streaming traditions.</mark>
+    Saying that in an interview demonstrates something no individual fact can: that the branches are joined
+    in your head.
+  </div>
+</section>
+
+<section id="defence">
+  <h2><span class="num">::</span> Interview defence</h2>
+  <p class="sub">This branch is examined by scenario, not by definition. Every question below is a story.</p>
+
+  <table>
+    <thead><tr><th>The question</th><th>Node</th><th>What a strong answer contains</th></tr></thead>
+    <tbody>
+      <tr><td>Model this business for reporting</td><td><a href="#m5">M5</a></td><td><mark>Grain stated as a sentence, out loud, before anything else</mark></td></tr>
+      <tr><td>What happens if you pick the wrong grain?</td><td><a href="#m5">M5</a></td><td>Aggregate up always; disaggregate never. The only unrecoverable modelling error</td></tr>
+      <tr><td>A salesperson changes region — what happens to history?</td><td><a href="#m9">M9</a></td><td>Ask which view the business wants; then type 2, or type 6 for both</td></tr>
+      <tr><td>We need history but the dimension has 50 volatile attributes</td><td><a href="#m9">M9</a></td><td>Type 4 mini-dimension. Knowing this exists is the differentiator</td></tr>
+      <tr><td>The correction was backdated. Now what?</td><td><a href="#m9">M9</a></td><td>Bi-temporal — valid time and transaction time as separate axes</td></tr>
+      <tr><td>Star or snowflake?</td><td><a href="#m8">M8</a></td><td>Star, and the two conditions that would flip it. <em>Not</em> a storage argument</td></tr>
+      <tr><td>Why is this revenue figure double the real one?</td><td><a href="#m5">M5</a>, <a href="#m7">M7</a></td><td>Mixed grain, or a bridge table without allocation factors</td></tr>
+      <tr><td>Average of the percentage column looks wrong</td><td><a href="#m6">M6</a></td><td>Non-additive. Store numerator and denominator instead</td></tr>
+      <tr><td>How would you partition this table?</td><td><a href="#m11">M11</a></td><td>Both conditions, plus confirming pruning in the plan rather than assuming it</td></tr>
+      <tr><td>Should we use Data Vault?</td><td><a href="#m10">M10</a></td><td>For raw integration and auditability, with marts on top. Never for serving</td></tr>
+      <tr><td>Three teams have three different active-user numbers</td><td><a href="#m12">M12</a></td><td>A metric layer — and first, whether the grain even supports the definition</td></tr>
+      <tr><td>Lambda or Kappa?</td><td><a href="#m4">M4</a></td><td>The batch layer is the watermark's correction mechanism, not legacy debt</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The move that distinguishes a senior answer here</span>
+    <strong>Ask what the business wants before choosing a technique.</strong>
+    <mark>Almost every modelling question in this branch has two defensible answers and one clarifying
+    question that reveals which applies.</mark> Candidates who choose immediately look decisive and are
+    guessing; candidates who ask first look slow for four seconds and then look like someone who has
+    delivered a model that got used.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next</th><th>What it inherits from L1</th></tr></thead>
+    <tbody>
+      <tr><td><a href="pipelines.html">L5 pipelines</a></td><td>Incremental models need a grain and a change-detection key; CDC out-of-order updates are <a href="#m9">M9</a> from the source side</td></tr>
+      <tr><td><a href="reliability.html">L6 reliability</a></td><td>Uniqueness tests <em>are</em> grain assertions; lineage is the model made visible</td></tr>
+      <tr><td><a href="system-design.html">L7 system design</a></td><td>Every design round opens with a modelling decision, and grain is the first thing to state</td></tr>
+      <tr><td><a href="platform.html">L8 platform</a></td><td>Conformed dimensions and metric definitions are the organisational problem L8 exists to solve</td></tr>
+      <tr><td><a href="substrate.html">L0 substrate</a></td><td>Backwards: <a href="#m11">M11</a> is <a href="substrate.html#b7">B7</a> applied to a specific model</td></tr>
+      <tr><td><a href="stream-semantics.html">L4 stream semantics</a></td><td>Sideways: bi-temporal modelling and event-time processing are one distinction in two traditions</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Branch complete when</span>
+    You can be handed an unfamiliar business and, within ten minutes, <strong>produce a grain sentence, a
+    fact-type choice, an SCD decision for each volatile attribute, and a written list of the questions your
+    model will not be able to answer.</strong>
+    <mark>The last item is the test. Everything before it is craft; that one is judgement.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · L1 · Data architecture &amp; modelling</footer>
+
+</body>
+</html>

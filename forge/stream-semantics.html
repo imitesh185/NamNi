@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L4 · Stream processing semantics — Forge</title>
+<meta name="description" content="Event time, windows, watermarks, late data, keyed state, checkpointing, streaming joins, end-to-end exactly-once and backpressure — with three laboratories." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#why">The one question</a>
+  <a href="#env">The environment</a>
+  <a href="#map">Internal dependency map</a>
+  <h4>Nodes</h4>
+  <a href="#w1">W1 · The three times</a>
+  <a href="#w2">W2 · Windows</a>
+  <a href="#w3">W3 · Watermarks</a>
+  <a href="#w4">W4 · Late data</a>
+  <a href="#w5">W5 · Keyed state</a>
+  <a href="#w6">W6 · Checkpointing</a>
+  <a href="#w7">W7 · State growth &amp; TTL</a>
+  <a href="#w8">W8 · Streaming joins</a>
+  <a href="#w9">W9 · Exactly-once</a>
+  <a href="#w10">W10 · Backpressure</a>
+  <a href="#w11">W11 · Engines compared</a>
+  <a href="#w12">W12 · When not to stream</a>
+  <h4>Laboratories</h4>
+  <a href="#lab13">13 · Watermark &amp; Late Data</a>
+  <a href="#lab14">14 · State Growth</a>
+  <a href="#lab15">15 · Exactly-Once</a>
+  <h4>Exit</h4>
+  <a href="#defence">Interview defence</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Forge</a><span>/</span>L4 Stream semantics</p>
+
+<div class="hero">
+  <div class="kicker">Branch L4 · new · requires <a href="kafka.html">L3</a> · the differentiator</div>
+  <h1>Stream processing semantics</h1>
+  <p class="dropcap">This is the branch that most reliably separates candidates. Almost everyone can
+  describe a Kafka consumer. Far fewer can say what a watermark is actually <em>guessing</em> about, what
+  "exactly-once" demands from a sink, or why an unbounded stream-stream join is a memory leak with a
+  schedule.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>A stream has no end, so "all the data" never arrives. Every concept in
+    this branch is a way of deciding when to stop waiting.</mark> Windows are the unit you stop waiting
+    for. Watermarks are the guess about when it is safe to stop. Allowed lateness is how much you un-stop.
+    State is what you must remember while waiting. TTL is when you stop remembering. Join time bounds are
+    how long you wait for the other side. Backpressure is what happens when you cannot keep up with the
+    waiting.
+  </div>
+  <div class="tags">
+    <span class="tag">#event-time</span>
+    <span class="tag t2">#watermarks</span>
+    <span class="tag t3">#state</span>
+    <span class="tag">#exactly-once</span>
+    <span class="tag t2">#backpressure</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> The one question this branch exists to answer</h2>
+  <p class="sub">It has no single correct answer, which is exactly why it works as a question.</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“You compute hourly revenue from a stream. At 14:00 you emit the 13:00–14:00 total.
+    At 14:05 an event with timestamp 13:47 arrives. What do you do?”</b>
+    Drop it and be quietly wrong. Wait longer and be slowly right. Restate and force every downstream
+    consumer to accept that a published number can change. Or side-output it and hand the problem to a
+    human. <mark>The answer reveals whether you understand that completeness in a stream is unknowable,
+    not merely difficult.</mark>
+  </div>
+
+  <p>There is a second question, and it is the operational counterpart — the one that exposes people who
+  have read about streaming but never run it:</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“Your job ran at a steady 10,000 events per second for six hours and then died with OOM.
+    Throughput never changed. What died?”</b>
+    <mark>State, not throughput.</mark> A streaming job's memory is not a function of its rate — it is a
+    function of <em>key cardinality × retention</em>. And the follow-up that most people miss:
+    doubling the memory makes it die after twelve hours instead of six.
+    <em>You bought hours, not a fix.</em>
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The failure mode of this branch</span>
+    Learning the vocabulary without ever producing a wrong number. <strong>Watermarks, allowed lateness and
+    exactly-once are trivially memorisable and almost impossible to reason about until you have watched a
+    count come out too low.</strong> <mark>Every lab here begins by producing a demonstrably incorrect
+    result and then earning each mechanism as the fix for it.</mark>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Why this branch is worth disproportionate effort</span>
+    L2 and L3 are branches where you are competing against many people who also know Spark and Kafka.
+    <strong>This is the branch where the field thins.</strong> The concepts are engine-independent, they
+    transfer to any tool the company happens to use, and they are the ones that appear in
+    <a href="system-design.html">system design</a> rounds rather than trivia rounds.
+  </div>
+</section>
+
+<section id="env">
+  <h2><span class="num">01</span> The environment</h2>
+  <p class="sub">One component here matters more than all the others: a generator whose lateness you control.</p>
+
+  <table class="nw">
+    <thead><tr><th>Component</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>The Kafka cluster from <a href="kafka.html#env">L3</a></b></td><td>Reused as-is. A replayable source is a hard requirement for <a href="#w9">W9</a> — you cannot demonstrate exactly-once without one</td></tr>
+      <tr><td><b>An event generator with a controllable lateness distribution</b></td><td><mark>The single most important tool in this branch.</mark> Each event carries an event-time field; you control the distribution of (arrival − event time). "5% arrive 1–30 min late, 0.1% arrive up to 6 hours late" must be a parameter, not an accident</td></tr>
+      <tr><td><b>A batch oracle</b> — the same aggregation computed over the complete dataset</td><td>Without a source of truth you cannot tell that the stream is wrong. Every lab compares against it</td></tr>
+      <tr><td><b>Apache Flink</b>, local cluster</td><td>The learning engine. Watermarks, state and checkpoints are first-class and directly observable per operator. Semantics that are implicit elsewhere are explicit here</td></tr>
+      <tr><td><b>Spark Structured Streaming</b> — already present from <a href="spark.html">L2</a></td><td>The employment engine. Port <a href="#lab13">Lab 13</a> to it and record everything you <em>cannot</em> express — that difference is <a href="#w11">W11</a>, earned rather than read</td></tr>
+      <tr><td><b>The Flink Web UI</b>, plus state and checkpoint metrics to a CSV or Prometheus</td><td>Current watermark per subtask, checkpoint size and duration, backpressure ratio. The labs need time series</td></tr>
+      <tr><td><b>An external sink with an inspectable state</b> — Postgres is enough</td><td><a href="#lab15">Lab 15</a> lives at the boundary where the guarantee stops holding</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Three habits to establish before the first lab</span>
+    <strong>Never let a test depend on wall-clock time.</strong> Every result must be reproducible by
+    replaying the same input, which means event-time everywhere and a generator you can rerun.
+    <strong>Log the current watermark alongside every emitted result</strong> — "window fired at watermark
+    T" is the line that explains almost every surprising output.
+    <strong>Record state size and checkpoint duration on every run, even when the run is about something
+    else.</strong> <mark>State growth is invisible until it is fatal, and the whole skill is seeing it
+    early.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">The engine choice, stated honestly</span>
+    <strong>Flink teaches the semantics; Structured Streaming gets you hired.</strong> Do the labs in Flink
+    because the mechanisms are visible — you can watch a watermark advance per subtask and see state on
+    disk. Then port the first lab to Structured Streaming.
+    <mark>The list of things that became harder or impossible in the port is more valuable than either
+    implementation</mark>, and it is a far better answer to "which would you choose" than any blog
+    comparison.
+  </div>
+</section>
+
+<section id="map">
+  <h2><span class="num">02</span> Internal dependency map</h2>
+
+<pre>W1 THE THREE TIMES ................. the root of everything
+        │
+        ├───────────────────────────────┐
+        ↓                               ↓
+   W2 WINDOWS                      W5 KEYED STATE
+        │                               │
+        ↓                               ├──→ W7 STATE GROWTH &amp; TTL
+   W3 WATERMARKS [spine]                │
+        │                               ↓
+        ↓                          W6 CHECKPOINTING [spine]
+   W4 LATE DATA                         │
+        │                               │
+        └──────→ W8 STREAMING JOINS ←───┘
+                        │
+                        ↓
+              W9 END-TO-END EXACTLY-ONCE ....... convergence
+                        │              ↑
+   W10 BACKPRESSURE ────┤              └── L3 K8 delivery semantics
+                        ↓
+              W11 ENGINES COMPARED
+                        │
+                        ↓
+              W12 WHEN NOT TO STREAM</pre>
+
+  <div class="note">
+    <span class="lbl">Reading this map</span>
+    <strong>There are two spines, not one.</strong> <a href="#w3">W3 watermarks</a> governs the correctness
+    of <em>what</em> you emit. <a href="#w6">W6 checkpointing</a> governs the correctness of <em>whether
+    you emit it once</em>. They are independent — a job can have perfect watermarks and duplicate every
+    output, or perfect exactly-once delivery of numbers that are simply wrong.
+    <br><br>
+    <mark><a href="#w9">W9</a> is where they meet, and it needs a third input from outside this branch:
+    <a href="kafka.html#k8">L3 K8</a>.</mark> That is why end-to-end exactly-once cannot be understood
+    early, and why most people's version of it is a slogan.
+  </div>
+</section>
+
+<section id="w1">
+  <h2><span class="num">W1</span> The three times</h2>
+  <p class="sub">Event time, processing time, ingestion time — and why the distinction is the entire subject.</p>
+
+  <p><b>WHAT IT IS.</b> <strong>Event time</strong> is when the thing happened, carried in the record.
+  <strong>Processing time</strong> is when your operator saw it. <strong>Ingestion time</strong> is when it
+  entered the pipeline. The gap between event and processing time is <em>skew</em>, and it is never zero,
+  never constant, and has no upper bound.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a batch job has all the data by definition, so the distinction is
+  invisible there. <strong>A streaming job never has all the data, so every result is a statement about a
+  subset — and which subset depends entirely on which clock you used to define it.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="kafka.html">L3</a> — you need a real stream with real arrival disorder.</p>
+
+  <p><b>SUBTOPICS.</b> The three times and where each is assigned · skew and its distribution ·
+  why processing-time results are non-deterministic across reruns and event-time results are not ·
+  the replay test as the decisive argument · timestamp assignment at the source versus at the broker ·
+  clock skew on the producing devices · out-of-order arrival as the normal case, not the exception ·
+  what "real-time" means when someone says it in a requirements meeting.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free articles · <em>Title:</em> Tyler Akidau, <strong>"Streaming 101" and
+    "Streaming 102"</strong> — O'Reilly Radar<br>
+    <em>Why this one:</em> free, diagram-driven, and the clearest writing that exists on this material.
+    <mark>These two articles are also chapters 1 and 2 of the book <em>Streaming Systems</em></mark> — read
+    them first and decide afterwards whether the rest of the book is worth buying.
+    <br><br>
+    <b>DEEPER</b> — "The Dataflow Model" (VLDB 2015), free from Google Research. It is the paper that
+    unified batch and streaming into one model, and its four questions —
+    <em>what results, where in event time, when in processing time, how do refinements relate</em> — are a
+    complete framework for interrogating any streaming requirement.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · The replay test</span>
+    Compute the same hourly count twice from the same input: once with processing-time windows, once with
+    event-time windows. They differ, which is unsurprising.
+    <br><br>
+    <strong>Now replay the identical input a second time.</strong> The event-time results are byte-identical
+    to the first run. <mark>The processing-time results are different again</mark> — because they were never
+    a property of the data, only of how fast your machine happened to be reading that afternoon.
+    <br><br>
+    <em>That is the entire argument for event time, and it takes twenty minutes to produce.</em>
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#w2">W2</a> · <a href="#w3">W3</a> ·
+  <a href="../atlas/distributed-systems.html#n3">Distributed Systems N3</a> (there is no global clock —
+  this is that fact arriving as a data problem).</p>
+</section>
+
+<section id="w2">
+  <h2><span class="num">W2</span> Windows</h2>
+  <p class="sub">The unit you agree to stop waiting for.</p>
+
+  <p><b>WHAT IT IS.</b> A rule that assigns each event to one or more finite buckets so that an unbounded
+  stream can be aggregated at all. Tumbling (fixed, non-overlapping), sliding (fixed, overlapping),
+  session (gap-defined and dynamic), global (with a custom trigger).</p>
+
+  <p><b>WHY IT EXISTS.</b> Because <code>COUNT(*)</code> over an infinite stream never returns.
+  <strong>A window is the smallest amount of finiteness you can impose while still answering the
+  question.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w1">W1</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Window assignment at arrival versus firing at trigger — two separate events people
+  conflate · tumbling and its alignment to epoch versus to a business day ·
+  <strong>sliding windows and the fan-out multiplier</strong> · session windows and
+  <strong>session merging</strong> when a late event bridges two sessions · global windows with custom
+  triggers · early and late firings · triggers as a separate axis from windows · window state lifetime.</p>
+
+  <div class="trap">
+    <span class="lbl">The one people get wrong</span>
+    A sliding window of size 1 hour with a 1-minute slide means <strong>every single event belongs to 60
+    windows simultaneously</strong>. State is 60×. Output volume is 60×. Checkpoint size is 60×.
+    <mark>A sliding window is a memory decision disguised as an analytics choice</mark>, and nobody
+    mentions this when they ask for "a rolling one-hour metric updated every minute".
+    <br><br>
+    The senior response is to ask whether an incrementally-maintained aggregate over a tumbling window
+    would satisfy the requirement — it usually does, at 1/60th the cost.
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> the Apache Flink documentation,
+    <strong>"Operators → Windows"</strong><br>
+    <em>Why this one:</em> free, and it separates the four orthogonal pieces — assigner, trigger, evictor,
+    allowed lateness — that every other treatment blurs together. <mark>Once you see that windows and
+    triggers are independent axes, early-firing and restatement stop being special cases.</mark>
+    <br><br>
+    <b>DEEPER</b> — "Streaming 102" again, specifically the animated window diagrams. They show session
+    merging better than prose can.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Watch two sessions become one</span>
+    Run a session window with a 30-minute gap. Produce activity at 10:00 and again at 11:00 — two distinct
+    sessions. Now inject a single late event with timestamp 10:40.
+    <br><br>
+    <strong>The two sessions merge into one, and the previously-emitted results for both are
+    superseded.</strong> <mark>A single record has retroactively changed the shape of the output</mark> —
+    which is why session windows cannot be computed with a naive incremental aggregate, and why they are
+    the most expensive window type to maintain.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#w3">W3</a> · <a href="#w7">W7</a> (window state is state) ·
+  <a href="#lab13">Lab 13</a>.</p>
+</section>
+
+<section id="w3">
+  <h2><span class="num">W3</span> Watermarks <span class="pill pC">spine</span></h2>
+  <p class="sub">A guess, made from data, about a fact you cannot know.</p>
+
+  <p><b>WHAT IT IS.</b> An assertion flowing through the pipeline that says: <em>"I believe no further
+  event with timestamp ≤ T will arrive."</em> It is generated by a strategy — most commonly
+  <em>bounded out-of-orderness</em>, meaning <code>max timestamp seen − a fixed delay</code> — and it
+  advances monotonically.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a window must fire at some point, and there is no signal in the world
+  that says "the data is complete now". <strong>The watermark is the pipeline's substitute for that
+  missing signal, and it is a heuristic, not a fact.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w1">W1</a> · <a href="#w2">W2</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Watermark generation strategies · bounded out-of-orderness and how to pick the
+  bound · <strong>the watermark advances as the minimum across all inputs</strong> · per-partition
+  watermarks and why they matter · <mark>idle sources stalling the global watermark</mark> and idleness
+  detection · watermark propagation through operators · perfect versus heuristic watermarks · the latency
+  versus completeness trade-off expressed as a measured curve rather than an opinion.</p>
+
+  <div class="rule">
+    <span class="lbl">The definition to be able to say under pressure</span>
+    <strong>"A watermark is a claim about completeness, derived from the data, that may be wrong in both
+    directions."</strong> Too aggressive and you drop real events. Too conservative and every result is
+    late for no benefit.
+    <mark>There is no correct watermark delay — there is only a curve, and an operating point you chose
+    on it deliberately.</mark> <a href="#lab13">Lab 13</a> exists to make you the person who has actually
+    plotted that curve.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The incident everyone eventually has</span>
+    <strong>The watermark is computed from data, not from the wall clock.</strong> If one input partition
+    goes quiet — a region with no overnight traffic, a producer that crashed, a topic partition with no
+    assigned producer — the global watermark is the minimum across inputs, so it <em>stops advancing
+    entirely</em>.
+    <br><br>
+    <mark>No windows fire. No output appears. No error is logged. Nothing is late; nothing is wrong;
+    nothing is emitted.</mark> The job looks healthy in every metric except the one nobody is watching.
+    Idleness detection is the fix, and knowing this failure exists is a strong senior signal because it is
+    learned almost exclusively by having suffered it.
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> Flink docs,
+    <strong>"Concepts → Timely Stream Processing"</strong> plus "Generating Watermarks"<br>
+    <em>Why this one:</em> free, and it is the only mainstream documentation that treats watermark
+    generation as a pluggable strategy you are expected to reason about, rather than a single knob.
+    The idleness section is short and worth more than its length.
+    <br><br>
+    <b>DEEPER</b> — "Streaming 102", the watermark section, for the intuition; and the Dataflow paper's
+    treatment of heuristic versus perfect watermarks for the formal version.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab13">Laboratory 13 — Watermark &amp; Late Data.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="#w4">W4</a> · <a href="#w7">W7</a> ·
+  <a href="pipelines.html#p7">L5 CDC</a> (a watermark advancing past a slow source transaction is the same
+  failure in a different costume).</p>
+</section>
+
+<section id="w4">
+  <h2><span class="num">W4</span> Late data</h2>
+  <p class="sub">Three responses, and each one writes a contract with everybody downstream.</p>
+
+  <p><b>WHAT IT IS.</b> An event whose timestamp is below the current watermark — it arrived after you
+  decided to stop waiting for it. The options are to <strong>drop</strong>, to
+  <strong>restate</strong>, or to <strong>side-output</strong>.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the watermark is a guess, so being wrong is not an edge case — it is the
+  expected condition. <strong>The question is never whether late data occurs, only what you have agreed to
+  do about it.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w3">W3</a>.</p>
+
+  <table>
+    <thead><tr><th>Response</th><th>What it costs</th><th>What it demands downstream</th></tr></thead>
+    <tbody>
+      <tr><td><b>Drop</b></td><td>Silent inaccuracy, proportional to your watermark delay</td><td>Nothing — which is why it is the default, and why it is dangerous. <mark>Acceptable only if you measure and publish the drop rate</mark></td></tr>
+      <tr><td><b>Restate</b></td><td>Window state kept alive for the whole allowed-lateness period, plus repeated output</td><td>An upsert-capable sink, and consumers who accept that a published number can change. <em>This is the one people do not think through</em></td></tr>
+      <tr><td><b>Side-output</b></td><td>A second stream and a reconciliation process</td><td>A human or a batch job that closes the loop. Very common in finance, where an unexplained restatement is worse than a known exception queue</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>SUBTOPICS.</b> Allowed lateness and its state cost · output modes — append, update, complete — and
+  what each permits · side outputs and reconciliation tables · the lambda architecture as an
+  institutionalised answer to this problem · the kappa response — restate, and make the sink cope ·
+  measuring and publishing your own drop rate · idempotent restatement.</p>
+
+  <div class="life">
+    <span class="lbl">The line that reframes the whole conversation</span>
+    <strong>"Drop or restate is not an engineering decision. It is a product decision, and I would escalate
+    it rather than make it silently."</strong>
+    <br><br>
+    <mark>This is one of the highest-value sentences in the entire Forge.</mark> It signals that you
+    understand data systems as contracts with people rather than as pipelines, which is exactly the
+    distinction between a senior engineer and a strong mid-level one. It is also simply true — the cost of
+    a wrong number differs by six orders of magnitude between a marketing dashboard and a settlement file,
+    and you are not the person who knows which this is.
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> Flink, "Allowed Lateness" and
+    "Side Outputs"; and the Spark <strong>Structured Streaming Programming Guide</strong>, the
+    "Handling Late Data and Watermarking" section<br>
+    <em>Why both:</em> reading them side by side is the fastest way to see that
+    <mark>Spark gives you drop-or-restate and Flink gives you drop-or-restate-or-divert</mark> — a concrete
+    capability difference rather than a philosophical one, and the first entry in your
+    <a href="#w11">W11</a> comparison.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#lab13">Lab 13</a> · <a href="reliability.html#r5">L6 data contracts</a> ·
+  <a href="modelling.html#m9">L1</a> (a restatement is a slowly-changing fact).</p>
+</section>
+
+<section id="w5">
+  <h2><span class="num">W5</span> Keyed state</h2>
+  <p class="sub">The key decides the partition decides the parallel unit decides the skew. For the third time.</p>
+
+  <p><b>WHAT IT IS.</b> Memory that survives between events, scoped to a key and an operator. Value state,
+  list state, map state, aggregating state. The keyspace is partitioned across parallel subtasks, so each
+  subtask owns a disjoint slice of the state.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because almost nothing interesting is computable from a single event.
+  <strong>Counting, joining, deduplicating, sessionising and detecting patterns all require remembering
+  something, and in an unbounded stream "remembering" is the expensive word.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w1">W1</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Keyed versus operator state · state primitives and when each fits ·
+  <strong>state backends</strong> — heap versus RocksDB, and the serialisation cost per access ·
+  key groups and how state is redistributed when parallelism changes · state schema evolution ·
+  queryable state · timers as state.</p>
+
+  <div class="note">
+    <span class="lbl">The isomorphism to name out loud</span>
+    A hot key in a stateful streaming job is <strong>the same phenomenon</strong> as a skewed shuffle
+    partition in <a href="spark.html#s10">Spark</a> and a hot partition in
+    <a href="kafka.html#k9">Kafka</a>. Same power-law cause, same symptom — one parallel unit doing most of
+    the work — and largely the same fixes: change the key, salt it, or handle the heavy hitters separately.
+    <br><br>
+    <mark>This is the third appearance of one idea in three different systems.</mark> Being able to say
+    "this is the same problem I showed you in Spark, arriving through a different door" is worth more in an
+    interview than any individual fact in this branch.
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> Flink docs,
+    <strong>"Concepts → Stateful Stream Processing"</strong> and "Working with State"<br>
+    <em>Why this one:</em> free, and it makes state an explicit first-class object with a lifecycle, which
+    is precisely the mental model that transfers to every other engine — including the ones where state is
+    hidden from you.
+    <br><br>
+    <b>DEEPER</b> — the free Ververica / Apache Flink training exercises on GitHub. They are hands-on,
+    small, and the stateful-enrichment exercise is a good half-hour before <a href="#lab14">Lab 14</a>.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#w6">W6</a> · <a href="#w7">W7</a> · <a href="spark.html#s10">L2 S10 skew</a> ·
+  <a href="kafka.html#k9">L3 K9</a>.</p>
+</section>
+
+<section id="w6">
+  <h2><span class="num">W6</span> Checkpointing and recovery <span class="pill pC">spine</span></h2>
+  <p class="sub">How a job that has been running for a week survives a machine dying.</p>
+
+  <p><b>WHAT IT IS.</b> Asynchronous barrier snapshotting. Barriers are injected at the sources and flow
+  with the records; each operator snapshots its state when it has received barriers from all of its inputs;
+  the collection of snapshots plus the source offsets forms a globally consistent cut.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because stopping the world to take a consistent snapshot of a distributed
+  dataflow would make the system unusable. <strong>Barrier alignment achieves consistency without ever
+  pausing the whole job — it is Chandy-Lamport applied to dataflow.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w5">W5</a> · <a href="../atlas/distributed-systems.html#n5">Distributed
+  Systems N5</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Barriers and alignment · <strong>why alignment stalls under backpressure</strong>
+  and unaligned checkpoints as the response · checkpoint interval versus recovery time · incremental
+  checkpoints with RocksDB · <strong>savepoints versus checkpoints</strong> — one is for the operator, one
+  is for the system · restoring into a modified job graph · <mark>operator UIDs, without which you cannot
+  restore after a code change</mark> · checkpoint duration exceeding the interval as a death spiral.</p>
+
+  <div class="trap">
+    <span class="lbl">The operational scar worth acquiring deliberately</span>
+    If you do not assign explicit operator UIDs, the state is keyed to auto-generated identifiers derived
+    from the job graph. <strong>Change one line of topology and the restore fails — or worse, silently
+    restores nothing into a renamed operator.</strong>
+    <mark>You now have a job with a week of accumulated state that cannot be upgraded without losing
+    it.</mark>
+    <br><br>
+    Experiment 9 of <a href="#lab15">Lab 15</a> produces this on purpose, because it takes ten minutes to
+    reproduce and is otherwise learned during an outage.
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> Carbone et al.,
+    <strong>"Lightweight Asynchronous Snapshots for Distributed Dataflows"</strong> (arXiv, free)<br>
+    <em>Why this one:</em> short, readable, and it states the alignment mechanism precisely enough that
+    the backpressure interaction in <a href="#w10">W10</a> becomes obvious rather than mysterious.
+    <br><br>
+    <b>DEEPER</b> — Chandy and Lamport's original distributed snapshots paper (free). Worth thirty minutes
+    once, because the same algorithm turns up in distributed debuggers and garbage collectors and you will
+    recognise it thereafter.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Watch a checkpoint get slower</span>
+    Plot checkpoint duration and size against state size across a run that grows state steadily.
+    <strong>Then find the point where checkpoint duration approaches the checkpoint interval.</strong>
+    <br><br>
+    <mark>Past that point the job spends most of its time checkpointing, which slows processing, which
+    grows the backlog, which grows state, which lengthens the next checkpoint.</mark> It is a reinforcing
+    loop with the same shape as the rebalance storm in <a href="kafka.html#k6">L3 K6</a> and the retry
+    storm in <a href="../atlas/distributed-systems.html#n7">Distributed Systems N7</a>.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#w9">W9</a> · <a href="#w10">W10</a> · <a href="#lab15">Lab 15</a>.</p>
+</section>
+
+<section id="w7">
+  <h2><span class="num">W7</span> State growth and TTL</h2>
+  <p class="sub">The dominant operational problem in streaming, and it is not a performance problem.</p>
+
+  <p><b>WHAT IT IS.</b> The tendency of keyed state to grow without bound, because keys keep being new and
+  nothing ever removes the old ones. It is the leading cause of streaming job death.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because retention is implicit unless you make it explicit.
+  <strong>Every stateful operator is an accumulator by default; bounding it is an act you must
+  perform.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w5">W5</a> · <a href="#w6">W6</a>.</p>
+
+  <div class="rule">
+    <span class="lbl">The sentence that answers the six-hour-OOM question</span>
+    <strong>A streaming job's memory is not a function of throughput. It is a function of
+    key cardinality × per-key size × retention.</strong>
+    <br><br>
+    <mark>Which is why doubling the memory buys hours, not correctness.</mark> Growth is linear in time and
+    memory is a constant; the intersection simply moves. Saying this out loud, unprompted, is one of the
+    clearest senior signals available in a streaming interview.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Sources of unbounded growth — unbounded key cardinality, windows held open by
+  allowed lateness, joins without time bounds, deduplication sets, timers that never fire ·
+  <strong>state TTL</strong> and its cleanup strategies, including the lag between logical expiry and
+  physical removal · window state cleanup · approximate structures as a deliberate accuracy trade —
+  Bloom filters for membership, HyperLogLog for cardinality, t-digest for quantiles ·
+  <strong>computing a state budget before writing the job</strong> · state size as an SLO.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation + blog · <em>Title:</em> Flink docs,
+    <strong>"State Time-To-Live"</strong>, plus the Flink blog posts on RocksDB state backend tuning<br>
+    <em>Why this one:</em> free, and the TTL documentation is unusually honest about the fact that expiry
+    is lazy — <mark>state is removed when it is next accessed or compacted, not when it expires</mark>,
+    which is a distinction that shows up as a memory graph that does not fall when you expect it to.
+    <br><br>
+    <b>DEEPER</b> — for the approximate structures, the original HyperLogLog paper and any solid Bloom
+    filter derivation. You need to be able to compute the false-positive rate from the parameters, because
+    <a href="#lab14">Lab 14</a> asks you to decide whether that rate is acceptable.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab14">Laboratory 14 — Stateful Processing &amp; State Growth.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="#w8">W8</a> · <a href="index.html#dsa">the DSA table</a> — four of its
+  thirteen rows are this node · <a href="../atlas/probability.html#n6">Probability N6</a> (why approximate
+  structures work at all).</p>
+</section>
+
+<section id="w8">
+  <h2><span class="num">W8</span> Streaming joins</h2>
+  <p class="sub">Where an unbounded join reveals itself as a memory leak with a schedule.</p>
+
+  <p><b>WHAT IT IS.</b> Three distinct operations that share a name. <strong>Stream-stream</strong> joins
+  two unbounded inputs within a time bound. <strong>Stream-table</strong> enriches a stream from a
+  reference dataset. <strong>Temporal</strong> joins to the version of the reference data
+  <em>as of the event's own event time</em>.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because to join A with B you must buffer A until B could still plausibly arrive
+  — and <strong>"could still arrive" is unbounded unless you bound it</strong>. The time bound is not an
+  optimisation; it is what makes the operation possible at all.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w3">W3</a> · <a href="#w5">W5</a> · <a href="#w7">W7</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The cost is computable before you write the job</span>
+    <strong>State ≈ event rate × join interval × record size</strong>, for each side.
+    10,000 events/sec × a 1-hour interval × 500 bytes is about 18 GB per side.
+    <mark>You can therefore reject an impossible requirement in the design meeting rather than discovering
+    it in production</mark> — and doing that arithmetic aloud in a system design round is a
+    disproportionately strong move.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Interval joins and choosing the bound from the actual lateness distribution ·
+  outer joins in streaming and when the null is emitted · <strong>enrichment done wrong in two standard
+  ways</strong> — per-event lookups to an external database, and a dimension loaded once at startup that
+  is stale forever · broadcast state for small, slowly-changing reference data ·
+  <strong>temporal joins</strong> and versioned tables · join skew.</p>
+
+  <div class="trap">
+    <span class="lbl">Enrichment: the two wrong answers</span>
+    <strong>(a) Look it up in Postgres per event.</strong> That is a network round trip per record. At
+    10,000 events/sec with a 2 ms round trip you need 20 concurrent lookups just to keep up, and the
+    database is now your throughput ceiling and your availability dependency. Same structure as
+    <a href="../atlas/networking.html#n6">Networking N6</a> — <em>round trips dominate, not bandwidth</em>.
+    <br><br>
+    <strong>(b) Load the dimension once at startup.</strong> Now it is stale for the entire lifetime of a
+    job that is designed to run for months. <mark>The correct answer is usually a broadcast changelog
+    stream from a compacted Kafka topic</mark> — which is exactly what
+    <a href="kafka.html#k2">L3 K2</a> built.
+  </div>
+
+  <div class="life">
+    <span class="lbl">The temporal join, and why finance insists on it</span>
+    A payment in EUR arrives with event time 13:47 yesterday. Which exchange rate applies — the one in
+    force at 13:47, or today's? <strong>A normal stream-table join silently gives you today's.</strong>
+    <br><br>
+    <mark>A temporal join is a Type 2 slowly-changing-dimension lookup expressed in streaming.</mark> It is
+    the same idea as <a href="modelling.html#m9">L1</a>'s temporal modelling, and recognising them as one
+    concept in two branches is precisely the kind of connection that makes an answer sound like experience
+    rather than revision.
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> Flink SQL docs,
+    <strong>"Joins"</strong> — regular, interval, temporal and lookup joins, each with its state
+    implication stated<br>
+    <em>Why this one:</em> free, and it is the rare reference that tells you which joins retain state
+    forever. <mark>The phrase "the required state may grow indefinitely" appears in that documentation and
+    should be read as a warning rather than a footnote.</mark>
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#w7">W7</a> · <a href="modelling.html#m9">L1 temporal modelling</a> ·
+  <a href="spark.html#s9">L2 S9</a> (a broadcast join and broadcast state are the same instinct).</p>
+</section>
+
+<section id="w9">
+  <h2><span class="num">W9</span> End-to-end exactly-once <span class="pill pC">convergence</span></h2>
+  <p class="sub">A claim that is meaningless without a stated scope.</p>
+
+  <p><b>WHAT IT IS.</b> The property that each input record affects the final output exactly once, despite
+  arbitrary failures. It requires <strong>three things simultaneously</strong>: a replayable source,
+  checkpointed state, and a sink that is either idempotent or participates in a two-phase commit.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because checkpointing alone gives you exactly-once <em>state</em> and says
+  nothing about <em>output</em>. <mark>A job can recover its counters perfectly and still have written the
+  same row to your warehouse twice.</mark></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w6">W6</a> · <a href="kafka.html#k8">L3 K8</a> ·
+  <a href="kafka.html#lab12">L3 Lab 12</a> is the direct prerequisite, and
+  <a href="substrate.html#b8">L0 B8</a> is where the underlying impossibility is stated.</p>
+
+  <table>
+    <thead><tr><th>Requirement</th><th>Mechanism</th><th>What breaks without it</th></tr></thead>
+    <tbody>
+      <tr><td>Replayable source</td><td>Kafka offsets stored <em>in</em> the checkpoint, not committed independently</td><td>Recovery cannot reconstruct the input, so nothing else matters</td></tr>
+      <tr><td>Recoverable state</td><td>Checkpointing (<a href="#w6">W6</a>)</td><td>Counters are wrong after every restart</td></tr>
+      <tr><td>Cooperative sink</td><td>Idempotent writes, <em>or</em> two-phase commit</td><td><mark>Duplicated output despite everything upstream being correct</mark></td></tr>
+    </tbody>
+  </table>
+
+  <p><b>SUBTOPICS.</b> Idempotent sinks — upsert by a deterministic key, and why writing an
+  <em>absolute</em> value is naturally idempotent while writing a <em>delta</em> is not ·
+  two-phase-commit sinks — pre-commit at checkpoint, commit on completion notification ·
+  <strong>the failure window between checkpoint-complete and commit</strong> ·
+  <mark>transaction timeout must exceed the checkpoint interval, or you lose data</mark> ·
+  transactions surviving a job restart · effectively-once as the honest name.</p>
+
+  <div class="rule">
+    <span class="lbl">The formulation to use</span>
+    <strong>"We are exactly-once from Kafka to Kafka via transactions, and effectively-once into the
+    warehouse because the sink is idempotent on (entity_id, version)."</strong>
+    <br><br>
+    <mark>Stating the scope is the differentiator.</mark> "Our pipeline is exactly-once" is, in almost every
+    real system, true inside the engine and false at the edges — and being the person who names the edge is
+    a stronger signal than any amount of confidence about the middle.
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free blog + docs · <em>Title:</em> the Apache Flink blog post
+    <strong>"An Overview of End-to-End Exactly-Once Processing in Apache Flink"</strong>, plus the
+    <code>TwoPhaseCommitSinkFunction</code> documentation<br>
+    <em>Why this one:</em> free, and it walks the pre-commit / commit protocol step by step with the exact
+    failure points marked. <mark>It is also candid that the guarantee is a property of the whole chain, not
+    of the framework</mark> — which is the point of the node.
+    <br><br>
+    <b>DEEPER</b> — <a href="kafka.html#k8">KIP-98</a> again, from the sink side this time. Having read it
+    for L3 and re-read it here is how the two branches fuse.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab15">Laboratory 15 — End-to-End Exactly-Once.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="pipelines.html#p4">L5 idempotent pipelines</a> ·
+  <a href="reliability.html">L6</a> · <a href="../atlas/distributed-systems.html#n7">Distributed Systems N7</a>.</p>
+</section>
+
+<section id="w10">
+  <h2><span class="num">W10</span> Backpressure</h2>
+  <p class="sub">In the engine it is backpressure; in Kafka it is lag. Same problem, two vantage points.</p>
+
+  <p><b>WHAT IT IS.</b> The condition where an operator cannot consume its input as fast as it arrives, and
+  the resulting slowdown propagates upstream until it reaches the source.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because unbounded buffering is not an option — a buffer that absorbs a permanent
+  rate mismatch is just a slower way to run out of memory. <strong>Propagating the pressure to the source
+  is the only stable response.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w6">W6</a> · <a href="kafka.html#k9">L3 K9</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The connection to name</span>
+    Credit-based flow control pushes pressure upstream until the source stops reading from Kafka.
+    <strong>At that moment your engine-side backpressure becomes consumer lag in Kafka.</strong>
+    <mark>They are one phenomenon observed from two places</mark>, and an engineer who says so has just
+    demonstrated that <a href="kafka.html">L3</a> and L4 are joined in their head rather than filed
+    separately.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Detection — busy, idle and backpressured ratios per subtask ·
+  credit-based flow control · <strong>the diagnostic procedure</strong> · <a href="#w6">checkpoint
+  alignment stalling under backpressure</a> and unaligned checkpoints · the four responses — scale out,
+  optimise the operator, buffer, or shed load · <mark>parallelism bounded by source partition count</mark>
+  · load shedding, sampling and graceful degradation · why adding parallelism sometimes makes it worse.</p>
+
+  <div class="rule">
+    <span class="lbl">The reading procedure</span>
+    <strong>Walk backwards from the sink. The bottleneck is the first operator that is busy while its
+    upstream is backpressured.</strong> Everything upstream of it is backpressured as a consequence and is
+    innocent; everything downstream is idle and is also innocent.
+    <br><br>
+    <mark>This is a specific, procedural answer to "how do you find the slow part", which is a question
+    most candidates answer with a shrug and a metric name.</mark>
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free blog · <em>Title:</em> the Flink blog,
+    <strong>"A Deep-Dive into Flink's Network Stack"</strong> and "How to Identify the Source of
+    Backpressure"<br>
+    <em>Why this one:</em> free, and it explains credit-based flow control from the buffer level up, which
+    is what turns backpressure from a red square in a UI into a mechanism you can reason about.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="kafka.html#k9">L3 K9 lag</a> ·
+  <a href="../atlas/distributed-systems.html#n7">Distributed Systems N7</a> ·
+  <a href="../atlas/systems-thinking.html#n4">Systems Thinking N4</a> (this is a balancing loop, and load
+  shedding is what you add when the balancing loop is too slow).</p>
+</section>
+
+<section id="w11">
+  <h2><span class="num">W11</span> Engines compared — Structured Streaming versus Flink</h2>
+  <p class="sub">The real differences, which are not the ones in the marketing comparisons.</p>
+
+  <p><b>WHAT IT IS.</b> A capability comparison you assemble yourself by porting
+  <a href="#lab13">Lab 13</a> from Flink to Structured Streaming and recording what became harder.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because "which would you use" is a near-certain interview question, and
+  <strong>the difference between a memorised answer and an earned one is audible</strong>.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#w3">W3</a> · <a href="#w4">W4</a> · <a href="#w5">W5</a> ·
+  <a href="spark.html">L2</a>.</p>
+
+  <table>
+    <thead><tr><th>Axis</th><th>Structured Streaming</th><th>Flink</th></tr></thead>
+    <tbody>
+      <tr><td>Execution</td><td>Micro-batch; latency floor is the trigger interval</td><td>Per-record; latency floor is the operator chain</td></tr>
+      <tr><td>Watermarks</td><td>Effectively one per query, and chained stateful operators were long constrained</td><td>Per-operator, pluggable strategies, explicit idleness handling</td></tr>
+      <tr><td>Late data</td><td>Drop, or restate via output mode. <mark>No side output for late records</mark></td><td>Drop, restate with allowed lateness, or divert to a side output</td></tr>
+      <tr><td>State</td><td>Versioned state store on the checkpoint filesystem; arbitrary stateful logic is coarse-grained</td><td>Pluggable backends, RocksDB with incremental checkpoints, fine-grained state primitives and timers</td></tr>
+      <tr><td>Output modes</td><td>Append, update, complete — they constrain what is expressible</td><td>Triggers and sinks are independent axes</td></tr>
+      <tr><td>Exactly-once</td><td>Supported; sink support varies</td><td>Supported; a general two-phase-commit sink framework</td></tr>
+      <tr><td><b>Operations</b></td><td>Another job on the Spark platform you already run</td><td><em>Another distributed system to operate, monitor and staff</em></td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The answer to give</span>
+    <strong>"Structured Streaming when the latency requirement is minutes and we already run Spark —
+    because the marginal operational cost is near zero. Flink when the semantics are the hard part:
+    sub-second latency, complex event-time logic, large keyed state, or side-outputs for
+    reconciliation."</strong>
+    <br><br>
+    <mark>Then add the operational sentence</mark> — that introducing a second stream processor is a
+    staffing decision as much as a technical one. That last clause is what makes the answer sound like it
+    came from someone who has had to justify a platform choice rather than compare two feature lists.
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation, read in parallel · <em>Title:</em> the
+    <strong>Structured Streaming Programming Guide</strong> and the <strong>Flink concepts
+    documentation</strong><br>
+    <em>Why this way:</em> free, current, and reading the two side by side on the same question — how do I
+    handle a late event — surfaces genuine capability gaps that no third-party comparison article states
+    accurately, because most of them are written by a vendor.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="spark.html">L2</a> · <a href="system-design.html">L7 system design</a> ·
+  <a href="platform.html">L8</a> (choosing an engine is a platform decision).</p>
+</section>
+
+<section id="w12">
+  <h2><span class="num">W12</span> When not to stream</h2>
+  <p class="sub">The counterpart node, and often the strongest thing you can say in a design round.</p>
+
+  <p><b>WHAT IT IS.</b> The set of conditions under which a streaming job is the wrong answer, and a
+  scheduled batch job is the right one.</p>
+
+  <div class="note">
+    <span class="lbl">Do not stream when</span>
+    <strong>The consumer reads the result once a day.</strong> A daily dashboard fed by a streaming job has
+    batch requirements and streaming costs.<br>
+    <strong>Correctness requires completeness and lateness is unbounded.</strong> Financial close and
+    reconciliation want a cutoff, not a guess.<br>
+    <strong>The logic needs full history or global state.</strong> You would be reimplementing a batch
+    engine badly.<br>
+    <strong>A five-minute scheduled job would meet the SLA.</strong> It usually would, and it is not
+    streaming.<br>
+    <strong>Nobody is on call.</strong> <mark>A batch job is a program; a streaming job is a service.</mark>
+    A failed batch job at 3 a.m. is a rerun. A failed streaming job at 3 a.m. is an incident, plus a state
+    recovery, plus a backlog to burn down.
+  </div>
+
+  <div class="life">
+    <span class="lbl">The interrogation to run when someone says "real-time"</span>
+    <strong>"How many seconds is real-time? Who reads this, and how often? What decision changes if the
+    number is fifteen minutes old?"</strong>
+    <br><br>
+    <mark>The requirement collapses to a fifteen-minute batch job more often than not.</mark> Asking these
+    three questions before designing anything is a senior move in an interview and a career-lengthening
+    habit in reality — the streaming systems that are hardest to justify are the ones nobody was allowed to
+    question.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="system-design.html">L7</a> · <a href="kafka.html#k12">L3 K12</a> ·
+  <a href="spark.html#s13">L2 S13</a> — the three "when not to" nodes together are a single disposition,
+  and it is the one that separates engineers from tool users.</p>
+</section>
+
+<section id="lab13">
+  <h2><span class="num">13</span> Laboratory — Watermark &amp; Late Data</h2>
+  <p class="sub">Correct hourly counts that were already published wrong.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Count completed orders per region per hour, from an event stream, and publish each
+    hour's total at the top of the following hour. 5% of events arrive 1–30 minutes late; 0.1% arrive up to
+    6 hours late, from mobile clients that were offline.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> Event-time tumbling hourly windows. Watermark = maximum observed timestamp,
+    with zero delay. Late events dropped. No allowed lateness. Plus a <strong>batch oracle</strong> that
+    computes the true count from the complete day of data.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE — four escalations</span>
+    <strong>1. The counts are low. Every hour.</strong> Compare against the oracle: roughly 5% missing,
+    and the report went out already.<br>
+    <strong>2. Set the watermark delay to 30 minutes.</strong> Counts improve markedly. You now publish 30
+    minutes later, and the 0.1% is still gone.<br>
+    <strong>3. Set the delay to 6 hours.</strong> Counts are nearly exact. The dashboard is six hours
+    behind and nobody will use it.<br>
+    <strong>4. Idle one input partition.</strong> <mark>The watermark stalls at the minimum across inputs
+    and no windows fire at all.</mark> Zero output, zero errors, every health check green.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Event time versus processing time → window assignment and firing →
+  the watermark as a heuristic → bounded out-of-orderness → the latency/completeness curve → allowed
+  lateness and restatement → the upsert requirement it imposes on the sink → side outputs and
+  reconciliation → per-partition watermarks and idleness → session merging.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Baseline: zero delay, drop late. Measure error against the oracle, per hour</td><td>Quantify wrongness before fixing anything</td></tr>
+      <tr><td>2</td><td>Sweep the watermark delay: 0, 1, 5, 15, 30, 60, 360 minutes. Plot completeness against emit latency</td><td><mark>The curve. This is the artifact of the lab</mark></td></tr>
+      <tr><td>3</td><td>Change the lateness distribution from uniform to long-tailed; re-run the sweep</td><td>The knee moves — <em>there is no universal delay</em></td></tr>
+      <tr><td>4</td><td>Enable allowed lateness with an update-mode sink; count restatements per window</td><td>Correctness bought with downstream complexity</td></tr>
+      <tr><td>5</td><td>Measure state size against allowed lateness</td><td>Completeness costs memory, not only latency</td></tr>
+      <tr><td>6</td><td>Route late events to a side output; build a reconciliation table</td><td>The finance answer: a known exception queue</td></tr>
+      <tr><td>7</td><td>Idle one partition. Observe the stall and zero output. Then enable idleness detection</td><td><mark>The silent failure</mark></td></tr>
+      <tr><td>8</td><td>Processing-time windows versus event-time on identical input — then replay both</td><td>Determinism. The core argument of <a href="#w1">W1</a></td></tr>
+      <tr><td>9</td><td>Session windows; inject a late event that bridges two sessions</td><td>Session merging and retroactive output change</td></tr>
+      <tr><td>10</td><td>Sliding 1h/1min versus tumbling 1h: measure output volume and state</td><td>The 60× fan-out, measured</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Completeness percentage against watermark delay; time-to-first-output;
+  restatement counts; state size; and in experiment 7, the flat line where output should be.
+  <strong>The artifact is the completeness–latency curve</strong> with your chosen operating point marked
+  and justified.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Every "why doesn't the real-time dashboard match the daily report"
+  ticket ever raised. <mark>The answer is almost always a watermark delay that nobody chose
+  deliberately</mark> — it was a default, and the drop rate was never measured.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> Very high, and unusual. Most streaming projects demonstrate that a pipeline
+  runs. This one demonstrates a measurement: <em>"at a 15-minute watermark we capture 99.4% of events at
+  15 minutes' latency; the remaining 0.6% is reconciled by a nightly batch."</em> That single sentence is a
+  complete senior answer to a question most people answer with a shrug.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#w4">W4</a> · <a href="#w7">W7</a> ·
+  <a href="#lab14">Lab 14</a> · <a href="reliability.html#r2">L6 data quality</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The data structure this lab forces</span>
+    To emit events in event-time order from an out-of-order stream you must buffer and release, which is a
+    <strong>min-heap keyed by timestamp, bounded by the watermark</strong> — pop everything below the
+    watermark, hold the rest.
+    <mark>The watermark is not merely a correctness concept; it is the bound that makes the buffer
+    finite.</mark>
+  </div>
+</section>
+
+<section id="lab14">
+  <h2><span class="num">14</span> Laboratory — Stateful Processing &amp; State Growth</h2>
+  <p class="sub">A job that runs perfectly for six hours and then dies.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Maintain per-user session metrics — session length, event count, last seen — over a
+    continuous stream, and deduplicate a feed in which 2% of events are duplicates.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> Keyed state on the heap backend. No TTL. Deduplication by an exact set of event
+    IDs. Session windows with a 30-minute gap. Throughput held constant throughout.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    <strong>Run it. It is flawless for six hours.</strong> Then GC time climbs, throughput sags, and it
+    dies with OOM. <mark>The input rate never changed.</mark>
+    <br><br>
+    <strong>Now the instructive part: double the heap and re-run.</strong> It dies at twelve hours.
+    <em>You bought hours, not a fix</em> — and having personally watched that happen is what makes the
+    lesson stick where a blog post would not.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Keyed state and its partitioning → bounded versus unbounded key
+  cardinality → state size as a function of cardinality × retention → heap versus RocksDB backends →
+  the serialisation cost of a disk-backed backend → state TTL and lazy cleanup → approximate structures
+  and the accuracy trade → checkpoint duration as a function of state size → recovery time → hot keys.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Fixed key cardinality (10k users). Plot state size over time</td><td>It plateaus</td></tr>
+      <tr><td>2</td><td>Unbounded cardinality (new IDs forever). Same plot</td><td><mark>Linear, forever. The two curves side by side are the whole lesson</mark></td></tr>
+      <tr><td>3</td><td>Correlate state size with heap usage and GC time until death; record time-to-OOM</td><td>The failure is memory, not compute</td></tr>
+      <tr><td>4</td><td>Double the memory; re-run; record the new time-to-OOM</td><td>Linearity, confirmed by measurement</td></tr>
+      <tr><td>5</td><td>Switch to RocksDB. Measure survival <em>and</em> the throughput cost</td><td>Disk-backed state is a trade, not a free fix</td></tr>
+      <tr><td>6</td><td>Add state TTL. Find the plateau, and the lag before expired state actually disappears</td><td>Lazy cleanup — the graph does not drop when you expect</td></tr>
+      <tr><td>7</td><td>Replace the exact dedup set with a Bloom filter. Measure memory saved and the false-positive rate</td><td><mark>Then decide whether a false positive is acceptable here. In payments it is not — that decision is the point</mark></td></tr>
+      <tr><td>8</td><td>Plot checkpoint duration against state size; find where duration approaches the interval</td><td>The checkpoint death spiral</td></tr>
+      <tr><td>9</td><td>Kill and restore. Measure recovery time against state size</td><td>Large state makes recovery an outage, not a blip</td></tr>
+      <tr><td>10</td><td>Introduce a hot key holding 40% of events; observe per-subtask state and lag</td><td>The power law, third appearance</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> State size over time for both cardinality regimes; GC time; time-to-OOM at
+  two memory settings; per-access latency on each backend; checkpoint duration and recovery time against
+  state size; per-subtask skew. <strong>The artifact is a state budget</strong> —
+  <em>cardinality × per-key bytes × retention</em>, computed in advance and then checked against
+  measurement.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> The most common cause of streaming pages at 3 a.m., and the one least
+  likely to be diagnosed correctly, because every throughput metric looks normal right up to the end.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> High, and rare. <mark>Being able to compute a streaming job's memory
+  requirement before writing it</mark> — and then show the graph proving the estimate was right — is a
+  capability very few candidates can demonstrate.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#w6">W6</a> · <a href="#w8">W8</a> ·
+  <a href="#lab15">Lab 15</a> · <a href="platform.html#e9">L8 cost</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The data structure this lab forces</span>
+    The dedup path walks the entire ladder in one afternoon: <strong>hash set</strong> (exact, unbounded,
+    fatal) → <strong>map with TTL</strong> (bounded by time, still large) →
+    <strong>Bloom filter</strong> (bounded by design, with a false-positive rate you must compute and
+    then justify) → <strong>LSM-backed store</strong> (bounded by disk, paying serialisation per access).
+    <mark>Four rows of the <a href="index.html#dsa">DSA table</a> are this single experiment.</mark>
+  </div>
+</section>
+
+<section id="lab15">
+  <h2><span class="num">15</span> Laboratory — End-to-End Exactly-Once</h2>
+  <p class="sub">Kill it mid-stream and prove, by count, that nothing was lost and nothing was duplicated.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Maintain a running balance per account from a payment stream, written to an external
+    database. The balance must be exactly correct after any crash, at any point, including a crash during
+    the write.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> Kafka source → keyed running sum → JDBC sink. Checkpointing enabled.
+    At-least-once delivery to the sink. Plus a <strong>verifier</strong> that independently computes the
+    true balance from the input topic, and a crash injector that kills the job at random points.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    <strong>Kill the job twenty times at random.</strong> Balances are too high. Records were reprocessed
+    and re-added after each restart.
+    <br><br>
+    <mark>Checkpointing protected the state and did nothing whatsoever for the sink.</mark> That is the
+    realisation the lab exists to produce: <strong>exactly-once state is not exactly-once output</strong>,
+    and the two are commonly confused by people who are otherwise fluent.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Checkpointed state versus emitted output as separate guarantees →
+  replayable sources → idempotent writes, and why absolute values are idempotent while deltas are not →
+  two-phase-commit sinks and the pre-commit/commit protocol → the failure window between them →
+  transaction timeout versus checkpoint interval → operator UIDs and upgradability → effectively-once as
+  the honest name → the cost of the guarantee, in throughput.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Checkpointing off; crash repeatedly</td><td>The floor: both state and output wrong</td></tr>
+      <tr><td>2</td><td>Checkpointing on; crash repeatedly. Compare state correctness to output correctness</td><td><mark>The two guarantees, isolated. The central result</mark></td></tr>
+      <tr><td>3</td><td>Idempotent sink: upsert the absolute balance rather than applying a delta</td><td>Why the shape of the write determines the guarantee</td></tr>
+      <tr><td>4</td><td>Non-idempotent sink: an append-only ledger table</td><td>Sink cooperation is not optional</td></tr>
+      <tr><td>5</td><td>Two-phase-commit sink to Kafka; inspect the transactions</td><td>Exactly-once, engine to engine</td></tr>
+      <tr><td>6</td><td>Set the transaction timeout <em>below</em> the checkpoint interval; crash</td><td><mark>Real data loss. The production footgun</mark></td></tr>
+      <tr><td>7</td><td>Crash specifically between checkpoint-complete and commit</td><td>Recovery must re-commit, not re-process</td></tr>
+      <tr><td>8</td><td>Vary the checkpoint interval; plot recovery time and duplicate window against it</td><td>The interval is a trade-off, not a default</td></tr>
+      <tr><td>9</td><td>Change the job graph with no operator UIDs; attempt restore. Then add UIDs and retry</td><td>Upgradability as a design-time decision</td></tr>
+      <tr><td>10</td><td>Measure throughput and latency at at-least-once versus exactly-once</td><td>The cost, quantified rather than assumed</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Computed balance against true balance after every crash; duplicate and missing
+  counts; throughput at each guarantee level; and in experiment 6, the exact records that vanished.
+  <strong>The artifact is a guarantee table</strong> — source × state × sink → the actual end-to-end
+  guarantee, with measured duplicate and loss counts in every cell.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> This is the payments interview, more or less verbatim. <mark>"Our
+  pipeline is exactly-once" is usually true within the engine and false end-to-end</mark>, and the
+  candidate who states where the boundary sits — and can show a table proving they found it by
+  experiment — is answering a different, better question than the one asked.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> The highest of the three. A crash-injection harness with an independent
+  verifier and a measured guarantee table is directly relevant to every regulated-data role, and it is not
+  a project that can be faked by following a tutorial.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="pipelines.html#p6">L5 idempotent pipelines and backfills</a> ·
+  <a href="reliability.html">L6</a> · <a href="system-design.html">L7 system design</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The sentence this lab earns you</span>
+    <strong>"Exactly-once from Kafka to Kafka via transactions; effectively-once into Postgres because the
+    sink upserts on (account_id, checkpoint_id). The boundary is the sink, and it is idempotent by
+    construction rather than by luck."</strong>
+    <mark>Say that in a payments interview and the conversation changes.</mark>
+  </div>
+</section>
+
+<section id="defence">
+  <h2><span class="num">::</span> Interview defence</h2>
+  <p class="sub">The node each question probes, and what separates a strong answer from a correct one.</p>
+
+  <table>
+    <thead><tr><th>The question</th><th>Node</th><th>What a strong answer contains</th></tr></thead>
+    <tbody>
+      <tr><td>What is a watermark?</td><td><a href="#w3">W3</a></td><td>A heuristic claim about completeness, derived from data. <mark>The word "guess" should appear</mark></td></tr>
+      <tr><td>Event time versus processing time — why does it matter?</td><td><a href="#w1">W1</a></td><td>Determinism under replay. Not "accuracy" — <em>reproducibility</em></td></tr>
+      <tr><td>How do you handle late data?</td><td><a href="#w4">W4</a></td><td>Three options with their downstream contracts, and the statement that the choice is a product decision</td></tr>
+      <tr><td>How do you pick the watermark delay?</td><td><a href="#w3">W3</a>, <a href="#lab13">Lab 13</a></td><td>From the measured lateness distribution, as a point on a completeness/latency curve you have plotted</td></tr>
+      <tr><td>Your streaming job OOMs after six hours. Diagnose it</td><td><a href="#w7">W7</a></td><td>Cardinality × retention, not throughput. And that more memory only moves the deadline</td></tr>
+      <tr><td>How does a stream-stream join work?</td><td><a href="#w8">W8</a></td><td>Time-bounded buffering, with the state cost computed as rate × interval × size</td></tr>
+      <tr><td>How would you enrich a stream from a dimension table?</td><td><a href="#w8">W8</a></td><td>Broadcast changelog from a compacted topic. <em>Not</em> per-event lookups, and not a startup load</td></tr>
+      <tr><td>Is your pipeline exactly-once?</td><td><a href="#w9">W9</a></td><td><mark>State the scope.</mark> Source, state and sink named separately, with the boundary identified</td></tr>
+      <tr><td>How does checkpointing work?</td><td><a href="#w6">W6</a></td><td>Barriers, alignment, a consistent cut — and that offsets live inside the checkpoint</td></tr>
+      <tr><td>What is backpressure and how do you find its source?</td><td><a href="#w10">W10</a></td><td>The backwards walk from the sink, and that it surfaces as Kafka lag at the source</td></tr>
+      <tr><td>Flink or Spark Structured Streaming?</td><td><a href="#w11">W11</a></td><td>Latency and semantics on one side, operational cost on the other. <em>The staffing sentence</em></td></tr>
+      <tr><td>Design a real-time system for X</td><td><a href="#w12">W12</a></td><td>Ask how many seconds "real-time" means before designing anything</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The move that distinguishes a senior answer here</span>
+    <strong>Give the trade-off before the mechanism.</strong>
+    <mark>Every question in this branch has an answer of the form "you are trading completeness against
+    latency, or accuracy against memory, and here is where I would sit and why".</mark>
+    Candidates who name the mechanism first sound like they have read about streaming. Candidates who name
+    the trade-off first sound like they have operated it — and the second group is very much smaller.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next</th><th>What it inherits from L4</th></tr></thead>
+    <tbody>
+      <tr><td><b>L5 pipelines</b></td><td>Direct. CDC correctness <em>is</em> the watermark problem — out-of-order updates, deletes, and a watermark advancing past a slow source transaction</td></tr>
+      <tr><td>L6 reliability</td><td>Your measured drop rate becomes a data-quality SLO; restatement becomes a data contract clause</td></tr>
+      <tr><td>L7 system design</td><td>Every real-time design is a watermark decision, a state budget and a guarantee scope — now argued with numbers from Labs 13–15</td></tr>
+      <tr><td>L8 platform</td><td>State size and checkpoint storage are cost lines; engine choice is a platform decision with a staffing cost</td></tr>
+      <tr><td><a href="kafka.html">L3 Kafka</a></td><td>Backwards: engine backpressure and consumer lag are one phenomenon seen from two vantage points</td></tr>
+      <tr><td><a href="spark.html">L2 Spark</a></td><td>Sideways: a hot key in keyed state is a skewed shuffle partition wearing different clothes</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Branch complete when</span>
+    Given a streaming requirement, and <strong>before writing any code</strong>, you can state:
+    <mark>(a) the watermark delay and the completeness it buys, (b) the state budget in gigabytes, and
+    (c) the end-to-end guarantee with its scope named.</mark>
+    <br><br>
+    And — the counterpart, which matters as much — you can look at a requirement and say
+    <strong>"this should not be a streaming job"</strong>, with the three questions that establish it.
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · L4 · Stream processing semantics</footer>
+
+</body>
+</html>

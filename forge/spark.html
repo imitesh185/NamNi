@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L2 · Apache Spark — Forge</title>
+<meta name="description" content="Spark internals for senior interviews: execution model, shuffle, Catalyst, Tungsten, AQE, memory, joins, skew — with four laboratories." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#why">The one question</a>
+  <a href="#env">The environment</a>
+  <a href="#map">Internal dependency map</a>
+  <h4>Nodes</h4>
+  <a href="#s1">S1 · Architecture</a>
+  <a href="#s2">S2 · Execution model</a>
+  <a href="#s3">S3 · The shuffle</a>
+  <a href="#s4">S4 · Partitioning</a>
+  <a href="#s5">S5 · Catalyst</a>
+  <a href="#s6">S6 · Tungsten</a>
+  <a href="#s7">S7 · AQE</a>
+  <a href="#s8">S8 · Memory &amp; spill</a>
+  <a href="#s9">S9 · Joins</a>
+  <a href="#s10">S10 · Skew</a>
+  <a href="#s11">S11 · I/O &amp; caching</a>
+  <a href="#s12">S12 · The UI as instrument</a>
+  <a href="#s13">S13 · When not to use Spark</a>
+  <h4>Laboratories</h4>
+  <a href="#lab05">05 · Shuffle &amp; Skew</a>
+  <a href="#lab06">06 · Catalyst &amp; Plans</a>
+  <a href="#lab07">07 · Memory &amp; Spill</a>
+  <a href="#lab08">08 · Join Strategy</a>
+  <h4>Exit</h4>
+  <a href="#defence">Interview defence</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Forge</a><span>/</span>L2 Spark</p>
+
+<div class="hero">
+  <div class="kicker">Branch L2 · deepen · the highest-yield branch in the tree</div>
+  <h1>Apache Spark</h1>
+  <p class="dropcap">Five years of Spark usage produces fluency with the API and, usually, a set of
+  performance habits absorbed from colleagues without their reasons attached. This branch replaces the
+  habits with mechanisms — <em>so that "we repartitioned before the join" becomes a decision you can
+  defend, quantify, and know the failure mode of.</em></p>
+  <div class="why">
+    <b>The single idea.</b> <mark>Almost every slow Spark job is slow because of data movement, and almost
+    all data movement is the shuffle.</mark> Stage boundaries, join strategy, skew, spill, AQE and memory
+    pressure are not separate topics — they are six views of the same event. Understand the shuffle
+    completely and the rest of Spark becomes consequences.
+  </div>
+  <div class="tags">
+    <span class="tag">#shuffle</span>
+    <span class="tag t2">#catalyst</span>
+    <span class="tag t3">#skew</span>
+    <span class="tag">#memory</span>
+    <span class="tag t2">#spark-ui</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> The one question this branch exists to answer</h2>
+  <p class="sub">Every senior Spark interview converges on it, in some phrasing.</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“This job used to take 12 minutes and now takes 90. Walk me through how you would find out why,
+    and what you would change first.”</b>
+    Nothing about syntax. It tests whether you can move from a symptom, to a specific stage, to a specific
+    cause, to a change with a predicted effect — out loud, without the cluster in front of you.
+  </div>
+
+  <p>Answering it requires four things in a specific order, and this branch is organised around them:</p>
+
+  <table class="nw">
+    <thead><tr><th>#</th><th>What you need</th><th>Node</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>A mental model of what executes where and when</td><td><a href="#s1">S1</a>, <a href="#s2">S2</a></td></tr>
+      <tr><td>2</td><td>The ability to read the plan and the UI as instruments</td><td><a href="#s5">S5</a>, <a href="#s12">S12</a></td></tr>
+      <tr><td>3</td><td>A causal theory of where time actually goes</td><td><a href="#s3">S3</a>, <a href="#s8">S8</a>, <a href="#s10">S10</a></td></tr>
+      <tr><td>4</td><td>A ranked list of interventions with known trade-offs</td><td><a href="#s4">S4</a>, <a href="#s7">S7</a>, <a href="#s9">S9</a></td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The failure mode of this branch</span>
+    Reading about Catalyst and AQE without watching them act. <strong>Every concept here has an observable
+    consequence in an explain plan or the Spark UI.</strong> <mark>If you cannot point to where you would
+    see it, you do not have it — because that is exactly the follow-up question.</mark>
+  </div>
+</section>
+
+<section id="env">
+  <h2><span class="num">01</span> The environment</h2>
+  <p class="sub">One setup decision determines whether the labs teach anything. Get this right first.</p>
+
+  <p><strong>Local mode alone is not sufficient</strong> for this branch. Several of the most important
+  behaviours — shuffle fetch across the network, executor loss, external shuffle service, per-executor
+  memory pressure — either do not occur or are invisible with a single JVM.</p>
+
+  <table class="nw">
+    <thead><tr><th>Setup</th><th>What it gives you</th><th>Use it for</th></tr></thead>
+    <tbody>
+      <tr><td><b>Local mode</b>, <code>local[4]</code>, driver memory capped low</td><td>Plans, Catalyst, AQE decisions, spill, fast iteration</td><td><a href="#lab06">Lab 06</a>, parts of <a href="#lab07">07</a></td></tr>
+      <tr><td><b>Standalone cluster in Docker</b> — 1 master, 3 workers, deliberately small executor memory</td><td>Real shuffle across processes, executor loss, per-executor UI metrics, straggler visibility</td><td><a href="#lab05">Lab 05</a>, <a href="#lab07">07</a>, <a href="#lab08">08</a></td></tr>
+      <tr><td><b>History server enabled</b> for both</td><td>Event logs you can re-open after the job ends</td><td>All labs — this is non-negotiable</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Three settings to fix before starting</span>
+    <strong>Enable the event log</strong> so every run is inspectable afterwards.
+    <strong>Set executor memory deliberately small</strong> — a few hundred megabytes — so spill and OOM
+    happen at data sizes you can generate in seconds rather than hours.
+    <strong>Turn AQE off by default</strong> and switch it on explicitly per experiment, because
+    <mark>AQE silently fixes several of the problems these labs exist to make you see.</mark>
+  </div>
+
+  <p><b>Data.</b> Generate it rather than downloading it. You need control over cardinality, skew and size,
+  and a generator with tunable key distribution is itself the first useful artifact of this branch.</p>
+</section>
+
+<section id="map">
+  <h2><span class="num">02</span> Internal dependency map</h2>
+  <p class="sub">Within Spark, these are the real arrows.</p>
+
+<pre>S1 ARCHITECTURE ──→ S2 EXECUTION MODEL ──→ S3 THE SHUFFLE  ←── the spine
+                                              │
+                    ┌─────────────────────────┼─────────────────────────┐
+                    │                         │                         │
+              S4 PARTITIONING           S8 MEMORY &amp; SPILL          S9 JOINS
+                    │                         │                         │
+                    └────────→ S10 SKEW ←─────┴─────────────────────────┘
+                                    ↑
+S5 CATALYST ──→ S6 TUNGSTEN ──→ S7 AQE ─────────┘
+     │
+     └──→ S11 I/O &amp; CACHING
+
+S12 THE UI AS INSTRUMENT ......... cuts across everything; start using it at S2
+S13 WHEN NOT TO USE SPARK ........ requires all of the above to be honest</pre>
+
+  <div class="note">
+    <span class="lbl">Reading this map</span>
+    <strong>S3 is the hub.</strong> S4, S8, S9 and S10 are all ways of controlling, surviving or avoiding
+    it. S5–S7 are the optimiser's attempts to do the same automatically.
+    <mark>S12 is not a topic, it is the instrument — pick it up at S2 and never put it down.</mark>
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="num">S1</span> Architecture</h2>
+  <p class="sub">Who runs what, where, and what dies when.</p>
+
+  <p><b>WHAT IT IS.</b> A driver process holding the SparkContext and the DAG scheduler; executors as
+  long-lived JVMs holding cached data and running tasks; a cluster manager allocating them. One application
+  contains many jobs, each job many stages, each stage many tasks.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the unit of parallelism must be smaller than the unit of failure, and
+  both must be smaller than the unit of scheduling. <strong>The task is the retry unit, the executor is the
+  loss unit, the application is the billing unit</strong> — and confusing those three is the source of most
+  operational misunderstanding.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="substrate.html#b8">L0 distributed minimum</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Driver responsibilities and why driver OOM is different from executor OOM ·
+  executor lifecycle and dynamic allocation · cluster manager options and what each actually changes ·
+  client vs cluster deploy mode and where the driver lives · cores, slots and task concurrency ·
+  what survives an executor loss and what does not.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>The Internals of Apache Spark</em> — Jacek
+    Laskowski, free at books.japila.pl<br>
+    <em>Why this one:</em> free, and it is written from the source code outward.
+    <mark>It is the only comprehensive free treatment of Spark's internals that stays current</mark>, and it
+    is the reference you will return to for every node in this branch.
+    <br><br>
+    <b>DEEPER</b> — the Spark source on GitHub, specifically <code>DAGScheduler</code> and
+    <code>TaskSchedulerImpl</code>. Read after S2, not before.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Find where your driver actually is</span>
+    Run the same job in client mode and in cluster mode on the standalone cluster. In one case the driver is
+    your terminal; in the other it is inside the cluster. Now <strong>kill the submitting terminal in each
+    case</strong> and observe which job survives.
+    <br><br>
+    Then trigger the two OOMs deliberately: a <code>collect()</code> of a large dataset kills the driver; a
+    wide aggregation with tiny executor memory kills an executor. <mark>Note that the first produces no
+    retry and the second does</mark> — the task is the retry unit, and the driver has no equivalent.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#s2">S2</a> · <a href="#s8">S8</a> (driver vs executor memory) ·
+  <a href="../atlas/infrastructure-cloud.html">Infrastructure</a> (containers and resource limits).</p>
+</section>
+
+<section id="s2">
+  <h2><span class="num">S2</span> Execution model</h2>
+  <p class="sub">Lazy evaluation, the DAG, and the one question: what creates a stage boundary?</p>
+
+  <p><b>WHAT IT IS.</b> Transformations build a logical plan and execute nothing; an action triggers the
+  scheduler to compile that plan into a DAG of stages, each stage a set of tasks that can run without
+  moving data between partitions.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because laziness lets the optimiser see the whole computation before choosing
+  how to execute it — which is what makes predicate pushdown, column pruning and join reordering possible
+  at all. <strong>Eager evaluation would forfeit every optimisation in <a href="#s5">S5</a>.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> S1.</p>
+
+  <p><b>SUBTOPICS.</b> Transformations vs actions · narrow vs wide dependencies · <strong>what creates a
+  stage boundary</strong> — the single most asked question in this branch · DAG scheduler vs task
+  scheduler · pipelining within a stage · task locality levels · speculative execution · why a job count
+  can exceed your action count.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>Learning Spark, 2nd Edition</em> — Damji et al.,
+    free PDF from Databricks — chapters 2–3<br>
+    <em>Why this one:</em> free, current, and it establishes the job/stage/task vocabulary precisely
+    before any performance discussion. <mark>Getting this vocabulary exact is what lets you describe a
+    problem specifically in an interview</mark> rather than saying "the job was slow".
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Predict the stage count, then check</span>
+    Write five short queries — a filter, a filter plus map, a groupBy, a join, a join followed by a groupBy.
+    <strong>Before running each, write down how many stages you expect and why.</strong> Then run and check
+    the UI.
+    <br><br>
+    You will be wrong at least once, and the wrongness is the lesson. <mark>Every stage boundary is a
+    shuffle, and every shuffle is a stage boundary</mark> — that identity is the most useful single fact in
+    this node, and deriving it from your own wrong prediction makes it permanent.
+    <br><br>
+    Then find the surprise: run a query with a single action and observe more than one job in the UI.
+    Work out what caused the extra job. It is usually the optimiser sampling for statistics, or a
+    <code>Dataset</code> operation that must inspect the data to plan.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#s3">S3</a> directly — this node exists to arrive at it ·
+  <a href="#s12">S12</a> · <a href="../atlas/computing.html#n7">Computing N7</a> (cost models).</p>
+</section>
+
+<section id="s3">
+  <h2><span class="num">S3</span> The shuffle <span class="pill pL">spine</span></h2>
+  <p class="sub">The single most important sub-branch in L2. Everything else radiates from it.</p>
+
+  <p><b>WHAT IT IS.</b> The redistribution of data across partitions so that all records with the same key
+  land on the same task. Map-side: partition, sort, and write to local disk. Reduce-side: fetch the
+  relevant blocks from every upstream executor over the network, merge, and process.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because grouping and joining require co-location, and co-location requires
+  movement. <strong>There is no way to compute a global aggregate without moving data</strong> — the only
+  question is how much, how well overlapped, and whether it fits in memory on arrival.</p>
+
+  <p><b>DEPENDENCIES.</b> S2. Benefits from <a href="../atlas/computing.html#n4">Computing N4</a> and
+  <a href="../atlas/operating-systems.html#n4">OS N4</a> — shuffle is disk and network behaviour wearing a
+  Spark costume.</p>
+
+  <p><b>SUBTOPICS.</b> Shuffle write path: bucketing by partition, sorting, spilling, the index file ·
+  shuffle read path: fetch requests, remote vs local blocks, fetch failures and stage retries · the
+  external shuffle service and why it decouples shuffle files from executor life · push-based shuffle ·
+  <code>spark.sql.shuffle.partitions</code> and why the default is almost always wrong · shuffle spill
+  (memory and disk) as distinct metrics · why a fetch failure retries a whole stage rather than a task ·
+  shuffle compression and serialisation cost.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> the Spark <em>Tuning Guide</em> and
+    <em>SQL Performance Tuning</em> pages, read with <em>The Internals of Apache Spark</em> chapters on the
+    shuffle system<br>
+    <em>Why this one:</em> both free. The official tuning guide states the levers; Laskowski explains what
+    they act on. <mark>Reading the lever without the mechanism is how people acquire performance
+    superstitions.</mark>
+    <br><br>
+    <b>DEEPER</b> — Spark source: <code>ShuffleMapTask</code>, <code>SortShuffleWriter</code>,
+    <code>ShuffleBlockFetcherIterator</code>. Worth one afternoon after Lab 05.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab05">Laboratory 05 — Shuffle &amp; Skew</a>, below. This node is not
+  learnable by reading.</p>
+
+  <div class="trap">
+    <span class="lbl">The mental model to build here</span>
+    <strong>A shuffle is a distributed sort-and-transfer with a memory budget.</strong> Every shuffle
+    problem is one of four things: <mark>too much data moved · moved unevenly · not fitting in memory on
+    arrival · or a failure forcing it to happen twice.</mark> Being able to say which of the four you are
+    looking at, from the UI, is the skill this node is for.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#s4">S4</a> (how much and where) · <a href="#s8">S8</a> (fitting) ·
+  <a href="#s9">S9</a> (avoiding) · <a href="#s10">S10</a> (evenness) · <a href="#s7">S7</a> (fixing it at
+  runtime).</p>
+</section>
+
+<section id="s4">
+  <h2><span class="num">S4</span> Partitioning</h2>
+  <p class="sub">The lever that controls parallelism, memory per task, and how much shuffle happens at all.</p>
+
+  <p><b>WHAT IT IS.</b> How the dataset is divided across tasks — on read, after a shuffle, and by explicit
+  instruction.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the partition is simultaneously the unit of parallelism, the unit of
+  memory pressure, and the unit of skew. <strong>Too few and you lose parallelism and risk OOM; too many
+  and scheduling overhead and small-file writes dominate.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> S2, S3.</p>
+
+  <p><b>SUBTOPICS.</b> Input partitioning: <code>maxPartitionBytes</code>, file splitting, and why
+  non-splittable compression destroys parallelism · default parallelism vs shuffle partitions and the
+  difference · <strong><code>repartition</code> vs <code>coalesce</code></strong> — full shuffle vs
+  narrow merge, and the trap where coalesce reduces upstream parallelism too · hash vs range partitioning ·
+  <code>repartitionByRange</code> and its sampling · bucketing and pre-shuffled joins · partition pruning
+  vs partition count.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> Spark SQL <em>Performance Tuning</em> —
+    the partitioning and bucketing sections<br>
+    <em>Why this one:</em> free, and the bucketing section in particular explains the one technique that
+    <mark>removes a shuffle entirely rather than making it cheaper</mark>, which is the strongest available
+    optimisation and the least used.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · The coalesce trap</span>
+    Build a job with an expensive map over 200 partitions, then write the output. Add
+    <code>coalesce(1)</code> before the write to avoid small files. <strong>Runtime collapses to
+    single-threaded.</strong>
+    <br><br>
+    <mark>Coalesce does not add a shuffle, so it propagates backwards</mark> — the whole upstream stage now
+    runs with one task. Replace it with <code>repartition(1)</code> and the map runs at full parallelism
+    with a shuffle before the write. <em>Compare the two runtimes and note that the "cheaper" operation was
+    catastrophically more expensive.</em> This is the most common Spark performance mistake in production
+    and it is entirely counter-intuitive.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#s3">S3</a> · <a href="#s10">S10</a> · <a href="#s11">S11</a>
+  (small files) · <a href="../atlas/data-engineering.html#n2">Data Engineering N2</a>.</p>
+</section>
+
+<section id="s5">
+  <h2><span class="num">S5</span> Catalyst</h2>
+  <p class="sub">The optimiser as an object you can inspect, argue with, and occasionally overrule.</p>
+
+  <p><b>WHAT IT IS.</b> The query compiler: parse into an unresolved plan, resolve against the catalog,
+  apply rule-based rewrites, choose physical operators with cost-based input, and generate code.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the declarative promise — you say what, Spark decides how — requires
+  something to decide. <strong>Catalyst is why the same result can be computed a hundred times faster
+  without changing your code</strong>, and why it sometimes is not.</p>
+
+  <p><b>DEPENDENCIES.</b> S2 · <a href="../atlas/databases.html#n3">Databases N3</a> (query planning is the
+  same discipline).</p>
+
+  <p><b>SUBTOPICS.</b> The four phases and what each can and cannot do · rule-based rewrites: predicate
+  pushdown, column pruning, constant folding, filter reordering, null propagation · cost-based
+  optimisation and its dependence on statistics · <code>ANALYZE TABLE</code> and what happens without it ·
+  reading <code>explain(mode="formatted")</code> and <code>explain("cost")</code> · why UDFs are
+  optimisation barriers · the difference between the parsed, analysed, optimised and physical plans.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free online book · <em>Title:</em> <em>The Internals of Spark SQL</em> — Jacek Laskowski,
+    free at books.japila.pl<br>
+    <em>Why this one:</em> free, and it documents the individual optimiser rules by name.
+    <mark>Being able to name the rule that fired — or did not — is the difference between describing the
+    plan and explaining it.</mark>
+    <br><br>
+    <b>DEEPER</b> — the original Catalyst paper, <em>Spark SQL: Relational Data Processing in Spark</em>
+    (SIGMOD 2015), freely available. Short, and it states the design goals directly.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab06">Laboratory 06 — Catalyst &amp; Plan Reading</a>.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#s6">S6</a> · <a href="#s7">S7</a> · <a href="#s9">S9</a> (join selection
+  happens here) · <a href="../atlas/databases.html#n3">Databases N3</a>.</p>
+</section>
+
+<section id="s6">
+  <h2><span class="num">S6</span> Tungsten</h2>
+  <p class="sub">Why Spark stopped being a JVM object-graph engine.</p>
+
+  <p><b>WHAT IT IS.</b> The execution backend: binary row format outside the JVM heap, whole-stage code
+  generation that collapses an operator chain into a single tight loop, and vectorised readers for
+  columnar sources.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because at scale the bottleneck stopped being I/O and became
+  <strong>CPU, garbage collection and virtual function call overhead</strong>. Tungsten's answer was to
+  stop creating Java objects per row and stop dispatching per operator.</p>
+
+  <p><b>DEPENDENCIES.</b> S5 · <a href="../atlas/computing.html#n4">Computing N4</a> (cache locality) ·
+  <a href="../atlas/computing.html#n1">Computing N1</a> (binary representation).</p>
+
+  <p><b>SUBTOPICS.</b> <code>UnsafeRow</code> and off-heap memory · why serialisation dominates without it
+  · whole-stage code generation and the WholeStageCodegen boxes in the UI · when codegen is disabled and
+  why · vectorised Parquet reading · cache-friendly memory layout · the practical consequence: why
+  DataFrame operations beat RDD operations by large factors.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free engineering post · <em>Title:</em> the Databricks engineering blog posts on Project
+    Tungsten and whole-stage code generation — free<br>
+    <em>Why this one:</em> free, written by the implementers, and they include the benchmark reasoning.
+    <mark>They also explain why the JVM was the problem</mark>, which connects this directly to
+    <a href="../atlas/computing.html#n4">Computing N4's memory hierarchy</a>.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Watch codegen collapse a pipeline</span>
+    Run a chain of filters and projections and open the physical plan. <strong>Note the
+    <code>WholeStageCodegen</code> box wrapping several operators.</strong> Then insert a Python UDF in the
+    middle and look again — the box splits in two, with the UDF between them.
+    <br><br>
+    <mark>You have just made the optimisation barrier visible.</mark> Time both. Then replace the UDF with a
+    native expression and watch the box re-fuse and the runtime drop. <em>This single observation is the
+    complete argument for avoiding UDFs</em>, and it is far more convincing than being told.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#s5">S5</a> · <a href="#s8">S8</a> (off-heap memory) ·
+  <a href="../atlas/computing.html#n4">Computing N4</a>.</p>
+</section>
+
+<section id="s7">
+  <h2><span class="num">S7</span> Adaptive Query Execution</h2>
+  <p class="sub">The optimiser admitting it cannot know enough before the job runs.</p>
+
+  <p><b>WHAT IT IS.</b> Re-optimisation at stage boundaries using real runtime statistics: coalescing
+  shuffle partitions, splitting skewed join partitions, and switching join strategy after seeing actual
+  sizes.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because <a href="#s5">Catalyst</a> plans with estimates, and estimates on
+  multi-stage pipelines compound their errors. <strong>AQE exists because static cost-based optimisation
+  is structurally unable to know the size of an intermediate result.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> S3, S5. Understand the problems <em>before</em> the feature that hides them.</p>
+
+  <p><b>SUBTOPICS.</b> Dynamically coalescing shuffle partitions — and why this makes
+  <code>shuffle.partitions</code> tuning less critical · skew join handling by splitting large partitions ·
+  runtime join strategy switching to broadcast · dynamic partition pruning · the configuration surface and
+  the thresholds that matter · <strong>what AQE cannot fix</strong> — skew inside a single key, skew in a
+  non-join aggregation, and bad partitioning at read time.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation + free engineering post · <em>Title:</em> Spark SQL
+    Performance Tuning, the AQE section, with the Databricks AQE announcement post<br>
+    <em>Why this one:</em> both free, and the announcement post shows the before-and-after plans.
+    <mark>Seeing the plan change at runtime is the whole point</mark>, and the documentation alone does not
+    convey it.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Run every experiment twice</span>
+    <strong>The discipline for this node: every experiment in Labs 05 and 08 is run with AQE off, then
+    on.</strong> Record both. <mark>The delta is the measurement of what AQE does</mark>, and it is far more
+    informative than either number alone.
+    <br><br>
+    Then find AQE's limits deliberately: construct a skew where a <em>single key</em> is enormous. AQE can
+    split a partition but cannot split a key, so the straggler remains. <em>That boundary is the answer to
+    "when do you still need salting?"</em> — a question you will be asked.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#s10">S10</a> · <a href="#s9">S9</a> · <a href="#s4">S4</a>.</p>
+</section>
+
+<section id="s8">
+  <h2><span class="num">S8</span> Memory and spill</h2>
+  <p class="sub">Five distinct OOMs with five distinct fixes — and most people know one.</p>
+
+  <p><b>WHAT IT IS.</b> The unified memory model: a region shared between execution (shuffle, sort, join
+  hash tables) and storage (cached blocks), with execution able to evict storage but not the reverse, plus
+  reserved and user memory outside it.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because static partitioning between caching and execution wasted whichever half
+  was idle. <strong>Unified memory made the boundary dynamic, at the cost of making OOM diagnosis
+  harder</strong> — the failure now depends on what else was happening.</p>
+
+  <p><b>DEPENDENCIES.</b> S1, S3, S6.</p>
+
+  <p><b>SUBTOPICS.</b> Executor memory layout: reserved, user, execution, storage · the fraction settings ·
+  on-heap vs off-heap · overhead memory and why the container dies rather than the JVM · spill to disk as
+  designed behaviour rather than failure · <strong>the five OOM causes</strong> — driver collect, oversized
+  broadcast, skewed partition, too few partitions, and container overhead — each with a different fix ·
+  GC pressure and how to see it.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> the Spark <em>Tuning Guide</em> memory
+    management section, with <em>The Internals of Apache Spark</em> on
+    <code>UnifiedMemoryManager</code><br>
+    <em>Why this one:</em> free, and the internals reference gives you the actual arithmetic of how the
+    regions are sized. <mark>Being able to compute how much execution memory a task actually gets</mark> is
+    what turns a guess into a diagnosis.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab07">Laboratory 07 — Memory &amp; Spill</a>.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#s3">S3</a> · <a href="#s10">S10</a> ·
+  <a href="../atlas/operating-systems.html#n3">OS N3</a> (the container OOM killer is not the JVM).</p>
+</section>
+
+<section id="s9">
+  <h2><span class="num">S9</span> Joins</h2>
+  <p class="sub">Where the optimiser's most consequential decision is made.</p>
+
+  <p><b>WHAT IT IS.</b> The physical strategies — broadcast hash, sort-merge, shuffle hash, broadcast
+  nested loop — and the rules by which one is chosen.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a join is the most expensive common operation, and the right strategy
+  differs by orders of magnitude. <strong>Broadcasting a small side eliminates the shuffle entirely; getting
+  the size estimate wrong kills the driver.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> S3, S5. <a href="../atlas/databases.html#n3">Databases N3</a> is the same
+  material at single-node scale.</p>
+
+  <p><b>SUBTOPICS.</b> The four strategies and their cost shapes · <code>autoBroadcastJoinThreshold</code>
+  and why it is compared against an <em>estimate</em> · why a broadcast collects to the driver first ·
+  sort-merge join and its sort cost · shuffle hash join and when it beats sort-merge · bucketed joins as
+  pre-shuffled data · join hints and when overriding is correct · join reordering · outer joins and why
+  they restrict strategy · <strong>the null-key problem</strong> — nulls all hash to one partition.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> Spark SQL Performance Tuning — join
+    strategy hints, plus <em>The Internals of Spark SQL</em> on <code>JoinSelection</code><br>
+    <em>Why this one:</em> free, and <code>JoinSelection</code> is a readable decision tree.
+    <mark>Reading the actual selection logic means you can predict the strategy before running the
+    job</mark>, which is a genuinely impressive interview move.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab08">Laboratory 08 — Join Strategy</a>.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#s10">S10</a> · <a href="#s7">S7</a> · <a href="#s4">S4</a> (bucketing).</p>
+</section>
+
+<section id="s10">
+  <h2><span class="num">S10</span> Skew</h2>
+  <p class="sub">The normal case, not the exception — and the most common real-world Spark problem.</p>
+
+  <p><b>WHAT IT IS.</b> Uneven distribution of records across partitions, so one task processes far more
+  data than the others and the stage cannot finish until it does.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because real key distributions are power-law, not uniform. <strong>One customer,
+  one product, one null, one default value</strong> — every real dataset has them, and hash partitioning
+  faithfully sends all of them to one place.</p>
+
+  <p><b>DEPENDENCIES.</b> S3, S4 · <a href="../atlas/probability.html#n4">Probability N4</a> (heavy tails
+  are the same phenomenon).</p>
+
+  <p><b>SUBTOPICS.</b> Detection in the UI: task duration distribution, max vs median shuffle read ·
+  detection in data: key frequency histogram before running · sources of skew — nulls, defaults,
+  sentinel values, celebrity keys, time-of-day clustering · salting and the two-stage aggregation it
+  requires · isolated map join for a single hot key · AQE skew handling and its boundary · why
+  <code>repartition</code> alone does not fix key skew.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free conference talks · <em>Title:</em> Data+AI Summit / Spark Summit talks on skew and
+    performance tuning — free on YouTube<br>
+    <em>Why this one:</em> free, and skew is the topic where practitioner talks genuinely beat
+    documentation, because <mark>they show the actual UI screenshots of a skewed stage</mark>, which is what
+    you need to recognise it in three seconds.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab05">Laboratory 05</a> — skew is half of it.</p>
+
+  <div class="life">
+    <span class="lbl">The diagnostic to internalise</span>
+    <strong>In the stage summary, compare the max task duration against the median.</strong>
+    <mark>A ratio above roughly 5× is skew until proven otherwise.</mark> Then check max shuffle read bytes
+    against median. Two numbers, ten seconds, and it is the first thing to look at in any slow stage.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#s7">S7</a> · <a href="#s9">S9</a> ·
+  <a href="../atlas/probability.html#n4">Probability N4</a> · L3 Kafka hot partitions — the identical
+  problem in a different system.</p>
+</section>
+
+<section id="s11">
+  <h2><span class="num">S11</span> I/O and caching</h2>
+  <p class="sub">Where Spark meets storage, and where caching stops helping.</p>
+
+  <p><b>WHAT IT IS.</b> How Spark reads and writes files — pruning, pushdown, split behaviour — and the
+  persistence API for reusing computed data.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the cheapest work is work not done. <strong>Partition pruning, column
+  pruning and predicate pushdown eliminate reads entirely</strong>, which beats any amount of downstream
+  optimisation. Caching is the opposite trade: spend memory to avoid recomputation, and it frequently loses.</p>
+
+  <p><b>DEPENDENCIES.</b> S5 · <a href="substrate.html#b2">L0 file formats</a>.</p>
+
+  <p><b>SUBTOPICS.</b> Partition pruning vs dynamic partition pruning · column pruning · predicate pushdown
+  and which predicates actually push · file listing cost at scale and why it dominates on cloud storage ·
+  split sizes and non-splittable compression · the small-files problem on write ·
+  <code>persist</code> storage levels · <strong>when caching hurts</strong> — evicting execution memory,
+  caching something read once, caching before a filter · checkpointing vs caching and lineage truncation.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> Spark SQL data sources documentation and
+    the Parquet format specification, read together<br>
+    <em>Why this one:</em> both free, and the pairing is the point.
+    <mark>Pushdown only works if the format supports it</mark>, so reading the format spec tells you what
+    is even possible before you read what Spark attempts.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Make caching lose</span>
+    Cache a large DataFrame, then run a job whose shuffle needs memory. <strong>Watch execution memory evict
+    your cached blocks, then watch the recomputation.</strong> You paid for caching and got nothing.
+    <br><br>
+    Then the second case: cache a DataFrame that is used exactly once. Compare against no caching. The
+    cached version is slower — you paid the write cost for no reuse.
+    <mark>Two experiments, and "cache it" stops being a reflex.</mark>
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#s8">S8</a> (cache evicts and is evicted) · L0 formats ·
+  <a href="../atlas/data-engineering.html#n2">Data Engineering N2</a>.</p>
+</section>
+
+<section id="s12">
+  <h2><span class="num">S12</span> The UI as an instrument</h2>
+  <p class="sub">Not a topic. The instrument you use for every other node.</p>
+
+  <p><b>WHAT IT IS.</b> The Spark UI and event log as a diagnostic surface: jobs, stages, task distribution,
+  shuffle metrics, SQL plans with runtime statistics, executor health, and GC time.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because a distributed job has no single place where the story is. <strong>The UI
+  is where the narrative is reconstructed</strong> — and the interview question is always "how would you
+  find that", not "what is that".</p>
+
+  <p><b>DEPENDENCIES.</b> S2. Pick it up here and use it for everything after.</p>
+
+  <p><b>SUBTOPICS.</b> The stage summary metrics table and reading the percentile columns · shuffle read and
+  write, remote vs local · spill (memory) vs spill (disk) as separate signals · the SQL tab with runtime
+  row counts against estimates · GC time as a fraction of task time · the timeline view for straggler and
+  scheduling gaps · the event log and the history server · what is <em>not</em> in the UI.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free official documentation · <em>Title:</em> the Spark <em>Web UI</em> documentation
+    page<br>
+    <em>Why this one:</em> free, and it is the only complete reference for what each metric means.
+    <mark>Most engineers use the UI for years without reading this page</mark> and consequently misread
+    three or four metrics permanently.
+  </div>
+
+  <div class="life">
+    <span class="lbl">The five-number diagnosis, to internalise as a reflex</span>
+    For any slow stage, read these five in this order:
+    <br><br>
+    <strong>1.</strong> Max vs median task duration → <em>skew</em>.
+    <strong>2.</strong> Shuffle read size → <em>how much moved</em>.
+    <strong>3.</strong> Spill (memory) and spill (disk) → <em>did it fit</em>.
+    <strong>4.</strong> GC time as a fraction of task time → <em>memory pressure</em>.
+    <strong>5.</strong> Estimated vs actual rows in the SQL tab → <em>did the optimiser plan on a lie</em>.
+    <br><br>
+    <mark>Those five numbers diagnose the large majority of slow Spark jobs</mark>, and being able to
+    recite them in order is a strong signal in an interview.
+  </div>
+
+  <p><b>CONNECTS TO.</b> Everything. Also
+  <a href="../atlas/infrastructure-cloud.html#n5">Infrastructure N5</a> — this is observability with a
+  domain-specific UI.</p>
+</section>
+
+<section id="s13">
+  <h2><span class="num">S13</span> When not to use Spark</h2>
+  <p class="sub">The node that demonstrates judgment rather than knowledge.</p>
+
+  <p><b>WHAT IT IS.</b> The honest boundary of the tool, and what to reach for instead.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because "we used Spark" is a default rather than a decision at many companies,
+  and <strong>an interviewer asking when you would not use it is testing whether you have a cost model at
+  all.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> S1–S12, honestly held.</p>
+
+  <table>
+    <thead><tr><th>Situation</th><th>Why Spark loses</th><th>Reach for</th></tr></thead>
+    <tbody>
+      <tr><td>Data fits comfortably on one machine</td><td>JVM startup, scheduling and shuffle overhead exceed the work</td><td>DuckDB, Polars, or plain SQL in the warehouse</td></tr>
+      <tr><td>Sub-second interactive queries</td><td>Job launch latency is measured in seconds</td><td>A serving store, OLAP engine, or pre-aggregation</td></tr>
+      <tr><td>Genuine low-latency streaming</td><td>Micro-batch has a floor; state handling is less mature</td><td>Flink</td></tr>
+      <tr><td>Row-level lookups by key</td><td>Full scan or shuffle to find one row</td><td>A key-value store or an indexed database</td></tr>
+      <tr><td>Many small frequent jobs</td><td>Per-job overhead dominates and cluster cost is continuous</td><td>Warehouse SQL, or a long-lived service</td></tr>
+      <tr><td>Transactional writes with concurrency</td><td>Spark is not an OLTP system and never was</td><td>An OLTP database</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The strongest version of this answer</span>
+    <strong>Name the crossover point with a number.</strong> <mark>"Under roughly 50–100 GB with a single
+    machine available, a single-node engine usually wins on both latency and cost, and I would benchmark
+    before assuming otherwise"</mark> is a far stronger answer than "Spark is overkill for small data",
+    because it demonstrates you have measured rather than absorbed an opinion.
+  </div>
+</section>
+
+<section id="lab05">
+  <h2><span class="num">05</span> Laboratory — Shuffle &amp; Skew</h2>
+  <p class="sub">The flagship lab of this branch. If you do only one, do this one.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> You are computing revenue per customer over a year of order events. The job is correct
+    and unacceptably slow, and the slowness is not proportional to the data size.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A generator producing order events with a customer key, an amount and a
+    timestamp — starting with a <em>uniform</em> key distribution, roughly 200 million rows, written as
+    Parquet. A simple <code>groupBy(customer).agg(sum(amount))</code> job on the standalone cluster with
+    AQE off and small executor memory. Establish this baseline and record its stage timings. It will be
+    unremarkable, which is the point.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    Regenerate the data with a <strong>realistic power-law key distribution</strong> — one customer holding
+    perhaps 8% of all rows, a handful holding 1% each, a long tail holding the remainder. Change nothing
+    else. <mark>The job now takes several times longer, 199 tasks finish in seconds, and one runs for
+    minutes.</mark> The data volume is identical.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> In this order, each demanded by the previous observation:
+  the shuffle write and read path → partition as the unit of skew → hash partitioning's faithfulness to the
+  key distribution → task duration distribution as a diagnostic → salting and two-stage aggregation →
+  AQE skew handling and its boundary → why <code>repartition</code> alone changes nothing.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Uniform vs skewed keys, identical row count</td><td>Skew is independent of volume</td></tr>
+      <tr><td>2</td><td>Sweep <code>shuffle.partitions</code> across 50 / 200 / 1000 / 4000</td><td>More partitions do not split a single key</td></tr>
+      <tr><td>3</td><td><code>repartition(n)</code> before the aggregation</td><td>Redistributing does not fix key skew — a surprise for most people</td></tr>
+      <tr><td>4</td><td>Salt the hot keys, aggregate twice, then combine</td><td>The actual fix, and its cost</td></tr>
+      <tr><td>5</td><td>Sweep the salt factor 2 / 10 / 50 / 200</td><td>Over-salting adds a second shuffle for no gain</td></tr>
+      <tr><td>6</td><td>Enable AQE and re-run experiments 1 and 4</td><td>What AQE fixes automatically, and what it does not</td></tr>
+      <tr><td>7</td><td>Make one <em>single key</em> enormous, then enable AQE</td><td>AQE splits partitions, not keys — the boundary</td></tr>
+      <tr><td>8</td><td>Add a null-heavy key column and join on it</td><td>Nulls all hash to one partition — the skew nobody plants deliberately</td></tr>
+      <tr><td>9</td><td>Kill one executor mid-shuffle</td><td>Fetch failure retries the whole stage, not the task</td></tr>
+      <tr><td>10</td><td>Reduce executor memory until spill appears, then further</td><td>Where skew becomes OOM rather than slowness</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> For every run, record: max and median task duration; max and median shuffle
+  read bytes; spill to memory and to disk; total stage time; and the number of tasks in the tail. Plot max
+  and median task duration against experiment number.
+  <strong>The plot is the artifact</strong> — it shows the fixes working and the boundaries where they stop.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> This is the single most common production Spark incident. A celebrity
+  product, a default customer ID used by an upstream system, a null from a failed enrichment, or a
+  test-account key that accumulated a year of traffic. <mark>In every case the pipeline was fine until the
+  distribution changed, which is why it fails in production and not in testing.</mark></p>
+
+  <p><b>PORTFOLIO VALUE.</b> High. A repository containing a tunable skew generator, a benchmark harness, a
+  results table and a plot demonstrating each mitigation and its limit is a genuinely uncommon artifact —
+  and it is directly demonstrable in an interview screen-share.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#s7">S7 AQE</a> · <a href="#s9">S9 joins</a> (skewed joins are
+  worse than skewed aggregations) · <a href="#s8">S8 memory</a> · L3 Kafka hot partitions.</p>
+
+  <div class="note">
+    <span class="lbl">The data structure this lab forces</span>
+    To find the hot keys before running, you need the top-K most frequent keys over a large dataset without
+    sorting all of it. <strong>That is a bounded min-heap</strong>, and it is worth implementing rather than
+    calling — because <mark>"I profiled the key distribution first" is a much stronger answer than "I
+    noticed the job was slow"</mark>, and the heap is how you do it cheaply.
+  </div>
+</section>
+
+<section id="lab06">
+  <h2><span class="num">06</span> Laboratory — Catalyst &amp; Plan Reading</h2>
+  <p class="sub">Turning the optimiser from a black box into an object you interrogate.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Two queries that return identical results differ in runtime by more than an order of
+    magnitude, and the difference is invisible in the source code.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A star schema on local mode: one large partitioned fact table in Parquet, three
+    dimension tables of varying size, all generated. A set of analytical queries with filters on both fact
+    and dimension columns. Statistics not collected. AQE off.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    Write the same logical query three ways: filter before join, filter after join, and filter inside a
+    Python UDF. <strong>Two are fast and one is catastrophically slow.</strong>
+    <mark>Catalyst pushed the filter down in two cases and could not see through the UDF in the third</mark>
+    — and nothing in the source code signals which is which until you read the plan.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> The four plan phases → predicate pushdown and column pruning → why a UDF
+  is an optimisation barrier → statistics and cardinality estimation → cost-based join reordering → reading
+  estimated vs actual rows → dynamic partition pruning.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Diff the parsed, analysed, optimised and physical plans for one query</td><td>What each phase actually changes</td></tr>
+      <tr><td>2</td><td>Filter placement: before join, after join, inside a UDF</td><td>Pushdown, and the barrier</td></tr>
+      <tr><td>3</td><td><code>select *</code> vs three columns on a 40-column table</td><td>Column pruning, measured in bytes read</td></tr>
+      <tr><td>4</td><td>Filter on a partition column vs a regular column</td><td>Partition pruning vs row filtering</td></tr>
+      <tr><td>5</td><td>Run without statistics, then <code>ANALYZE TABLE</code>, then re-plan</td><td>How much the plan depends on statistics</td></tr>
+      <tr><td>6</td><td>Compare estimated vs actual row counts in the SQL tab</td><td>Where the optimiser's model breaks</td></tr>
+      <tr><td>7</td><td>Introduce correlated filter columns (city and postcode)</td><td>Independence assumption; estimates collapse</td></tr>
+      <tr><td>8</td><td>Three-table join, reorder the SQL manually</td><td>Whether Catalyst reorders, and when it cannot</td></tr>
+      <tr><td>9</td><td>Filter the dimension, join to the partitioned fact, AQE on</td><td>Dynamic partition pruning</td></tr>
+      <tr><td>10</td><td>Native expression vs Python UDF vs pandas UDF</td><td>Codegen fusion and the serialisation boundary</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Bytes read from disk (the pushdown evidence), the presence and shape of
+  <code>WholeStageCodegen</code> boxes, estimated vs actual rows at each operator, and which optimiser rules
+  changed the plan between phases. <strong>Keep the plans as text files</strong> — diffing plans is the
+  actual professional skill this lab builds.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> The "why is this query slow when the identical logic elsewhere is fast"
+  investigation, and the perennial UDF argument. <mark>Also the stale-statistics incident: a table grows
+  ten-fold, nobody re-analyses, and the planner chooses a strategy for a table that no longer exists</mark>
+  — which is the same failure as <a href="../atlas/databases.html#n3">Databases N3</a>.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> Medium-high, and unusual. A written teardown showing ten plan diffs with the
+  runtime consequence of each is the kind of artifact that signals depth rather than exposure.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#s6">S6 Tungsten</a> · <a href="#s7">S7 AQE</a> ·
+  <a href="#s9">S9 joins</a> · <a href="../atlas/databases.html#n3">Databases N3</a>.</p>
+</section>
+
+<section id="lab07">
+  <h2><span class="num">07</span> Laboratory — Memory &amp; Spill</h2>
+  <p class="sub">Five OOMs, five causes, five different fixes.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> The job dies with an out-of-memory error. The standard response — increase executor
+    memory — sometimes works, sometimes does nothing, and sometimes makes it worse. You need to know which
+    case you are in.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> The standalone cluster with deliberately small executor memory and a modest
+    dataset, so that every failure reproduces in under a minute. A job with a wide aggregation, a join, and
+    an optional cache step, all parameterised so you can trigger each failure independently.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE — five separate ones</span>
+    <strong>1.</strong> <code>collect()</code> a large result → the <em>driver</em> dies.
+    <strong>2.</strong> Join against a slightly-too-large dimension with a raised broadcast threshold → the
+    driver dies again, for a different reason.
+    <strong>3.</strong> Aggregate a skewed key → one <em>executor</em> dies.
+    <strong>4.</strong> Set <code>shuffle.partitions</code> very low → executors die on partition size.
+    <strong>5.</strong> Allocate large off-heap buffers → the <em>container</em> is killed while the JVM
+    reports plenty of heap.
+    <br><br>
+    <mark>Five identical-looking failures with five completely different fixes.</mark>
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Unified memory regions and their arithmetic → execution evicting storage
+  → spill as designed behaviour rather than failure → the difference between JVM heap exhaustion and
+  container overhead → why driver memory is a separate problem → GC pressure as a distinct signal.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Reproduce all five failures and record the exact error text</td><td>They are distinguishable if you read them</td></tr>
+      <tr><td>2</td><td>For each, apply the wrong fix first (raise executor memory)</td><td>Which cases it does not help — the important half</td></tr>
+      <tr><td>3</td><td>Sweep <code>memoryFraction</code> settings on a shuffle-heavy job</td><td>The execution/storage boundary, moved deliberately</td></tr>
+      <tr><td>4</td><td>Cache a large dataset, then run a memory-hungry shuffle</td><td>Execution evicts storage; measure the recomputation</td></tr>
+      <tr><td>5</td><td>Reduce memory gradually and watch spill appear before failure</td><td>Spill is the warning; OOM is the wall</td></tr>
+      <tr><td>6</td><td>Compare spill-to-memory and spill-to-disk metrics</td><td>They mean different things and are read differently</td></tr>
+      <tr><td>7</td><td>Raise partition count on the OOMing aggregation</td><td>Smaller partitions as an alternative to more memory</td></tr>
+      <tr><td>8</td><td>Enable off-heap and repeat the container-kill case</td><td>Overhead memory versus heap</td></tr>
+      <tr><td>9</td><td>Track GC time as a fraction of task time across all runs</td><td>The silent tax before the visible failure</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> The exact exception and which process emitted it; peak execution and storage
+  memory per executor; spill volumes; GC time fraction; and whether the container or the JVM was the thing
+  that died. <strong>Build a one-page decision table</strong> — symptom to cause to fix.
+  <mark>That table is the artifact, and it is the answer to a very common interview question.</mark></p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> The 3am page. The genuinely valuable outcome here is the reflex of
+  reading the error and asking <em>which process died and why</em> before touching any configuration —
+  because raising memory is the response that masks four of the five causes without fixing them.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> High for interviews, moderate as a repository. The decision table is the part
+  worth publishing.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#s10">S10 skew</a> · <a href="#s4">S4 partitioning</a> ·
+  <a href="#s11">S11 caching</a> · <a href="../atlas/operating-systems.html#n3">OS N3</a>.</p>
+</section>
+
+<section id="lab08">
+  <h2><span class="num">08</span> Laboratory — Join Strategy</h2>
+  <p class="sub">The optimiser's most consequential decision, made observable and overridable.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> A join between a large fact table and a medium dimension is slow. Someone suggests
+    raising the broadcast threshold. It works — until the dimension grows slightly and the driver dies.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A fact table of a few hundred million rows and dimension tables at several sizes
+    spanning the broadcast threshold — well below, just below, just above, far above. Statistics
+    uncollected initially. AQE off.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    Raise <code>autoBroadcastJoinThreshold</code> so the medium dimension broadcasts. It is dramatically
+    faster. Now grow that dimension by 20%. <strong>The driver OOMs</strong> — because the threshold is
+    compared against an <em>estimate</em>, the estimate was stale, and a broadcast collects to the driver
+    before distributing.
+    <mark>The optimisation that worked yesterday is the outage today, and nothing in the code changed.</mark>
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> The four join strategies and their cost shapes → how
+  <code>JoinSelection</code> decides → estimates versus reality → why broadcast is driver-mediated →
+  sort-merge's sort cost → bucketing as pre-shuffled data → AQE runtime strategy switching → hints and when
+  overriding is correct.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Join against each dimension size; record the chosen strategy and runtime</td><td>The cost curve of each strategy</td></tr>
+      <tr><td>2</td><td>Force each strategy with a hint on the same pair</td><td>What the optimiser avoided, and why</td></tr>
+      <tr><td>3</td><td>Grow the dimension past the threshold with stale statistics</td><td>The estimate is the decision input, not the truth</td></tr>
+      <tr><td>4</td><td>Bucket both sides on the join key, then re-run</td><td>A join with no shuffle at all</td></tr>
+      <tr><td>5</td><td>Bucket with mismatched bucket counts</td><td>When bucketing silently stops working</td></tr>
+      <tr><td>6</td><td>Enable AQE and repeat experiment 3</td><td>Runtime strategy switching, observed in the plan</td></tr>
+      <tr><td>7</td><td>Join on a skewed key, with and without AQE skew handling</td><td>Skewed joins are worse than skewed aggregations</td></tr>
+      <tr><td>8</td><td>Left outer join on the same pair</td><td>Which strategies remain available and why</td></tr>
+      <tr><td>9</td><td>Join on a column with many nulls</td><td>All nulls to one partition; the fix is to filter or handle them separately</td></tr>
+      <tr><td>10</td><td>Three-way join, vary the order manually</td><td>Reordering, and its dependence on statistics</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> The chosen physical operator in the plan; shuffle bytes for each strategy;
+  driver memory during broadcast; sort time within sort-merge; and estimated versus actual build-side size.
+  <strong>Produce a chart of runtime against dimension size, one line per strategy.</strong>
+  <mark>The crossover points on that chart are the answer to "when would you broadcast?"</mark> — expressed
+  as a measured number rather than a rule of thumb.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Broadcast threshold tuning is one of the most commonly copied settings in
+  production and one of the least understood. The failure mode — <em>works fine until a dimension grows</em>
+  — is a real and recurring incident class, and bucketing is the underused technique that removes the
+  problem rather than tuning around it.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> High. The runtime-vs-size chart with strategy crossovers is a genuinely
+  striking artifact and directly answers a standard interview question with your own measurements.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#s10">S10 skew</a> · <a href="#s7">S7 AQE</a> ·
+  <a href="#s4">S4 bucketing</a> · <a href="../atlas/databases.html#n2">Databases N2</a> (the same join
+  algorithms at single-node scale).</p>
+</section>
+
+<section id="defence">
+  <h2><span class="num">::</span> Interview defence</h2>
+  <p class="sub">Not answers to memorise — the node each question is actually probing, and what a strong answer contains.</p>
+
+  <table>
+    <thead><tr><th>The question</th><th>What is really being tested</th><th>What a strong answer contains</th></tr></thead>
+    <tbody>
+      <tr><td>What creates a stage boundary?</td><td><a href="#s2">S2</a> — do you have the execution model</td><td>A wide dependency requiring a shuffle; and the identity that stage boundary ≡ shuffle</td></tr>
+      <tr><td>What causes a shuffle?</td><td><a href="#s3">S3</a></td><td>Operations needing co-location by key; naming the write path, the fetch, and the fact that it is disk plus network</td></tr>
+      <tr><td>repartition vs coalesce?</td><td><a href="#s4">S4</a> — depth beyond the definition</td><td>The definitions, <em>plus</em> that coalesce propagates reduced parallelism upstream — the trap most answers miss</td></tr>
+      <tr><td>How do you identify skew?</td><td><a href="#s10">S10</a>, <a href="#s12">S12</a></td><td>Max vs median task duration and shuffle read; then key-frequency profiling before the run</td></tr>
+      <tr><td>How do you fix skew?</td><td><a href="#s10">S10</a> — and whether you know the limits</td><td>Salting with its two-stage cost, AQE, isolated map join; and that AQE splits partitions, not keys</td></tr>
+      <tr><td>How does Catalyst optimise a query?</td><td><a href="#s5">S5</a></td><td>The four phases, two named rules, and the dependence on statistics — not a recitation of the diagram</td></tr>
+      <tr><td>What is AQE and what does it fix?</td><td><a href="#s7">S7</a></td><td>Runtime re-optimisation at stage boundaries; the three features; <em>and what it cannot fix</em></td></tr>
+      <tr><td>Why is Spark faster than MapReduce?</td><td><a href="#s6">S6</a> — beyond "in-memory"</td><td>Fewer materialisations, whole-stage codegen, off-heap binary rows, a global optimiser. "In-memory" alone is a weak answer</td></tr>
+      <tr><td>How would you debug a slow job?</td><td><a href="#s12">S12</a> — the whole branch</td><td>The five-number sequence, in order, then a hypothesis and a change with a predicted effect</td></tr>
+      <tr><td>The job OOMs — what do you do?</td><td><a href="#s8">S8</a></td><td>Ask which process died first; then the five causes and their different fixes. Never "increase memory" as the opening move</td></tr>
+      <tr><td>When would you broadcast?</td><td><a href="#s9">S9</a></td><td>A measured crossover, the fact that it is driver-mediated, and the stale-estimate failure mode</td></tr>
+      <tr><td>When would you not use Spark?</td><td><a href="#s13">S13</a> — judgment</td><td>A crossover point with a number, and a named alternative per situation</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The move that distinguishes a senior answer</span>
+    <strong>Every answer should end with an observation, not an assertion.</strong>
+    <mark>"…and I would confirm that by checking max versus median task duration in the stage summary"
+    turns a recited fact into demonstrated practice</mark> — and it is the single most reliable way to
+    signal that you have actually done this rather than read about it.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next</th><th>What it inherits from L2</th></tr></thead>
+    <tbody>
+      <tr><td><b><a href="kafka.html">L3 Kafka</a></b></td><td>Independent — take it next regardless. Skew reappears as hot partitions, and partitioning as the unit of parallelism is the same idea</td></tr>
+      <tr><td><b><a href="stream-semantics.html">L4 stream semantics</a></b></td><td>Structured Streaming sits on this entire branch; the state store is S8's memory problem with persistence added</td></tr>
+      <tr><td>L5 pipelines</td><td>Idempotent partition-overwrite writes are S11; backfill cost is S3 and S4 arithmetic</td></tr>
+      <tr><td>L7 system design</td><td>Every batch design decision is a shuffle-cost decision, argued with numbers from these labs</td></tr>
+      <tr><td>L8 platform</td><td>Multi-tenant compute means executor sizing, dynamic allocation and cost attribution — S1 and S8 at organisational scale</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Branch complete when</span>
+    You can take an unfamiliar slow job, produce a ranked list of three likely causes from the UI alone,
+    state what you would change first, and <strong>predict the direction and rough magnitude of the
+    improvement before making the change.</strong>
+    <mark>Prediction before the change is the test — not the change itself.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · L2 · Apache Spark</footer>
+
+</body>
+</html>

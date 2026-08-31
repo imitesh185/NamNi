@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L0 · The substrate — Forge</title>
+<meta name="description" content="Columnar layout, Parquet internals, open table formats, atomic commit on object storage, idempotency, query planning and the WAL — with two laboratories." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#why">The one question</a>
+  <a href="#env">The environment</a>
+  <a href="#map">Internal dependency map</a>
+  <h4>Layout</h4>
+  <a href="#b1">B1 · Row vs columnar</a>
+  <a href="#b2">B2 · Parquet, opened up</a>
+  <a href="#b3">B3 · Compression</a>
+  <a href="#b4">B4 · Format choice</a>
+  <h4>Atomicity</h4>
+  <a href="#b5">B5 · Open table formats</a>
+  <a href="#b6">B6 · Atomic commit</a>
+  <a href="#b7">B7 · Compaction</a>
+  <a href="#b8">B8 · Partial failure</a>
+  <h4>The source system</h4>
+  <a href="#b9">B9 · Planning &amp; joins</a>
+  <a href="#b10">B10 · LSM, MVCC, the WAL</a>
+  <a href="#b11">B11 · Python for DE</a>
+  <h4>Laboratories</h4>
+  <a href="#lab01">01 · Format Forensics</a>
+  <a href="#lab02">02 · Atomic Commit</a>
+  <h4>Exit</h4>
+  <a href="#defence">Interview defence</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Forge</a><span>/</span>L0 The substrate</p>
+
+<div class="hero">
+  <div class="kicker">Branch L0 · deepen · no prerequisites · the floor</div>
+  <h1>The substrate</h1>
+  <p class="dropcap">Small on purpose. This branch contains only what genuinely gates something above it —
+  and it earns its place because <em>almost every question in it arrives disguised as a question about
+  something else</em>. A Spark tuning question is usually a Parquet layout question. A CDC question is
+  usually a WAL question. An exactly-once question is usually an idempotency question.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>Nearly every performance and correctness property above this layer is
+    decided by two things: how the bytes are laid out, and which single operation is atomic.</mark>
+    Layout decides speed — columnar physical order, encoding, sorting, file size, partitioning.
+    Atomicity decides correctness — table formats, commits, idempotency, exactly-once. The two labs in this
+    branch are one for each half.
+  </div>
+  <div class="tags">
+    <span class="tag">#columnar</span>
+    <span class="tag t2">#parquet</span>
+    <span class="tag t3">#atomic-commit</span>
+    <span class="tag">#idempotency</span>
+    <span class="tag t2">#wal</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> The one question this branch exists to answer</h2>
+  <p class="sub">It sounds like a beginner question. The follow-up is not.</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“Why is Parquet faster than CSV?”</b>
+    Most answers are “it's columnar” or “it's compressed” — both true, both shallow.
+    <mark>There are four independent mechanisms</mark>: column pruning, predicate pushdown from footer
+    statistics, encoding that exploits a column's type homogeneity, and compression that works because the
+    encoded data is redundant. Naming all four, and knowing which one is doing the work in a given case,
+    is the whole difference.
+    <br><br>
+    And then the question that ends the conversation for most people:
+    <em>“when is Parquet slower than CSV?”</em>
+  </div>
+
+  <p>The second question belongs to the other half of the branch, and it is the one that separates people
+  who use a lakehouse from people who understand one:</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“Object storage has no transactions. How does your table get ACID?”</b>
+    <mark>It does not get it from the storage. It gets it from exactly one atomic operation on exactly one
+    pointer.</mark> Everything else — manifests, snapshots, time travel, schema evolution — is elaboration
+    on that single swap. And the half nobody reaches: <em>what operation, and atomic according to whom?</em>
+    The answer is the catalog, not the object store.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The failure mode of this branch</span>
+    Treating it as background reading. <strong>L0 is the branch most likely to be skimmed and least likely
+    to be examined directly</strong> — which is exactly why it pays: it is the layer where a senior answer
+    to an L2 or L5 question comes from.
+    <mark>Both labs here run on a laptop with free tools and produce artifacts within a day.</mark> It is
+    the highest ratio of insight to setup cost in the whole Forge.
+  </div>
+</section>
+
+<section id="env">
+  <h2><span class="num">01</span> The environment</h2>
+  <p class="sub">Deliberately light. No cluster is required for anything in this branch.</p>
+
+  <table class="nw">
+    <thead><tr><th>Component</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>DuckDB</b> — a single free binary</td><td><mark>The right instrument for format work.</mark> It reports bytes scanned and row groups skipped, starts instantly, and removes the cluster as a confounding variable</td></tr>
+      <tr><td><b>A real dataset, roughly 10 GB</b> — NYC taxi trips, or generated</td><td>Must contain a low-cardinality column, a high-cardinality one, a unique one, a timestamp and a nested field. Layout effects are invisible on small data</td></tr>
+      <tr><td><b><code>parquet-cli</code> / <code>pyarrow</code></b></td><td>To dump footers, row-group statistics, page headers and chosen encodings. <strong>Reading metadata directly is the core skill of this branch</strong></td></tr>
+      <tr><td><b>Apache Iceberg</b> with a local catalog, plus <b>MinIO</b> or a plain directory</td><td><a href="#lab02">Lab 02</a>. Delta works equally well; the mechanism is the same</td></tr>
+      <tr><td><b>PostgreSQL with logical decoding enabled</b></td><td>To see an actual WAL record produced by your own <code>UPDATE</code>. <a href="#b10">B10</a> is otherwise abstract</td></tr>
+      <tr><td><b><code>memray</code> or <code>tracemalloc</code></b></td><td>Peak memory of a Python pipeline, measured rather than assumed (<a href="#b11">B11</a>)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Three habits to establish before the first lab</span>
+    <strong>Measure bytes scanned, not wall time.</strong> Wall time is confounded by page cache and by
+    whatever else the machine is doing; <mark>bytes scanned is the honest metric, and it is also what cloud
+    billing charges for</mark>.
+    <strong>Test every format claim at three cardinalities and two sort orders.</strong> Encoding
+    effectiveness is almost entirely a function of cardinality and clustering, so a single-dataset result
+    is not a result.
+    <strong>Separate planning time from scan time in every measurement.</strong> The small-files problem and
+    the over-partitioning problem both live entirely in planning, and averaging them into one number hides
+    them.
+  </div>
+</section>
+
+<section id="map">
+  <h2><span class="num">02</span> Internal dependency map</h2>
+
+<pre>LAYOUT — decides speed                ATOMICITY — decides correctness
+──────────────────────                ──────────────────────────────
+
+B1 ROW vs COLUMNAR                    B8 PARTIAL FAILURE &amp; IDEMPOTENCY [spine]
+       │                                            │
+       ↓                                            │
+B2 PARQUET, OPENED UP [spine]                       │
+       │                                            │
+       ├──→ B3 COMPRESSION &amp; SPLITTABILITY          │
+       ↓                                            │
+B4 AVRO, ORC &amp; FORMAT CHOICE                        │
+       │                                            ↓
+       └──→ B5 OPEN TABLE FORMATS ──→ B6 ATOMIC COMMIT [spine]
+                                                    │
+                                                    ↓
+                                          B7 COMPACTION &amp; SMALL FILES
+
+
+THE SOURCE SYSTEM — decides what you can even read
+──────────────────────────────────────────────────
+
+B9  QUERY PLANNING &amp; JOIN ALGORITHMS ...... the vocabulary L2 assumes you have
+B10 B-TREE · LSM · MVCC · THE WAL ......... the thing L5 CDC actually reads
+B11 PYTHON FOR DATA ENGINEERING ........... the tool the rest is written in</pre>
+
+  <div class="note">
+    <span class="lbl">Reading this map</span>
+    <strong>The two halves never meet inside this branch — they meet above it.</strong> Layout and atomicity
+    converge for the first time in <a href="#b5">B5</a>, where a table format uses the metadata tree to
+    serve both purposes at once: statistics for pruning, and snapshots for isolation.
+    <br><br>
+    <mark>The three source-system nodes are deliberately unconnected to the rest.</mark> They are here not
+    because they belong to a lake architecture but because <a href="spark.html">L2</a> and
+    <a href="pipelines.html">L5</a> assume them, and assuming them silently is how people end up with
+    confident answers built on nothing.
+  </div>
+</section>
+
+<section id="b1">
+  <h2><span class="num">B1</span> Row versus columnar</h2>
+  <p class="sub">One decision about physical byte order, and half of analytics performance follows from it.</p>
+
+  <p><b>WHAT IT IS.</b> Whether the bytes of one <em>record</em> are contiguous on disk, or the bytes of one
+  <em>column</em> are.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because storage and network are read in blocks, and the only question that
+  matters is what fraction of each block you actually wanted. <strong>An analytical query touches 3 columns
+  of 80; in row layout, every block you read contains 77 columns you are going to discard.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> None.</p>
+
+  <div class="rule">
+    <span class="lbl">The framing that makes the rest follow</span>
+    <strong>Columnar is not a compression trick. It is a selectivity trick applied to the other axis of the
+    data.</strong> Row formats let you select rows cheaply; column formats let you select columns cheaply.
+    <br><br>
+    <mark>And the compression benefit is downstream of the layout benefit, not a separate one</mark> — a
+    column stores values of one type, frequently with few distinct values, often in sorted order. That
+    homogeneity is what makes encoding and compression suddenly effective. Reverse the causality in your
+    head and every Parquet fact stops needing to be memorised.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Physical layout and block-level read amplification · vectorised execution as the
+  natural consequence of columnar storage · why OLTP stays row-oriented · hybrid layouts (PAX) and why
+  Parquet is one · <strong>when row wins</strong> — point lookups, single-record writes, reading all
+  columns of a narrow table, and any workload where the record is the unit.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free paper · <em>Title:</em> <strong>"Dremel: Interactive Analysis of Web-Scale
+    Datasets"</strong> (Google, 2010)<br>
+    <em>Why this one:</em> free, short, and it is the direct ancestor of Parquet — the repetition and
+    definition level scheme in section 4 is the answer to "how does a columnar format store a nested
+    array", which is otherwise mysterious.
+    <br><br>
+    <b>DEEPER</b> — the C-Store paper (2005, free) for the original columnar database argument, including
+    the parts about compression and late materialisation that Parquet did not adopt.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · The ratio, measured</span>
+    Write the same table as CSV and as Parquet. Run <code>SELECT one_column</code> and then
+    <code>SELECT *</code>, measuring <strong>bytes read</strong> for each.
+    <br><br>
+    For one column of eighty, the ratio is enormous. <mark>For <code>SELECT *</code> it collapses to
+    roughly one — and with decode cost included, Parquet can lose.</mark> That is the answer to
+    "when is Parquet slower", produced in ten minutes rather than argued about.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#b2">B2</a> · <a href="../atlas/databases.html#n3">Databases N3</a> ·
+  <a href="../atlas/computing.html#n4">Computing N4</a> — the stride cliff is this same phenomenon at
+  cache-line scale, and recognising them as one idea is the point of having an Atlas.</p>
+</section>
+
+<section id="b2">
+  <h2><span class="num">B2</span> Parquet, opened up <span class="pill pC">spine</span></h2>
+  <p class="sub">File → row groups → column chunks → pages → encoded values. Plus a footer that changes everything.</p>
+
+  <p><b>WHAT IT IS.</b> A file is divided into <strong>row groups</strong> (a horizontal slice of rows),
+  each containing one <strong>column chunk</strong> per column, each divided into <strong>pages</strong>
+  which carry the encoding. The <strong>footer</strong> holds the schema and, per row group per column,
+  the min, max and null count.</p>
+
+  <p><b>WHY IT EXISTS.</b> Row groups make the file splittable across parallel tasks. Column chunks make
+  pruning possible. Pages give a unit of decode. <strong>And the footer lets an engine decide not to read
+  data at all — which is the only optimisation that beats reading data quickly.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#b1">B1</a>.</p>
+
+  <table>
+    <thead><tr><th>Mechanism</th><th>What it saves</th><th>What it requires to work</th></tr></thead>
+    <tbody>
+      <tr><td><b>Column pruning</b></td><td>Reading columns you did not select</td><td>Nothing. It is free and always on</td></tr>
+      <tr><td><b>Predicate pushdown</b> via footer stats</td><td>Reading entire row groups</td><td><mark>Data clustered by the predicate column</mark></td></tr>
+      <tr><td><b>Encoding</b> — dictionary, RLE, bit-packing, delta</td><td>Bytes, before compression even runs</td><td>Low cardinality, or sortedness, or both</td></tr>
+      <tr><td><b>Compression</b></td><td>Bytes, at a CPU cost paid on every read</td><td>Redundancy — which encoding has usually already exploited</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The most valuable Parquet fact, and almost nobody states it</span>
+    <strong>Footer statistics only prune if the data is sorted or clustered by the predicate
+    column.</strong> On an unsorted column, every row group's min–max spans nearly the whole domain, so
+    every row group matches every predicate and <mark>the statistics are present, correct, and completely
+    decorative</mark>.
+    <br><br>
+    This is why "we converted to Parquet and it barely helped" is a common and entirely explicable
+    complaint — and why <em>sorting</em> is a performance decision at least as large as format choice.
+    <a href="#lab01">Lab 01</a> experiment 5 exists to make you see the min–max ranges collapse.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Row group sizing as the central knob — too small and metadata dominates and
+  compression suffers, too large and pruning gets coarse · page size and page-level statistics ·
+  dictionary encoding and dictionary fallback when cardinality is too high · RLE and bit-packing ·
+  delta encoding for sorted integers and timestamps · <strong>definition and repetition levels</strong>
+  for nested data · bloom filters in the footer · column indexes and page skipping.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free specification · <em>Title:</em> the <strong>Apache Parquet format
+    specification</strong> on GitHub, plus the encodings document<br>
+    <em>Why this one:</em> free, and short enough to read completely.
+    <mark>Reading a format specification rather than a tutorial is itself the transferable skill</mark> —
+    it is how you will answer questions about formats that did not exist when you learned this.
+    <br><br>
+    <b>DEEPER</b> — the Dremel paper again for repetition and definition levels, which the specification
+    states but does not motivate.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Watch the statistics become useful</span>
+    Dump a file's footer with <code>parquet-cli meta</code>. Note the row group count, the encoding chosen
+    per column, and the min–max for your filter column in each row group. <strong>They will span almost the
+    entire domain.</strong>
+    <br><br>
+    Now rewrite the file sorted by that column and dump it again.
+    <mark>The ranges collapse into narrow, disjoint bands.</mark> Nothing about the format changed, nothing
+    about the query changed — but the engine can now skip most of the file, and you watched the moment it
+    became able to.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab01">Laboratory 01 — Format Forensics.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="#b3">B3</a> · <a href="#b7">B7</a> ·
+  <a href="spark.html#s11">L2 S11 I/O and caching</a> · <a href="modelling.html#m11">L1 physical design</a>.</p>
+</section>
+
+<section id="b3">
+  <h2><span class="num">B3</span> Compression and splittability</h2>
+  <p class="sub">A trade between bytes you store once and CPU you spend on every single read.</p>
+
+  <p><b>WHAT IT IS.</b> The codec applied to pages inside a columnar file, or to the whole file in the case
+  of raw text.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because storage is cheap and network is not, and because a smaller file is a
+  faster read <em>until</em> the decode cost exceeds the transfer saving.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#b2">B2</a>.</p>
+
+  <div class="trap">
+    <span class="lbl">The classic, and it still happens weekly</span>
+    <strong>A gzipped CSV is not splittable.</strong> A 10 GB <code>.csv.gz</code> is exactly one task, on
+    one core, regardless of how large your cluster is. <mark>You can add a hundred executors and the job
+    will not get one second faster.</mark>
+    <br><br>
+    Inside Parquet this disappears entirely, because compression is applied per page and the row group
+    boundaries remain visible in the footer. <em>Which means splittability stops being a codec decision the
+    moment you stop storing compressed text</em> — and that reframing is the actual lesson.
+  </div>
+
+  <table>
+    <thead><tr><th>Codec</th><th>Ratio</th><th>Decode</th><th>Where it belongs</th></tr></thead>
+    <tbody>
+      <tr><td><b>Snappy</b></td><td>Moderate</td><td>Very fast</td><td>The historical default, and still fine for hot data</td></tr>
+      <tr><td><b>Zstd</b> (level 1–3)</td><td>Better than gzip</td><td>Near Snappy</td><td><mark>Increasingly the correct default</mark> — better ratio at similar speed</td></tr>
+      <tr><td><b>Gzip</b></td><td>Good</td><td>Slow</td><td>Archives read rarely. You pay the decode forever otherwise</td></tr>
+      <tr><td><b>LZ4</b></td><td>Worst</td><td>Fastest</td><td>Intermediate shuffle data, where it is written and read once</td></tr>
+      <tr><td><b>None</b></td><td>—</td><td>—</td><td>Genuinely correct for already-encoded, already-tiny columns</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation + your own measurement · <em>Title:</em> the Parquet compression
+    documentation, and then <a href="#lab01">Lab 01</a> experiment 2<br>
+    <em>Why this way:</em> <mark>published codec benchmarks are close to worthless for this decision</mark>
+    because the ratio depends entirely on your data's cardinality and sortedness. The transferable skill is
+    the measurement procedure, not the numbers.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Break-even read count</span>
+    For each codec record three numbers: file size, write time, and decode time per query.
+    <strong>Then compute how many reads it takes for a better ratio to repay its extra CPU.</strong>
+    <br><br>
+    <mark>For a table read a thousand times a day the answer is "immediately"; for a landing zone read once
+    it is "never".</mark> Same data, opposite correct answers — which is why the question
+    "which codec should we use" has no answer without the read count.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#b4">B4</a> · <a href="spark.html#s11">L2 S11</a> ·
+  <a href="platform.html#e9">L8 cost</a>.</p>
+</section>
+
+<section id="b4">
+  <h2><span class="num">B4</span> Avro, ORC and format choice</h2>
+  <p class="sub">Two formats, one rule, and a stack that correctly uses both.</p>
+
+  <p><b>WHAT IT IS.</b> <strong>Avro</strong> is row-oriented with an embedded schema and first-class schema
+  evolution — the natural format for records arriving one at a time. <strong>ORC</strong> is columnar,
+  Parquet's closest peer, with stronger built-in indexes and native ACID inside Hive.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because the boundary of a data system has different requirements from its
+  interior. <strong>At the edge, records arrive singly and schemas change; in the middle, queries read few
+  columns of many rows.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#b1">B1</a>.</p>
+
+  <div class="rule">
+    <span class="lbl">The decision rule</span>
+    <strong>Row format where records arrive one at a time and the schema moves. Columnar format where
+    queries read few columns of many rows.</strong>
+    <mark>An Avro landing zone feeding a Parquet curated layer is not indecision — it is the correct
+    answer</mark>, and being able to say why in one sentence is worth more than an opinion about which
+    format is better.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Avro's writer/reader schema resolution and what makes a change compatible ·
+  why Kafka Connect writes Avro · the Schema Registry's compatibility modes as the enforcement of this ·
+  ORC stripes, stripe footers and per-stripe bloom filters · where ORC genuinely wins · why Parquet won the
+  ecosystem argument regardless.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free specifications · <em>Title:</em> the <strong>Apache Avro specification</strong>,
+    schema resolution section, and the <strong>ORC specification</strong><br>
+    <em>Why this one:</em> free, and Avro's schema resolution rules are the concrete definition of
+    "compatible change" that <a href="reliability.html#r6">L6 data contracts</a> otherwise discusses in the
+    abstract. <mark>Reading them here means L6 arrives as a policy question rather than a technical
+    one.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Opposite winners</span>
+    Write the same data as Avro and as Parquet, then measure three things: total size, time to append a
+    single record, and time to <code>SELECT</code> one column.
+    <mark>Each format wins two of three, and loses the other by roughly the margin it won by.</mark>
+    That symmetry is the whole of format selection, made concrete.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="kafka.html#k11">L3 K11 Schema Registry</a> ·
+  <a href="reliability.html#r5">L6 data contracts</a> · <a href="#b5">B5</a>.</p>
+</section>
+
+<section id="b5">
+  <h2><span class="num">B5</span> Open table formats — the metadata tree</h2>
+  <p class="sub">A table stops being a directory and becomes a data structure.</p>
+
+  <p><b>WHAT IT IS.</b> Iceberg, Delta and Hudi. In Iceberg's shape: a catalog pointer → a metadata file →
+  a <strong>manifest list</strong> (which is a snapshot) → <strong>manifests</strong> → data files, each
+  entry carrying per-column statistics.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because "a table is a directory of Parquet files" fails four ways at once:
+  no atomicity, no snapshot isolation, listing millions of objects is slow and was historically not even
+  consistent, and any schema or partition change means rewriting everything.</p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#b2">B2</a> · <a href="#b4">B4</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The three tricks worth extracting</span>
+    <strong>1. Statistics live in the manifest.</strong> Planning prunes files without opening a single
+    one — a directory table must list, then open, then decide. <mark>This is why Iceberg planning scales
+    and Hive-style partitioning does not.</mark><br>
+    <strong>2. Columns are tracked by ID, not by name or position.</strong> That single decision is what
+    makes renaming a column free, and reordering safe, where a directory of Parquet would need a rewrite.<br>
+    <strong>3. The partition spec is versioned.</strong> Old data keeps the spec it was written with, so
+    partitioning can change without rewriting history — and <em>hidden partitioning</em> means a user
+    filtering on <code>ts</code> gets the pruning automatically, which eliminates the single most common
+    Hive-era bug: the accidental full scan caused by a forgotten <code>dt=</code> predicate.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Snapshots, manifest lists and manifests · time travel as "keep the old manifest
+  list", costing metadata rather than data · snapshot expiry and orphan file cleanup · schema evolution
+  by column ID · partition evolution and hidden partitioning · <strong>copy-on-write versus
+  merge-on-read</strong> and which read/write cost you would rather pay · Delta's transaction log and
+  checkpoints as the same idea with different file names.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free specification · <em>Title:</em> the <strong>Apache Iceberg table
+    specification</strong><br>
+    <em>Why this one:</em> free, and unusually readable for a spec — it states the metadata tree, the
+    commit protocol and the evolution rules precisely enough that you can reimplement a subset, which is
+    exactly what <a href="#lab02">Lab 02</a> asks you to do.
+    <br><br>
+    <b>DEEPER</b> — the <em>Delta Lake</em> VLDB paper (free). Reading both makes the shared mechanism
+    obvious and the differences look like the implementation details they are.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Walk the tree by hand</span>
+    Create an Iceberg table, insert three times, then open the metadata directory and follow it manually:
+    pointer → metadata JSON → manifest list → manifest → data file entries with column statistics.
+    <br><br>
+    Now <strong>delete a single row</strong> and look again. A new snapshot exists; <mark>no previously
+    written file was modified.</mark> Every guarantee this format offers follows from that one observed
+    fact.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#b6">B6</a> · <a href="#b7">B7</a> ·
+  <a href="reliability.html#r11">L6 governance</a> — deletion in an immutable architecture is this node's
+  consequence.</p>
+</section>
+
+<section id="b6">
+  <h2><span class="num">B6</span> Atomic commit on object storage <span class="pill pC">spine</span></h2>
+  <p class="sub">The single most reusable idea in the substrate, and it is one sentence long.</p>
+
+  <p><b>WHAT IT IS.</b> Write all new data files where nothing points at them. Write the new metadata.
+  Then <strong>atomically swap one pointer</strong> from the old metadata to the new. Readers who resolved
+  the pointer before the swap see the old snapshot, consistently and completely. Readers after see the new
+  one. <mark>Nobody, at any moment, sees a mixture.</mark></p>
+
+  <p><b>WHY IT EXISTS.</b> Because the storage layer offers no transaction, and none is needed —
+  <strong>a single atomic operation on a single pointer is sufficient to build snapshot isolation over an
+  arbitrarily large set of non-atomic writes.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#b5">B5</a> · <a href="#b8">B8</a>.</p>
+
+  <div class="rule">
+    <span class="lbl">The half that separates a real answer from a memorised one</span>
+    <strong>What is atomic depends on the catalog, not on the object store.</strong> S3 for most of its
+    life had no compare-and-swap on an object, so the atomicity came from elsewhere: a Hive metastore
+    transaction, a DynamoDB conditional put, a Glue update, a row in Postgres, or — more recently —
+    conditional writes in S3 itself.
+    <br><br>
+    <mark>The commit is a compare-and-swap: “set the pointer to N+1 only if it is still N”.</mark> If it
+    fails, the writer replans and retries. That is optimistic concurrency control, and it is the same
+    mechanism as write-conflict detection in <a href="#b10">MVCC</a> — arriving from a completely different
+    direction.
+  </div>
+
+  <div class="note">
+    <span class="lbl">One shape, four industries</span>
+    <strong>Write to a temporary location → flush → atomically rename.</strong>
+    <br><br>
+    That is a safe file write (<a href="../tracks/python/runtime/the-write-path.html">the write path</a>).
+    It is a database commit — write the WAL, fsync, flip the commit record. It is an Iceberg snapshot. It
+    is a blue-green deployment — build the new stack, flip the load balancer.
+    <mark>Four industries, one idea, and recognising it is worth more than any individual fact in this
+    branch.</mark>
+  </div>
+
+  <p><b>SUBTOPICS.</b> Optimistic concurrency and the retry loop · what the writer must re-plan on
+  conflict, and why it is usually not a data rewrite · conflict granularity — file-level rather than
+  table-level, which is why two writers to different partitions both succeed · orphan files after a crashed
+  write, and why they are garbage rather than corruption · the reader's view and how long a snapshot stays
+  valid · why this is snapshot isolation and not serialisability.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free specification · <em>Title:</em> the Iceberg specification's <strong>commit and
+    conflict-resolution sections</strong>, plus the Delta transaction protocol document<br>
+    <em>Why both:</em> free, and they solve the identical problem with different vocabulary.
+    <mark>Reading two independent solutions to one problem is how you learn the problem rather than the
+    solution.</mark>
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab02">Laboratory 02 — Atomic Commit on Object Storage.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="pipelines.html#p4">L5 idempotent writes and backfills</a> ·
+  <a href="reliability.html">L6</a> · <a href="../atlas/distributed-systems.html#n5">Distributed Systems N5</a>.</p>
+</section>
+
+<section id="b7">
+  <h2><span class="num">B7</span> Compaction and the small-files problem</h2>
+  <p class="sub">Where partitioning strategy stops being a modelling question and becomes a cost line.</p>
+
+  <p><b>WHAT IT IS.</b> The disproportionate cost of many small files. Each one costs a metadata entry, a
+  request, an open, a footer read and usually a task — none of which scale with its size.</p>
+
+  <p><b>WHY IT EXISTS.</b> Because streaming and micro-batch writers create at least one file per partition
+  per batch. <strong>A job writing every five minutes into 200 partitions produces 57,600 files a day, all
+  of them tiny, and every one of them costs the same fixed overhead as a good one.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="#b2">B2</a> · <a href="#b5">B5</a>.</p>
+
+  <div class="trap">
+    <span class="lbl">The mirror-image mistake</span>
+    <strong>Over-partitioning.</strong> Partitioning on a high-cardinality column — a user ID, or a
+    timestamp truncated to the minute — produces one small file per partition and turns query planning into
+    a directory-listing exercise.
+    <br><br>
+    <mark>The rule has two conditions and people apply only the first: partition on a column that appears
+    in most queries' predicates <em>and</em> whose cardinality is low enough that each partition holds a
+    sensible amount of data.</mark> A column that satisfies one but not the other is a trap, and
+    high-cardinality filter columns should be handled by <em>sorting</em>, not partitioning.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Target file size and why 128 MB–1 GB is the usual band · compaction and rewrite
+  maintenance jobs · write-side coalescing versus after-the-fact compaction · clustering, sorting and
+  Z-ordering as the alternative to partitioning · <strong>why sorting is what makes footer statistics
+  selective</strong>, which loops directly back to <a href="#b2">B2</a> · compaction's interaction with
+  snapshot retention and time travel.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> the Iceberg <strong>maintenance</strong>
+    documentation — rewrite data files, rewrite manifests, expire snapshots, remove orphan files<br>
+    <em>Why this one:</em> free, and it enumerates the four maintenance operations every lakehouse needs.
+    <mark>Knowing that a table format requires scheduled maintenance at all is a distinguishing piece of
+    operational knowledge</mark> — plenty of people deploy one and never run any of it.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Separate planning from scanning</span>
+    Write identical data as 10,000 small files and as 100 right-sized ones. Same bytes, same rows, same
+    query.
+    <br><br>
+    <strong>Measure planning time and scan time separately.</strong> <mark>Most of the difference is in
+    planning — listing, opening and reading footers — before a single byte of actual data has been
+    read.</mark> Averaging the two into one number is how this problem stays undiagnosed for years.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="modelling.html#m11">L1 physical design</a> ·
+  <a href="spark.html#s11">L2 S11</a> · <a href="stream-semantics.html#w12">L4 W12</a> — a streaming
+  writer is the most common cause of this, and it is one more reason to ask whether streaming was needed.</p>
+</section>
+
+<section id="b8">
+  <h2><span class="num">B8</span> Partial failure and idempotency <span class="pill pC">spine</span></h2>
+  <p class="sub">The distributed-systems minimum for a data engineer, and it is smaller than people fear.</p>
+
+  <p><b>WHAT IT IS.</b> A request that times out has three possible truths: it never arrived; it arrived
+  and failed; it arrived, succeeded, and the response was lost. <strong>The caller cannot distinguish
+  them.</strong></p>
+
+  <p><b>WHY IT MATTERS.</b> Because that is not an engineering gap to be closed — it is a proof. Therefore
+  retrying is the only available action, therefore duplicates are guaranteed, therefore
+  <mark>the only durable answer is to make the operation safe to repeat.</mark></p>
+
+  <p><b>DEPENDENCIES.</b> None.</p>
+
+  <div class="rule">
+    <span class="lbl">The sentence this node exists to install</span>
+    <strong>Exactly-once <em>delivery</em> is impossible. Exactly-once <em>effect</em> is achievable — and
+    the difference is where the work goes.</strong>
+    <br><br>
+    Delivery is the network's problem and the network cannot solve it. Effect is your problem, and you can.
+    <mark>Every "exactly-once" claim in <a href="kafka.html#k8">L3</a>,
+    <a href="stream-semantics.html#w9">L4</a> and <a href="pipelines.html#p4">L5</a> is an instance of this one
+    sentence</mark>, which is why it belongs at the floor rather than in any of them.
+  </div>
+
+  <p><b>SUBTOPICS.</b> The undecidable timeout · at-most-once, at-least-once and effectively-once ·
+  <strong>the idempotency toolkit</strong> — natural keys, deterministic derived keys, overwrite-by-partition
+  instead of append, upsert on a business key, absolute values instead of deltas, a dedup table with a
+  bounded window · why coordination costs round trips · <strong>designing so that agreement is unnecessary,
+  which is cheaper than making agreement fast</strong> · retry storms and why naive retries make outages
+  worse.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free lecture notes and videos · <em>Title:</em> Martin Kleppmann's
+    <strong>Distributed Systems</strong> course (University of Cambridge) — full notes and lecture videos,
+    free<br>
+    <em>Why this one:</em> free, rigorous, and it covers exactly the parts a data engineer needs — failure
+    models, time, ordering, replication — without descending into consensus implementation, which
+    <a href="index.html#excluded">the Forge deliberately excludes</a>.
+    <br><br>
+    <b>DEEPER</b> — "A Note on Distributed Computing" (Waldo et al., free). Thirty years old and still the
+    clearest statement of why the network cannot be abstracted away.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Make the duplicates appear, then make them stop</span>
+    Write to a sink through a proxy that drops the <em>response</em> after the write has already succeeded.
+    The client times out and retries, exactly as any correct client would.
+    <strong>Count the rows.</strong>
+    <br><br>
+    Now add an idempotency key and an upsert, and repeat with the same fault injection.
+    <mark>The row count stops changing while the network keeps failing.</mark> That is the entire idea,
+    demonstrated in under an hour, and it is the foundation of three branches above this one.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="kafka.html#k8">L3 K8</a> · <a href="stream-semantics.html#w9">L4 W9</a> ·
+  <a href="pipelines.html#p6">L5 backfills</a> ·
+  <a href="../atlas/distributed-systems.html#n7">Distributed Systems N7</a>.</p>
+</section>
+
+<section id="b9">
+  <h2><span class="num">B9</span> Query planning, statistics and join algorithms</h2>
+  <p class="sub">Learn the shape once here, and Catalyst becomes an instance rather than a subject.</p>
+
+  <p><b>WHAT IT IS.</b> The pipeline every SQL engine runs: parse → resolve → logical plan → rule-based
+  optimisation → cost-based optimisation → physical plan. Plus cardinality estimation, which is the input
+  cost depends on.</p>
+
+  <p><b>WHY IT IS HERE.</b> Because Catalyst, Trino's planner, Postgres's planner and DuckDB's planner are
+  all the same shape. <strong>Learning it once at the floor turns <a href="spark.html#s5">L2 S5</a> into
+  "the Spark version of a thing I know" rather than a new subject.</strong></p>
+
+  <p><b>DEPENDENCIES.</b> None.</p>
+
+  <div class="note">
+    <span class="lbl">The load-bearing fact about cost-based optimisation</span>
+    <strong>A cost model is only as good as its cardinality estimates, and cardinality estimates degrade
+    catastrophically as joins are added</strong> — because errors compound multiplicatively down the plan.
+    <br><br>
+    <mark>This is why a plan that is excellent for three tables is frequently terrible for ten</mark>, and
+    it is the actual reason hints, materialised intermediate results and
+    <a href="spark.html#s7">adaptive execution</a> exist at all. AQE is not a clever feature; it is an
+    admission that the estimates were never going to be good enough.
+  </div>
+
+  <table>
+    <thead><tr><th>Join</th><th>How it works</th><th>What must be true</th><th>How it fails</th></tr></thead>
+    <tbody>
+      <tr><td><b>Broadcast hash</b></td><td>Ship the small side everywhere; no shuffle</td><td>One side genuinely fits in memory</td><td>Driver or executor OOM when "fits" was an estimate</td></tr>
+      <tr><td><b>Shuffle hash</b></td><td>Partition both sides by key; hash table per partition</td><td>The build side fits <em>per partition</em></td><td>Spill, or OOM on a skewed partition</td></tr>
+      <tr><td><b>Sort-merge</b></td><td>Sort both sides, merge in one pass</td><td>Nothing beyond sortable keys</td><td>Slow, but it survives. The large-large fallback</td></tr>
+      <tr><td><b>Nested loop</b></td><td>Compare everything to everything</td><td>Nothing</td><td>Quadratic. What you get for non-equi joins</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> the <strong>PostgreSQL documentation on query
+    planning</strong> and <code>EXPLAIN</code><br>
+    <em>Why this one:</em> free, and it is the best planner documentation that exists — it explains the
+    cost model, the statistics it depends on and how to read the output, all against an engine you can run
+    locally in a minute.
+    <br><br>
+    <b>DEEPER</b> — Selinger et al., 1979 (free). The origin of cost-based optimisation, and short enough
+    to read in a sitting. Everything since is a refinement of it.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Watch the estimates fall apart</span>
+    <code>EXPLAIN ANALYZE</code> a three-table join in Postgres or DuckDB and compare
+    <strong>estimated rows against actual rows</strong> at every node. Then add tables one at a time.
+    <br><br>
+    <mark>The divergence grows fast, and seeing it with your own eyes is the single most useful thing in
+    this node</mark> — because it explains why optimisers fail, why they fail specifically on large joins,
+    and why intervening is sometimes correct rather than a hack.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="spark.html#s5">L2 S5 Catalyst</a> · <a href="spark.html#s9">L2 S9 joins</a> ·
+  <a href="../atlas/databases.html#n5">Databases N5</a>.</p>
+</section>
+
+<section id="b10">
+  <h2><span class="num">B10</span> B-tree, LSM, MVCC and the WAL</h2>
+  <p class="sub">What the source system is doing, to the exact extent that it constrains you.</p>
+
+  <p><b>WHAT IT IS.</b> The four database internals that determine what a data engineer can extract and
+  which guarantees are inherited rather than chosen.</p>
+
+  <p><b>WHY IT IS HERE.</b> Because <strong>CDC is not a query — it is a replication client</strong>, and
+  understanding what it reads is the difference between operating one and hoping.</p>
+
+  <p><b>DEPENDENCIES.</b> None.</p>
+
+  <table>
+    <thead><tr><th>Structure</th><th>Optimised for</th><th>Pays in</th><th>Where you meet it</th></tr></thead>
+    <tbody>
+      <tr><td><b>B-tree</b></td><td>Reads and in-place updates</td><td>Write amplification from page splits and full-page writes</td><td>Postgres, InnoDB — most of your sources</td></tr>
+      <tr><td><b>LSM</b></td><td>Writes — append to a memtable, flush sorted, compact later</td><td>Read amplification, mitigated by bloom filters; and compaction load</td><td>Cassandra, RocksDB — <mark>and the <a href="kafka.html#k2">Kafka log</a> and <a href="stream-semantics.html#w5">L4's state backend</a> are this structure</mark></td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The asymmetry to be able to state</span>
+    <strong>You can have cheap writes or cheap reads. The data structure is that choice, and there is no
+    structure that avoids it.</strong>
+    <mark>Once you hold this, the Kafka log, an LSM store, a streaming state backend and a columnar table
+    stop being four things.</mark>
+  </div>
+
+  <p><b>SUBTOPICS.</b> MVCC — readers never block writers because old versions survive · isolation levels
+  as a spectrum from fast-and-anomalous to correct-and-slow · <strong>what your source's isolation level
+  means for a long extract query</strong>: under read-committed, different tables are read at different
+  points in time, so your "snapshot" is not one · the WAL as sequential-write-before-page-update, and
+  therefore as the basis of crash recovery · <strong>logical decoding, and that Debezium reads the same
+  stream a replica reads</strong> · replication slots, and that a stopped CDC consumer retains WAL until
+  the source's disk fills.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free university course · <em>Title:</em> <strong>CMU 15-445, Database Systems</strong> —
+    full video lectures, slides and notes, free<br>
+    <em>Why this one:</em> free and better than most paid material. Take only the storage, indexing,
+    concurrency-control and logging lectures — <mark>roughly eight of them cover everything in this
+    node</mark>, and skipping the rest is the correct move for a data engineer.
+    <br><br>
+    <b>DEEPER</b> — the PostgreSQL documentation on WAL, MVCC and logical decoding, which is where the
+    theory becomes a system you can run.
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Watch your own UPDATE appear in the WAL</span>
+    Enable logical decoding in Postgres, create a replication slot, and consume it with
+    <code>pg_recvlogical</code>. Run an <code>UPDATE</code> in another session and
+    <strong>watch the change record come out.</strong> CDC stops being magic in about five minutes.
+    <br><br>
+    Then <em>stop consuming</em> and query <code>pg_replication_slots</code>.
+    <mark>Retained WAL grows without limit, and the source database's disk is now on a timer.</mark>
+    That is a real outage, a real interview question, and ten minutes of work to have seen.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="pipelines.html#p7">L5 CDC</a> · <a href="kafka.html#k2">L3 K2</a> ·
+  <a href="../atlas/databases.html#n2">Databases N2</a> ·
+  <a href="../atlas/databases.html#n4">Databases N4</a>.</p>
+</section>
+
+<section id="b11">
+  <h2><span class="num">B11</span> Python for data engineering</h2>
+  <p class="sub">Four things about the language that actually change outcomes. The rest is general programming.</p>
+
+  <p><b>WHAT IT IS.</b> Iterators and streaming, memory behaviour, serialisation cost, and the concurrency
+  decision. Deliberately not "learn Python" — you have five years of it.</p>
+
+  <p><b>DEPENDENCIES.</b> None. Your existing
+  <a href="../tracks/index.html">Python object-model and data-model notes</a> already cover the language
+  layer beneath this.</p>
+
+  <table>
+    <thead><tr><th>Topic</th><th>The thing that matters</th></tr></thead>
+    <tbody>
+      <tr><td><b>Iterators and generators</b></td><td>Streaming without loading. <mark>The difference between processing 50 GB in 200 MB of RAM and not is usually one <code>yield</code></mark></td></tr>
+      <tr><td><b>Memory behaviour</b></td><td>Object overhead, why a list of ten million integers is not 80 MB, why a pandas copy doubles peak usage — and measuring it with <code>memray</code> rather than reasoning about it</td></tr>
+      <tr><td><b>Serialisation cost</b></td><td><strong>A Python UDF in Spark serialises every row out of the JVM and back.</strong> That is why it can be 10–100× slower than the equivalent native expression, and why Arrow-based UDFs exist</td></tr>
+      <tr><td><b>GIL, multiprocessing, asyncio</b></td><td>I/O-bound → asyncio or threads. CPU-bound in pure Python → processes. CPU-bound inside a library that releases the GIL → threads are fine. <mark>Most data engineering is the first or the third, which is why the GIL matters less than the internet insists</mark></td></tr>
+    </tbody>
+  </table>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation + your own notes · <em>Title:</em> the CPython documentation on
+    iterators and <code>itertools</code>, the <code>memray</code> documentation, and the
+    <strong>PySpark documentation on pandas/Arrow UDFs</strong><br>
+    <em>Why this way:</em> free, and the Arrow UDF documentation is the one that states the serialisation
+    boundary explicitly. <mark>It is also the single Python fact most likely to appear in a Spark
+    interview.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">OBSERVATION · Two numbers worth carrying</span>
+    Process a large CSV twice — once with a whole-file read, once as a generator pipeline — and measure
+    peak RSS with <code>memray</code>. <strong>Then write a Python UDF and an equivalent native Spark
+    expression over the same data and time both.</strong>
+    <br><br>
+    <mark>The memory ratio and the UDF ratio are two numbers you will use in interviews for years</mark>,
+    and both come from a single afternoon.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="spark.html#s6">L2 S6 Tungsten</a> — the serialisation boundary is why
+  Tungsten's optimisations stop at a Python UDF · <a href="pipelines.html">L5</a> ·
+  <a href="../tracks/index.html">the Python tracks</a>.</p>
+</section>
+
+<section id="lab01">
+  <h2><span class="num">01</span> Laboratory — Format Forensics</h2>
+  <p class="sub">The same query, on the same data, ten times slower. Nothing changed but how the bytes were written.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> One benchmark query — filter on a timestamp, group by a low-cardinality column,
+    aggregate two numeric ones — against roughly 10 GB of real data. Make it as fast as it can be, and know
+    exactly which decision bought which fraction of the improvement.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> The dataset as a single gzipped CSV. A fixed query. Measurement of
+    <strong>bytes scanned</strong>, planning time and scan time as three separate numbers.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE — four escalations</span>
+    <strong>1.</strong> The query takes minutes and uses one core.
+    <mark>Gzipped CSV is unsplittable — the whole file is a single task</mark>, and every byte of every
+    column is read and parsed.<br>
+    <strong>2.</strong> Convert to Parquet. Much faster — but check the footer: the statistics prune
+    <em>nothing</em>, because the data is unsorted and every row group's min–max spans the domain.<br>
+    <strong>3.</strong> Sort by the filter column. Row groups are now skipped and bytes scanned collapses.
+    <strong>This is the biggest single win, and it is not a format change.</strong><br>
+    <strong>4.</strong> Partition by a high-cardinality column to "help". Planning time explodes and the
+    total gets worse than step 2.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Splittability → columnar layout → column pruning → footer statistics →
+  the clustering dependency that makes them useful → encoding as a function of cardinality → codec ratio
+  versus decode cost → row group sizing → partition cardinality → planning cost as a distinct quantity
+  from scan cost.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>CSV, JSON, Avro, Parquet, ORC — same data. Size, write time, bytes read for the query</td><td>The format baseline, measured rather than assumed</td></tr>
+      <tr><td>2</td><td>Codec sweep on Parquet: none, snappy, gzip, zstd(1), zstd(9), lz4. Size, write time, decode time</td><td><mark>Compute the break-even read count</mark></td></tr>
+      <tr><td>3</td><td>Gzipped CSV vs bzip2 vs uncompressed. Count the tasks</td><td>Splittability, demonstrated not described</td></tr>
+      <tr><td>4</td><td>Row group size: 8, 32, 128, 512 MB. Bytes scanned and planning time</td><td>The pruning/metadata trade-off</td></tr>
+      <tr><td>5</td><td>Sorted vs unsorted by the predicate column. <strong>Dump the footer min–max for both</strong></td><td><mark>The headline result. The ranges collapse and pruning becomes possible</mark></td></tr>
+      <tr><td>6</td><td>Three columns — 5 distinct values, 5,000, all unique. Inspect the encoding Parquet chose for each</td><td>Encoding is a function of cardinality, not of your intent</td></tr>
+      <tr><td>7</td><td><code>SELECT</code> 1 column vs <code>SELECT *</code> on an 80-column table</td><td>Column pruning, and where Parquet loses</td></tr>
+      <tr><td>8</td><td>Partition by a low-cardinality column, then a high-cardinality one</td><td>Over-partitioning, in file count and planning time</td></tr>
+      <tr><td>9</td><td>10,000 small files vs 100 right-sized. Identical bytes</td><td>Planning cost isolated from scan cost</td></tr>
+      <tr><td>10</td><td>Add a nested array column; dump the page structure</td><td>Definition and repetition levels, seen once</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Bytes scanned above everything else. Row groups skipped. Footer statistics
+  before and after sorting. Planning time and scan time kept apart. <strong>The artifact is a layout
+  decision table</strong> — format × codec × sort order × row group size → bytes scanned, query time,
+  write time, storage size.</p>
+
+  <p><b>THE RESULT WORTH CARRYING.</b>
+  <mark><em>"Sorting by the predicate column reduced bytes scanned twelvefold. Changing the compression
+  codec changed it by a factor of 1.3."</em></mark>
+  Layout beats codec by an order of magnitude — and the codec is what everybody tunes.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Every "our warehouse bill is too high" investigation, because the bill
+  is bytes scanned. And every "we moved to Parquet and it barely helped" complaint, which this lab explains
+  completely.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> High, and unusually cheap — a laptop, DuckDB and a public dataset. It is a
+  measurement study, which reads very differently from a pipeline demo.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#b5">B5</a> · <a href="#b7">B7</a> ·
+  <a href="modelling.html#m11">L1 physical design</a> · <a href="spark.html#s11">L2 S11</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The data structure this lab forces</span>
+    A Parquet footer statistic is a <strong>zone map</strong> — a min–max index over a block — and its
+    effectiveness is entirely a function of clustering.
+    <mark>It is the same structure as a database's BRIN index, and it plays the same role that a bloom
+    filter plays in an LSM read: cheap metadata consulted first so that expensive data can be skipped
+    entirely.</mark>
+  </div>
+</section>
+
+<section id="lab02">
+  <h2><span class="num">02</span> Laboratory — Atomic Commit on Object Storage</h2>
+  <p class="sub">A reader sees half the old files and half the new. Then you rebuild Iceberg from first principles.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> A table is being replaced while it is being read. The reader must never observe a
+    mixture of old and new state.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A "table" that is a directory of Parquet files. A writer that deletes the old
+    files and writes new ones. A reader in a loop that lists the directory, reads everything, and checks an
+    <strong>invariant that must always hold</strong> — for instance, that the sum of all account balances
+    equals a known constant.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    <strong>The invariant fails during every write window.</strong> Not intermittently — reliably, and for
+    a longer interval than anyone expects.
+    <br><br>
+    <mark>Nothing logs an error. Nothing is wrong from the file system's point of view.</mark> The query
+    succeeded, returned rows, and the numbers were false. This is the exact failure mode that makes
+    silent data corruption so much worse than a crash.
+  </div>
+
+  <p><b>THEN BUILD THE FIX YOURSELF</b>, in four versions, before touching Iceberg:</p>
+
+  <table class="nw">
+    <thead><tr><th>Version</th><th>What you add</th><th>What it still gets wrong</th></tr></thead>
+    <tbody>
+      <tr><td><b>v1</b></td><td>Write new files under new names; swap a <code>CURRENT</code> pointer file. Readers resolve the pointer first</td><td>Two concurrent writers overwrite each other's pointer — a lost update</td></tr>
+      <tr><td><b>v2</b></td><td>Compare-and-swap on the pointer: set to N+1 only if still N. Loser replans and retries</td><td>Old data files accumulate forever</td></tr>
+      <tr><td><b>v3</b></td><td>Retain old pointers</td><td><mark>You have just built time travel, as a side effect of doing nothing</mark></td></tr>
+      <tr><td><b>v4</b></td><td>Delete data files only when no retained pointer references them</td><td>Nothing. You have derived snapshot expiry, and with it, Iceberg</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Non-atomic multi-file writes → indirection through a pointer →
+  compare-and-swap → optimistic concurrency and the retry loop → conflict granularity → snapshot isolation
+  → time travel as retained metadata → garbage collection versus deletion → orphan files as garbage rather
+  than corruption.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Directory-as-table with a concurrent reader. Measure how often and for how long the invariant breaks</td><td>Quantify the inconsistency window</td></tr>
+      <tr><td>2</td><td>Add the <code>CURRENT</code> pointer. Measure the remaining window</td><td>Indirection alone gets you most of the way</td></tr>
+      <tr><td>3</td><td>Two writers, plain pointer overwrite</td><td>Lost update, reproduced</td></tr>
+      <tr><td>4</td><td>Compare-and-swap commit. One wins, one retries — show it in the logs</td><td><mark>Optimistic concurrency, built by hand</mark></td></tr>
+      <tr><td>5</td><td>Kill the writer <em>between</em> writing data files and swapping the pointer</td><td>The table is untouched; the orphans are invisible. <strong>Garbage, not corruption</strong></td></tr>
+      <tr><td>6</td><td>Retain old pointers; read pointer N−2</td><td>Time travel, for free</td></tr>
+      <tr><td>7</td><td>Expire snapshots and delete unreferenced files; then try to time travel past the expiry</td><td>Why retention is a policy with a hard edge</td></tr>
+      <tr><td>8</td><td>Switch to real Iceberg. Repeat experiments 1, 4 and 5</td><td>Identical behaviour — <em>your model was right</em></td></tr>
+      <tr><td>9</td><td>Walk Iceberg's metadata tree and map every file to the piece you built</td><td>Recognition rather than memorisation</td></tr>
+      <tr><td>10</td><td>Two Iceberg writers committing to <em>different</em> partitions simultaneously</td><td>Both succeed — conflict detection is at file level, not table level</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> The length of the inconsistency window in v0 — it is larger than intuition
+  suggests. That the CAS retry re-plans rather than rewrites data. That a crashed writer leaves waste but
+  never a wrong answer. <strong>The artifact is roughly two hundred lines of your own transactional table
+  format</strong>, plus a mapping from each of its parts to Iceberg's.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> This is the mechanism underneath every lakehouse in production. And it
+  is <mark>the same shape as a database commit and a blue-green deployment</mark> — write the new thing
+  where nobody is looking, then flip one pointer.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> Very high, and rare. <em>"I implemented ACID over object storage from first
+  principles, then verified my model against Iceberg"</em> is not a claim that can be produced by following
+  a tutorial, and it is provable in a repository of a few hundred lines.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#b7">B7</a> · <a href="pipelines.html#p4">L5 idempotent writes</a> ·
+  <a href="reliability.html#r11">L6 governance</a> · <a href="system-design.html">L7 system design</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The move this lab teaches</span>
+    <strong>Build the primitive before adopting the product.</strong>
+    <mark>Two hundred lines of your own commit protocol makes Iceberg, Delta and Hudi legible in an
+    afternoon each</mark>, and makes their differences look like the implementation choices they are rather
+    than competing philosophies. It is the single highest-leverage day in the entire Forge.
+  </div>
+</section>
+
+<section id="defence">
+  <h2><span class="num">::</span> Interview defence</h2>
+  <p class="sub">Note how many of these are asked as questions about a different branch.</p>
+
+  <table>
+    <thead><tr><th>The question</th><th>Node</th><th>What a strong answer contains</th></tr></thead>
+    <tbody>
+      <tr><td>Why is Parquet faster than CSV?</td><td><a href="#b2">B2</a></td><td>Four mechanisms named separately, and which one dominates in the case at hand</td></tr>
+      <tr><td>When is Parquet <em>slower</em>?</td><td><a href="#b1">B1</a></td><td><code>SELECT *</code> on a narrow table, tiny files, row-level lookups, write-once-read-once</td></tr>
+      <tr><td>We moved to Parquet and it barely helped. Why?</td><td><a href="#b2">B2</a></td><td><mark>The data is unsorted, so the footer statistics prune nothing</mark></td></tr>
+      <tr><td>Why is my 10 GB file processed by one task?</td><td><a href="#b3">B3</a></td><td>Gzipped text is unsplittable. And the fix is not a bigger cluster</td></tr>
+      <tr><td>How does a lakehouse get ACID?</td><td><a href="#b6">B6</a></td><td>One atomic pointer swap, and <em>the catalog</em> is what makes it atomic</td></tr>
+      <tr><td>Two writers commit at once. What happens?</td><td><a href="#b6">B6</a></td><td>Compare-and-swap, one retries, conflict detection at file granularity</td></tr>
+      <tr><td>How would you partition this table?</td><td><a href="#b7">B7</a></td><td>Both conditions — in the predicates <em>and</em> low enough cardinality. Sorting for the rest</td></tr>
+      <tr><td>How do you handle duplicates from retries?</td><td><a href="#b8">B8</a></td><td>Exactly-once effect, not delivery. Then the idempotency toolkit</td></tr>
+      <tr><td>Why can't you just detect whether the write succeeded?</td><td><a href="#b8">B8</a></td><td>Because it is undecidable, not merely hard. <mark>Say "proof", not "difficult"</mark></td></tr>
+      <tr><td>What does CDC actually read?</td><td><a href="#b10">B10</a></td><td>The WAL, as a replication client. Plus the replication-slot disk risk</td></tr>
+      <tr><td>Which join did the engine choose, and why?</td><td><a href="#b9">B9</a></td><td>Cardinality estimates and the size threshold — and what would flip the decision</td></tr>
+      <tr><td>Why is a Python UDF slow in Spark?</td><td><a href="#b11">B11</a></td><td>Serialisation across the JVM boundary per row, and Arrow UDFs as the amortisation</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The move that distinguishes a senior answer here</span>
+    <strong>Answer with the mechanism, then the measurement.</strong>
+    <mark>"Columnar layout, and in our case sorting the predicate column cut bytes scanned twelvefold"
+    is a categorically different answer from "because it's columnar"</mark> — not because it is more
+    correct, but because only one of them could have been said by someone who had never opened a file.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next</th><th>What it inherits from L0</th></tr></thead>
+    <tbody>
+      <tr><td><a href="modelling.html">L1 modelling</a></td><td>Physical design is <a href="#b7">B7</a> applied — partitioning, clustering, file sizing are the same three decisions</td></tr>
+      <tr><td><a href="spark.html">L2 Spark</a></td><td>Catalyst is <a href="#b9">B9</a>'s planner; I/O tuning is <a href="#b2">B2</a>; join strategy is <a href="#b9">B9</a>'s table</td></tr>
+      <tr><td><a href="kafka.html">L3 Kafka</a></td><td>The log is an LSM structure (<a href="#b10">B10</a>); delivery semantics is <a href="#b8">B8</a> with a broker attached</td></tr>
+      <tr><td><a href="stream-semantics.html">L4 stream semantics</a></td><td>End-to-end exactly-once is <a href="#b8">B8</a> plus checkpointing; the state backend is an LSM</td></tr>
+      <tr><td><a href="pipelines.html">L5 pipelines</a></td><td>CDC reads the WAL (<a href="#b10">B10</a>); backfills are safe only because of <a href="#b8">B8</a>; partition overwrite is <a href="#b6">B6</a></td></tr>
+      <tr><td><a href="reliability.html#r11">L6 governance</a></td><td>Deletion in an immutable architecture is a <a href="#b5">B5</a> and <a href="#b7">B7</a> problem, not a policy one</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Branch complete when</span>
+    You can look at a slow query and say <strong>which of the four Parquet mechanisms is failing and
+    why</strong>, without running anything. And you can explain the atomic commit protocol at a whiteboard
+    <strong>from the pointer outwards</strong>, including who provides the atomicity and what happens when
+    two writers race.
+    <br><br>
+    <mark>The test for both is the same: could you have built it? For <a href="#b6">B6</a> the answer will
+    literally be yes, because you did.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · L0 · The substrate</footer>
+
+</body>
+</html>

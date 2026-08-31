@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L5 · Pipelines &amp; orchestration — Forge</title>
+<meta name="description" content="Idempotency, write semantics, backfills, incremental models, CDC correctness, snapshot stitching and pipeline testing — with two laboratories." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#why">The one question</a>
+  <a href="#env">The environment</a>
+  <a href="#map">Internal dependency map</a>
+  <h4>Orchestration</h4>
+  <a href="#p1">P1 · ETL vs ELT</a>
+  <a href="#p2">P2 · Orchestration</a>
+  <a href="#p3">P3 · Orchestrator internals</a>
+  <h4>Correctness on re-run</h4>
+  <a href="#p4">P4 · Idempotency</a>
+  <a href="#p5">P5 · Incremental models</a>
+  <a href="#p6">P6 · Backfills</a>
+  <h4>Change data capture</h4>
+  <a href="#p7">P7 · Log vs query CDC</a>
+  <a href="#p8">P8 · Snapshot stitching</a>
+  <a href="#p9">P9 · Deletes &amp; ordering</a>
+  <h4>Practice</h4>
+  <a href="#p10">P10 · Materialisation</a>
+  <a href="#p11">P11 · Testing</a>
+  <a href="#p12">P12 · When not to build one</a>
+  <h4>Laboratories</h4>
+  <a href="#lab16">16 · CDC Correctness</a>
+  <a href="#lab19">19 · Backfill &amp; Idempotency</a>
+  <h4>Exit</h4>
+  <a href="#defence">Interview defence</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Forge</a><span>/</span>L5 Pipelines</p>
+
+<div class="hero">
+  <div class="kicker">Branch L5 · own in practice · deepen on CDC and backfills</div>
+  <h1>Pipelines &amp; orchestration</h1>
+  <p class="dropcap">You have built pipelines for five years, so most of this branch is consolidation. Two
+  places, though, are where experience most reliably leaves a gap — <em>CDC correctness</em>, where rows go
+  missing in three distinct silent ways, and <em>backfill economics</em>, where the question is how to
+  reprocess two years of history through logic that has changed twice since.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>A pipeline is not a program that runs. It is a program that will be run
+    again, at an unknown time, over data that has since changed.</mark> Idempotency exists because it will
+    run again. Backfills exist because it will run over old data. Incrementality exists because the data
+    changed. CDC exists because it changed underneath you. Testing exists because you cannot inspect the
+    run that has not happened yet.
+  </div>
+  <div class="tags">
+    <span class="tag">#idempotency</span>
+    <span class="tag t2">#backfills</span>
+    <span class="tag t3">#cdc</span>
+    <span class="tag">#orchestration</span>
+    <span class="tag t2">#incremental</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> The one question this branch exists to answer</h2>
+  <p class="sub">Asked in almost every senior data engineering interview, in one phrasing or another.</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“Your job failed halfway through and you re-ran it. What is the state of the target table?”</b>
+    <mark>“It depends on the write semantics, and only one of the three is safe to re-run without
+    thinking.”</mark> Append duplicates. Upsert is idempotent only if the key is the grain. Partition
+    overwrite is idempotent by construction — which is why it is the pattern to design toward rather than
+    the one to fall back on.
+  </div>
+
+  <p>The second is the one that separates people who have maintained pipelines from people who have
+  written them:</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“Reprocess two years of history. The source schema changed twice in that period.”</b>
+    Four problems at once — <em>correctness</em> (today's logic does not apply to old data),
+    <em>ordering</em> (which models can run in parallel and which cannot), <em>cost</em> (two years of
+    compute arriving simultaneously), and <em>source drift</em> (dimension values were different then).
+    <mark>The fourth one is <a href="modelling.html#m9">L1 M9</a> arriving from the pipeline side, and
+    recognising that is the senior move.</mark>
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The failure mode of this branch</span>
+    Assuming familiarity is sufficient. <strong>Most engineers with five years of pipelines have never
+    deliberately broken CDC and watched rows disappear</strong> — they have only ever fixed it after a user
+    noticed. <mark>The two labs here exist to convert years of incident memory into a failure matrix you
+    can recite.</mark>
+  </div>
+</section>
+
+<section id="env">
+  <h2><span class="num">01</span> The environment</h2>
+  <p class="sub">One rule about clocks does more work here than any tool choice.</p>
+
+  <table class="nw">
+    <thead><tr><th>Component</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>Airflow</b>, and <b>Dagster</b> alongside it</td><td>Airflow is what job descriptions ask for. <mark>Dagster's asset model is what an orchestrator should be</mark> — and building the same DAG in both is the fastest way to understand what task-based orchestration cost you</td></tr>
+      <tr><td><b>dbt</b></td><td>Free, and it is where materialisation strategy, incremental models and data tests are all expressed. Used again in <a href="reliability.html">L6</a></td></tr>
+      <tr><td><b>Postgres with logical decoding</b>, plus <b>Debezium</b> into the <a href="kafka.html#env">L3 Kafka cluster</a></td><td><a href="#lab16">Lab 16</a>. Reuses infrastructure you already built rather than adding any</td></tr>
+      <tr><td><b>A full-table checksum comparator</b></td><td><strong>The instrument of Lab 16.</strong> Divergence between source and target must be detectable by computation, not by someone noticing</td></tr>
+      <tr><td><b>A run ledger</b> — parameters, inputs, row counts in and out, output checksum, per run</td><td><mark>Idempotency is a claim about two runs. Without a record of the first one it is unverifiable</mark></td></tr>
+      <tr><td><b>A separate queue or pool for backfills</b></td><td><a href="#lab19">Lab 19</a> experiment 7 exists to show why, and it needs the isolation to be optional</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The rule that makes everything else in this branch possible</span>
+    <strong>Never call <code>now()</code> inside a pipeline.</strong> Every job takes its logical date as a
+    parameter and derives every time boundary from it.
+    <br><br>
+    <mark>A pipeline that reads the wall clock cannot be run for a past date, cannot be tested
+    deterministically, and cannot be backfilled at all.</mark> This one rule converts backfilling from a
+    project into a loop, and it is the single highest-leverage convention in data engineering.
+    <br><br>
+    Two more: <strong>every model declares its write semantics</strong> — append, upsert, or
+    overwrite-partition — in its config, where a reviewer can see it. And <strong>every run records rows in
+    and rows out</strong>, which costs nothing and becomes the foundation of <a href="reliability.html#r7">L6</a>.
+  </div>
+</section>
+
+<section id="map">
+  <h2><span class="num">02</span> Internal dependency map</h2>
+
+<pre>P1 ETL vs ELT
+      │
+      ↓
+P2 ORCHESTRATION ─────→ P3 ORCHESTRATOR INTERNALS
+      │
+      ↓
+P4 IDEMPOTENCY &amp; WRITE SEMANTICS [spine] ←──── L0 B8 partial failure
+      │                                          L0 B6 atomic commit
+      ├──────→ P5 INCREMENTAL &amp; CHANGE DETECTION
+      │                    │
+      ↓                    ↓
+P6 BACKFILLS [spine] ←─────┘
+      │
+      ↓
+P7 CDC — LOG vs QUERY ←──── L0 B10 the WAL
+      │
+      ├──→ P8 SNAPSHOT + STREAM STITCHING
+      │
+      └──→ P9 DELETES, TOMBSTONES, OUT-OF-ORDER
+                    │
+                    ↓
+            P10 MATERIALISATION STRATEGIES
+                    │
+                    ↓
+            P11 TESTING PIPELINES &amp; DATA
+                    │
+                    ↓
+            P12 WHEN A PIPELINE SHOULD NOT EXIST</pre>
+
+  <div class="note">
+    <span class="lbl">Reading this map</span>
+    <strong>P4 is the load-bearing node and everything below it assumes it.</strong> An incremental model
+    that is not idempotent is a bug with a schedule. A backfill over non-idempotent writes is an outage
+    you scheduled yourself. <mark>CDC is idempotency applied to a stream of changes you did not
+    generate.</mark>
+    <br><br>
+    Note that P4 has two inbound arrows from <a href="substrate.html">L0</a> and no local dependencies —
+    it is the point where the substrate's proof about partial failure becomes a daily engineering practice.
+  </div>
+</section>
+
+<section id="p1">
+  <h2><span class="num">P1</span> ETL versus ELT</h2>
+  <p class="sub">ELT won, and the usual explanation is not the real one.</p>
+
+  <p><b>WHAT IT IS.</b> Whether transformation happens before the data lands in the warehouse, or after.</p>
+
+  <div class="rule">
+    <span class="lbl">Why ELT actually won</span>
+    Cheap storage and elastic compute are the reasons everyone gives, and they are true.
+    <mark>The reason that mattered more is organisational: transformation in the warehouse is SQL in
+    version control that an analyst can read, review and fix.</mark> Transformation in flight is Python in
+    a box only the data team can open.
+    <br><br>
+    <strong>ELT moved the transformation to where the people who understand the business already were.</strong>
+    That is why analytics engineering exists as a role, and it is a better answer than "storage got cheap".
+  </div>
+
+  <p><b>WHERE ETL STILL WINS.</b> PII that must never land in the warehouse at all · formats the warehouse
+  cannot read · very large reductions where landing the raw volume is genuinely wasteful · and regulated
+  contexts where the raw data may not cross a boundary.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#p10">P10</a> · <a href="modelling.html#m3">L1 M3</a> ·
+  <a href="reliability.html#r11">L6 governance</a>.</p>
+</section>
+
+<section id="p2">
+  <h2><span class="num">P2</span> Orchestration</h2>
+  <p class="sub">DAGs, schedules, sensors — and one confusion that causes more incidents than any other.</p>
+
+  <p><b>WHAT IT IS.</b> The system that decides what runs, when, in what order, and what happens when
+  something fails.</p>
+
+  <div class="trap">
+    <span class="lbl">The most common orchestration bug in the world</span>
+    <strong>The schedule is not the dependency.</strong> Two jobs scheduled at 02:00 and 02:15 are not
+    ordered — they are two independent jobs that happen to usually run in a convenient sequence.
+    <br><br>
+    <mark>It works perfectly until the first job is slow once, and then the second one silently processes
+    yesterday's data and reports success.</mark> If B needs A, express it as a dependency or a data sensor.
+    Time is not a dependency mechanism, and using it as one produces failures that are green.
+  </div>
+
+  <p><b>SUBTOPICS.</b> DAGs, schedules and catch-up semantics · <strong>task-based orchestration versus
+  asset-based</strong> — "run this task" versus "this table should exist and be fresh", and how much
+  lineage the second gives you for free · sensors, and the anti-pattern of a sensor occupying a worker slot
+  for six hours (deferrable operators and reschedule mode as the fix) · retries, exponential backoff and
+  when a retry is wrong · SLAs and alerting on lateness rather than on failure · dynamic task generation
+  and its debugging cost · <strong>the difference between a task failing and a task producing wrong
+  output</strong>, which is the whole of <a href="reliability.html">L6</a>.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> the <strong>Apache Airflow concepts
+    documentation</strong> and the <strong>Dagster "Thinking in Assets"</strong> guide<br>
+    <em>Why both:</em> free, and they disagree productively. <mark>Reading the asset-based framing after
+    years of task-based Airflow reorganises how you think about pipelines</mark> — dependencies become
+    statements about data rather than about execution, which is also how <a href="reliability.html#r10">lineage</a>
+    and freshness stop being bolt-ons.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#p3">P3</a> · <a href="#p6">P6</a> · <a href="reliability.html">L6</a>.</p>
+</section>
+
+<section id="p3">
+  <h2><span class="num">P3</span> Orchestrator internals</h2>
+  <p class="sub">Enough to debug it under pressure, which is the only reason to know it.</p>
+
+  <p><b>WHAT IT IS.</b> The scheduler loop, the executor, the task lifecycle, and the metadata database
+  that is simultaneously the source of truth and the usual bottleneck.</p>
+
+  <p><b>SUBTOPICS.</b> The scheduler loop and why <strong>the scheduler, not the workers, is normally the
+  scaling limit</strong> · executor types and where the work actually runs · task instance states —
+  queued, running, up_for_retry, upstream_failed, skipped — and what each tells you ·
+  the metadata database as a contention point · pools, priority weights and concurrency limits as the
+  actual mechanism for protecting a production SLA from a backfill.</p>
+
+  <div class="note">
+    <span class="lbl">Zombie tasks, and where you have seen this before</span>
+    A worker dies without reporting. The scheduler sees a task that is <em>running</em> and has stopped
+    heartbeating. <strong>It cannot tell a dead worker from a slow one</strong> — so it waits, then
+    declares the task a zombie, then retries, and if it was wrong the task now runs twice.
+    <br><br>
+    <mark>That is <a href="substrate.html#b8">L0 B8</a>'s undecidable timeout, arriving inside your
+    orchestrator.</mark> Which is also why <a href="#p4">P4</a> is not optional: your orchestrator will
+    eventually run a task twice, and it will be correct to do so.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#p4">P4</a> · <a href="substrate.html#b8">L0 B8</a> ·
+  <a href="../atlas/distributed-systems.html#n7">Distributed Systems N7</a>.</p>
+</section>
+
+<section id="p4">
+  <h2><span class="num">P4</span> Idempotency and write semantics <span class="pill pC">spine</span></h2>
+  <p class="sub">Three write modes, three re-run behaviours, and one design decision that removes most of this branch's difficulty.</p>
+
+  <table>
+    <thead><tr><th>Write mode</th><th>Re-running produces</th><th>Idempotent when</th></tr></thead>
+    <tbody>
+      <tr><td><b>Append</b></td><td>Duplicates, always</td><td>Never. Only safe behind a downstream dedup</td></tr>
+      <tr><td><b>Upsert / merge</b></td><td>The same rows, if the key is right</td><td><mark>The merge key is the grain</mark>. A key finer than the grain silently under-deduplicates</td></tr>
+      <tr><td><b>Overwrite partition</b></td><td>An identical partition</td><td><strong>By construction</strong>, provided the overwrite is atomic</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The design decision to make once and never revisit</span>
+    <strong>Make the unit of work a partition. Make writing a partition an overwrite.</strong>
+    <br><br>
+    <mark>Then a re-run is free, a backfill is just many re-runs, and recovery from a failed run is
+    "run it again" rather than an investigation.</mark> Almost every hard problem in the rest of this
+    branch is easy under that convention and hard without it.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The gap in delete-then-insert</span>
+    Partition overwrite implemented as <code>DELETE</code> followed by <code>INSERT</code> is not atomic.
+    <strong>There is a window in which a reader sees an empty partition</strong> and reports zero, entirely
+    successfully.
+    <br><br>
+    <mark>This is exactly the failure <a href="substrate.html#lab02">L0 Lab 02</a> produces</mark>, and the
+    fix is the same one: a table format whose commit swaps a single pointer. Partition overwrite is safe on
+    Iceberg or Delta and unsafe on a directory of Parquet, and the difference is invisible until a reader
+    happens to land in the window.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Idempotency keys and deterministic derived keys · merge key selection and its
+  identity with the grain · overwrite-by-partition semantics across engines · absolute values versus deltas
+  · at-least-once orchestration as the default assumption · verifying idempotency by checksum rather than
+  by inspection.</p>
+
+  <p><b>THE LAB.</b> <a href="#lab19">Laboratory 19 — Backfill &amp; Idempotency.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="substrate.html#b8">L0 B8</a> · <a href="substrate.html#b6">L0 B6</a> ·
+  <a href="stream-semantics.html#w9">L4 W9</a> · <a href="#p6">P6</a>.</p>
+</section>
+
+<section id="p5">
+  <h2><span class="num">P5</span> Incremental models and change detection</h2>
+  <p class="sub">Where "incremental" stops being a config value and becomes a correctness question.</p>
+
+  <p><b>WHAT IT IS.</b> Processing only what changed, which first requires knowing what changed — and every
+  method of knowing has a specific way of being wrong.</p>
+
+  <table>
+    <thead><tr><th>Method</th><th>Fails on</th></tr></thead>
+    <tbody>
+      <tr><td><b>High-watermark column</b> (<code>updated_at</code>)</td><td>Hard deletes · clock skew · backdated updates · <mark>and the transaction-boundary bug</mark></td></tr>
+      <tr><td><b>Log-based CDC</b></td><td>Nothing, at the cost of privileges and operational burden (<a href="#p7">P7</a>)</td></tr>
+      <tr><td><b>Snapshot diff</b></td><td>Nothing — but it reads everything, every time</td></tr>
+      <tr><td><b>Hash comparison</b></td><td>Nothing detectable, but still requires reading the full source</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The transaction-boundary bug, which is subtle and permanent</span>
+    You read <code>WHERE updated_at &gt; last_watermark</code> and advance the watermark to now.
+    <strong>A transaction that set <code>updated_at</code> to a moment before your read commits a few
+    seconds after it.</strong> The row was invisible when you read, and its timestamp is now below your
+    watermark forever.
+    <br><br>
+    <mark>You do not skip it once. You skip it permanently, and nothing will ever tell you.</mark>
+    The mitigations are to lag the watermark behind the longest possible transaction, to use the commit
+    timestamp rather than the row timestamp, or — properly — to read the log instead.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#p7">P7</a> · <a href="#p10">P10</a> · <a href="#lab16">Lab 16</a>.</p>
+</section>
+
+<section id="p6">
+  <h2><span class="num">P6</span> Backfills <span class="pill pC">spine</span></h2>
+  <p class="sub">Four independent problems that arrive as one request.</p>
+
+  <table>
+    <thead><tr><th>Axis</th><th>The question</th><th>What goes wrong</th></tr></thead>
+    <tbody>
+      <tr><td><b>Correctness</b></td><td>Does today's logic apply to two-year-old data?</td><td>The source schema changed twice. Your transformation references a column that did not exist</td></tr>
+      <tr><td><b>Ordering</b></td><td>Can partitions run in parallel?</td><td><mark>Only if no model depends on prior state.</mark> A running total cannot be parallelised, and most people do not know which of their models are order-dependent</td></tr>
+      <tr><td><b>Cost</b></td><td>What does 24 months of compute at once do?</td><td>It starves the daily run and misses the SLA — <em>the backfill causes the incident</em></td></tr>
+      <tr><td><b>Source drift</b></td><td>Dimension values were different then</td><td>Attribute historical sales to the region as-was or as-is? <a href="modelling.html#m9">L1 M9</a> from the other side</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The procedure, and it is the atomic swap again</span>
+    <strong>Backfill into a shadow table. Diff it against production over the overlap window. Then swap.</strong>
+    <br><br>
+    <mark>Write the new thing where nobody is looking, verify it, then flip one pointer.</mark> That is
+    <a href="substrate.html#b6">L0 B6</a> for the third time — after table commits and blue-green
+    deployment — and here it converts a backfill from an irreversible act into a reviewable one.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Chunking and throttling · queue and pool isolation so a backfill cannot starve
+  production · determining which models are parallel-safe, as a written inventory ·
+  versioned transformation logic for historical schemas · restatement policy — whether history is allowed
+  to change, and who decides · communicating a restatement to downstream consumers before it lands.</p>
+
+  <p><b>THE LAB.</b> <a href="#lab19">Laboratory 19.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="#p4">P4</a> · <a href="modelling.html#m9">L1 M9</a> ·
+  <a href="reliability.html#r5">L6 contracts</a> · <a href="platform.html#e9">L8 cost</a>.</p>
+</section>
+
+<section id="p7">
+  <h2><span class="num">P7</span> CDC — log-based versus query-based</h2>
+  <p class="sub">Two techniques that produce genuinely different data, not two implementations of one idea.</p>
+
+  <p><b>WHAT IT IS.</b> Query-based CDC polls the source for rows whose timestamp exceeds a watermark.
+  Log-based CDC reads the write-ahead log and receives every committed change.</p>
+
+  <div class="rule">
+    <span class="lbl">The distinction that matters, and it is not "log-based is better"</span>
+    <strong>Query-based CDC gives you the current state of rows that changed. Log-based CDC gives you the
+    change events.</strong>
+    <br><br>
+    <mark>Those are different data supporting different questions.</mark> "How many times did this order
+    change status, and in what order" exists only in the log — polling shows you the final state and
+    silently discards every intermediate one. If your model needs event history, no amount of polling
+    frequency recovers it.
+  </div>
+
+  <table>
+    <thead><tr><th></th><th>Query-based</th><th>Log-based</th></tr></thead>
+    <tbody>
+      <tr><td>Sees deletes</td><td><mark>No</mark></td><td>Yes</td></tr>
+      <tr><td>Sees intermediate states</td><td>No</td><td>Yes</td></tr>
+      <tr><td>Load on the source's query path</td><td>Yes</td><td>Negligible</td></tr>
+      <tr><td>Privileges needed</td><td>SELECT</td><td>Replication</td></tr>
+      <tr><td>Operational risk</td><td>Missed rows at transaction boundaries</td><td><strong>A stopped consumer retains WAL until the source's disk fills</strong></td></tr>
+    </tbody>
+  </table>
+
+  <p><b>DEPENDENCIES.</b> <a href="substrate.html#b10">L0 B10</a> — Debezium is a replication client, and
+  everything about operating it follows from that.</p>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation + blog · <em>Title:</em> the <strong>Debezium documentation</strong>,
+    particularly the Postgres connector's "how it works" and snapshot sections, plus the Debezium blog on
+    incremental snapshots<br>
+    <em>Why this one:</em> free, and it is unusually explicit about failure modes — replication slot growth,
+    snapshot locking, and what happens when the connector is offline are all documented rather than
+    discovered.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab16">Laboratory 16 — CDC Correctness.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="#p8">P8</a> · <a href="kafka.html#k2">L3 K2 log compaction</a> ·
+  <a href="substrate.html#b10">L0 B10</a>.</p>
+</section>
+
+<section id="p8">
+  <h2><span class="num">P8</span> Snapshot and stream stitching</h2>
+  <p class="sub">The hard part of CDC, and the part most treatments skip entirely.</p>
+
+  <p><b>WHAT IT IS.</b> You need the history from before CDC was switched on. So you take a snapshot, start
+  streaming, and must join the two <strong>without a gap and without a duplicate</strong> — while writes
+  continue throughout.</p>
+
+  <p><b>WHY IT IS HARD.</b> Because the snapshot and the stream overlap in time but not in order.
+  <mark>A log event received during the snapshot may be older or newer than the snapshot's version of that
+  same row, and arrival order does not tell you which.</mark></p>
+
+  <p><b>THE MECHANISM.</b> Record the log position at snapshot start. Apply log events from that position
+  forward. <strong>Reconcile by primary key <em>and version</em> — an LSN or offset per row — never by
+  arrival order.</strong> Upsert semantics then absorb the overlap harmlessly, because reapplying a change
+  you already have is a no-op.</p>
+
+  <p><b>SUBTOPICS.</b> Consistent snapshots and the locking cost of taking one · incremental and
+  watermark-based snapshotting that avoids locking the table · chunked snapshots interleaved with the
+  stream · resuming an interrupted snapshot · re-snapshotting a single table without stopping the
+  connector.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#p9">P9</a> · <a href="#lab16">Lab 16</a> experiment 9 ·
+  <a href="stream-semantics.html#w8">L4 W8</a>.</p>
+</section>
+
+<section id="p9">
+  <h2><span class="num">P9</span> Deletes, tombstones and out-of-order updates</h2>
+  <p class="sub">Three ways to lose rows, all of them silent. These are the three failures of Lab 16.</p>
+
+  <table>
+    <thead><tr><th>Failure</th><th>Mechanism</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td><b>Invisible hard delete</b></td><td>Nothing was <em>updated</em>; the row simply ceased to exist. Query-based CDC cannot see an absence</td><td>Log-based CDC, or a periodic reconciliation against a source key list</td></tr>
+      <tr><td><b>Evaporated tombstone</b></td><td>A null-value tombstone on a compacted topic is removed by the cleaner before your consumer reads it — <mark>and the deleted row resurrects</mark></td><td><code>delete.retention.ms</code> greater than your worst-case consumer downtime</td></tr>
+      <tr><td><b>Reordered update</b></td><td>Two updates to one key, consumed by parallel workers, applied in arrival order. The older wins</td><td><strong>Upsert only if the incoming LSN exceeds the stored one.</strong> Always. It costs one column</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">The single rule that prevents two of the three</span>
+    <strong>Store the source version — LSN, commit timestamp, or offset — on every row, and make every
+    upsert conditional on it increasing.</strong>
+    <mark>This is the same conditional write as <a href="substrate.html#b6">L0's compare-and-swap
+    commit</a>, applied per row rather than per table.</mark> It is one extra column and one extra
+    predicate, and it eliminates an entire class of silent corruption.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Soft versus hard delete in the target, and why soft-deleted rows are still PII
+  (<a href="reliability.html#r11">L6</a>) · the <code>__deleted</code> flag convention · reconciliation jobs that
+  compare key sets rather than rows · truncates and DDL, which most CDC connectors handle badly ·
+  ordering guarantees when the target is partitioned differently from the source.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#lab16">Lab 16</a> · <a href="reliability.html#r11">L6 governance</a> ·
+  <a href="kafka.html#k2">L3 K2</a>.</p>
+</section>
+
+<section id="p10">
+  <h2><span class="num">P10</span> Materialisation strategies</h2>
+  <p class="sub">View, table, incremental, ephemeral — and the reconciliation everybody forgets.</p>
+
+  <p><b>WHAT IT IS.</b> The choice of whether a model's results are computed at query time, stored, or
+  stored and updated in place.</p>
+
+  <p><b>THE TRADE.</b> Freshness against cost against complexity. A view is always fresh and always
+  expensive. A table is cheap to read and stale between runs. An incremental table is cheap and fresh, and
+  introduces a new failure mode of its own.</p>
+
+  <div class="trap">
+    <span class="lbl">The failure that accumulates silently for a year</span>
+    <strong>An incremental model can drift from what a full refresh would produce.</strong> A late-arriving
+    row outside the incremental window, a changed dimension, a fixed bug applied only to new data — each
+    leaves the incremental table subtly different from the truth.
+    <br><br>
+    <mark>Every incremental model needs a scheduled full-refresh reconciliation, and most teams do not have
+    one.</mark> The drift is invisible because there is nothing to compare against — which is precisely why
+    the comparison has to be scheduled rather than performed when someone gets suspicious.
+  </div>
+
+  <p><b>SUBTOPICS.</b> View, table, incremental, ephemeral and materialised view · incremental strategies —
+  append, merge, insert-overwrite, delete-insert · the lookback window and choosing it from the measured
+  lateness distribution (<a href="stream-semantics.html#lab13">L4 Lab 13</a> is the same measurement) ·
+  full-refresh cadence as a first-class schedule · when a view is the correct answer and materialising is
+  premature.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#p5">P5</a> · <a href="modelling.html#m11">L1 M11</a> ·
+  <a href="reliability.html#r2">L6</a>.</p>
+</section>
+
+<section id="p11">
+  <h2><span class="num">P11</span> Testing pipelines and testing data</h2>
+  <p class="sub">Two different activities that are constantly conflated, and both are required.</p>
+
+  <div class="rule">
+    <span class="lbl">The distinction</span>
+    <strong>Testing the code</strong> uses fixed inputs and asserts deterministic outputs. It catches
+    regressions you introduced.
+    <strong>Testing the data</strong> asserts constraints on values you did not write. It catches reality
+    changing.
+    <br><br>
+    <mark>They fail at different times for different reasons, and a team with only one of them is exposed
+    in a direction it cannot see.</mark>
+  </div>
+
+  <p><b>SUBTOPICS.</b> Fixture-based unit tests with tiny handcrafted inputs — <strong>ten rows you wrote
+  yourself beat a million you did not</strong> · assertion tests on outputs: uniqueness, not-null,
+  referential integrity, accepted values, freshness, row-count bounds · contract tests at boundaries
+  (<a href="reliability.html#r5">L6</a>) · testing against a sample rather than production ·
+  <strong>a test that the pipeline is idempotent</strong> — run twice, assert identical checksum — which
+  almost nobody writes and which would catch most of <a href="#lab19">Lab 19</a>'s failures automatically.</p>
+
+  <div class="note">
+    <span class="lbl">The test that is secretly a modelling assertion</span>
+    <strong>A uniqueness test on the grain columns <em>is</em> the grain, expressed as an executable
+    claim.</strong>
+    <mark>It is the only place in a codebase where <a href="modelling.html#m5">L1 M5</a>'s sentence becomes
+    something a machine can check</mark> — which is a good argument for writing it on every fact table,
+    even where you are certain it holds.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="reliability.html#r2">L6 quality</a> · <a href="modelling.html#m5">L1 M5</a> ·
+  <a href="platform.html#e7">L8 CI/CD for data</a>.</p>
+</section>
+
+<section id="p12">
+  <h2><span class="num">P12</span> When a pipeline should not exist</h2>
+  <p class="sub">The counterpart node, and the most valuable habit in the branch.</p>
+
+  <div class="note">
+    <span class="lbl">Do not build one when</span>
+    <strong>The source can be queried directly at acceptable cost.</strong> A pipeline that copies a small
+    table so a dashboard can read it is a liability with a schedule.<br>
+    <strong>The consumer is one person, once a quarter.</strong> That is a query.<br>
+    <strong>The transformation is a view.</strong> Materialising something cheap adds a failure mode and a
+    staleness window in exchange for nothing.<br>
+    <strong>The request was for a table rather than for an answer.</strong>
+    <mark>Ask what decision the data will inform. Sometimes the honest conclusion is that no pipeline is
+    needed, and delivering that is worth more than delivering the pipeline.</mark>
+  </div>
+
+  <div class="life">
+    <span class="lbl">The obligation nobody mentions when you build it</span>
+    <strong>Every pipeline you create is a permanent maintenance obligation, because nobody will ever ask
+    you to delete one.</strong> Requests to build are constant; requests to decommission are
+    approximately zero.
+    <br><br>
+    <mark>Pipeline sprawl is created here and paid for in <a href="platform.html#e10">L8</a></mark>, and a
+    senior engineer is someone who counts the future cost at the moment of creation rather than at the
+    moment of migration.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="platform.html#e10">L8 deprecation</a> ·
+  <a href="stream-semantics.html#w12">L4 W12</a> · <a href="kafka.html#k12">L3 K12</a> — the three
+  "when not to" nodes are one disposition.</p>
+</section>
+
+<section id="lab16">
+  <h2><span class="num">16</span> Laboratory — CDC Correctness</h2>
+  <p class="sub">Rows lost three distinct ways, all silently.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Replicate a Postgres <code>orders</code> table into a warehouse table. It must match
+    the source exactly, continuously, under a live write workload.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> Query-based CDC: poll <code>WHERE updated_at &gt; watermark</code> every five
+    minutes and upsert by primary key. Plus a <strong>full-table checksum comparator</strong> that runs
+    independently and reports divergence — without which none of the failures below are visible.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE — three, and each is silent</span>
+    <strong>1. Hard delete.</strong> Delete a row at the source. It remains in the target forever.
+    Nothing was updated, so nothing was polled.<br>
+    <strong>2. Transaction boundary.</strong> A long transaction whose <code>updated_at</code> precedes
+    your poll commits after it. <mark>The row is skipped permanently.</mark><br>
+    <strong>3. Reordered updates.</strong> Two updates to one key, consumed by parallel workers, applied in
+    arrival order. The older value wins and will never be corrected.
+    <br><br>
+    Then switch to log-based CDC and meet two <em>new</em> failures: the evaporated tombstone, and the
+    snapshot-to-stream gap.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Absence is not an update → watermark lag and commit timestamps →
+  the WAL as the only complete record → LSN-conditional upserts → replication slots and source disk risk →
+  tombstones and <code>delete.retention.ms</code> → consistent snapshots → stitching by key and version
+  rather than by arrival.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Query-based baseline, inserts and updates only. Verify by full-table checksum</td><td>It works — which is why the method survives in production</td></tr>
+      <tr><td>2</td><td>Add deletes. Plot divergence over time</td><td><mark>Monotonically increasing wrongness, never alerted</mark></td></tr>
+      <tr><td>3</td><td>Construct the transaction-boundary case with an explicit long transaction</td><td>Permanent, undetectable row loss</td></tr>
+      <tr><td>4</td><td>Introduce clock skew between source and pipeline; measure the loss window</td><td>Why the watermark must lag</td></tr>
+      <tr><td>5</td><td>Switch to Debezium; repeat experiments 2 and 3</td><td>Both disappear — establish what log-based buys</td></tr>
+      <tr><td>6</td><td>Rapid successive updates through parallel consumers: apply by arrival, then by LSN comparison</td><td><strong>The one-column fix for an entire failure class</strong></td></tr>
+      <tr><td>7</td><td>Stop the consumer for an hour. Watch <code>pg_replication_slots</code>. <strong>Compute time-to-disk-full</strong></td><td>The operational risk log-based CDC introduces</td></tr>
+      <tr><td>8</td><td>Let a tombstone be compacted away before consumption</td><td><mark>A deleted row resurrects</mark></td></tr>
+      <tr><td>9</td><td>Snapshot while writes continue; stitch to the stream; verify no gap and no duplicate</td><td>The part most treatments omit entirely</td></tr>
+      <tr><td>10</td><td>Schema change at source: add a column, drop one, change a type</td><td>Three different downstream outcomes, one of which is silent</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> The checksum comparison after every scenario — it is the instrument, and
+  everything else is commentary. Divergence over time in experiment 2. Retained WAL in experiment 7.
+  The exact moment the resurrected row reappears in experiment 8.</p>
+
+  <p><b>THE ARTIFACT.</b> <strong>A CDC failure matrix</strong> — failure mode × query-based ×
+  log-based × mitigation × how you would detect it. <mark>The detection column is the one that matters,
+  because every failure in this lab is silent by default.</mark></p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Every "the warehouse does not match the source" ticket, and the reason
+  they take weeks: the divergence started months before anyone noticed, and there is no record of when.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> High, and specifically high for payments and any regulated context, where
+  "our replica is provably consistent with the source, and here is the continuous check that proves it" is
+  the actual requirement.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#p9">P9</a> · <a href="reliability.html#r3">L6 quality and
+  reconciliation</a> · <a href="modelling.html#m9">L1 M9</a> · <a href="system-design.html#d3">L7 CDC design</a>.</p>
+</section>
+
+<section id="lab19">
+  <h2><span class="num">19</span> Laboratory — Backfill &amp; Idempotency</h2>
+  <p class="sub">Run it twice and everything doubles. Then reprocess two years and cause an outage.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> A daily aggregation pipeline. It must be safe to re-run, safe to run for any past date,
+    and capable of reprocessing 24 months without breaking the daily schedule.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> Append-mode writes. <code>now()</code> called inside the transformation.
+    No partitioning. A run ledger recording parameters, row counts and an output checksum for every run —
+    <strong>the instrument that makes idempotency checkable rather than assumed.</strong>
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE — six escalations</span>
+    <strong>1.</strong> Re-run yesterday. Every number doubles.<br>
+    <strong>2.</strong> Remove <code>now()</code> and discover the pipeline <em>cannot be run for a past
+    date at all</em> — the logic assumed "today" in four places.<br>
+    <strong>3.</strong> Switch to partition overwrite. Idempotent. Kill it mid-write on plain Parquet and
+    <mark>a reader sees an empty partition and reports zero, successfully.</mark><br>
+    <strong>4.</strong> Backfill 24 months in parallel. The daily run misses its SLA — <em>the backfill
+    caused the incident.</em><br>
+    <strong>5.</strong> The backfilled numbers differ from the originals for old dates. A dimension changed.
+    <strong>Now somebody must decide whether history is allowed to change.</strong><br>
+    <strong>6.</strong> A model with a running total is corrupted by parallel backfill, because its
+    partitions were never independent.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Write semantics and re-run behaviour → merge key as the grain →
+  atomic partition overwrite → logical date parameterisation → resource isolation for backfills →
+  order-dependence as a property to inventory → source drift and restatement policy →
+  shadow-diff-swap as the safe procedure.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Append mode; run twice; count</td><td>The baseline failure, in thirty seconds</td></tr>
+      <tr><td>2</td><td>Upsert on a key <em>finer</em> than the grain; run twice</td><td><mark>Partial deduplication — worse than obvious duplication, because it looks fixed</mark></td></tr>
+      <tr><td>3</td><td>Upsert on the grain; run twice; compare checksums</td><td>Idempotency, verified rather than believed</td></tr>
+      <tr><td>4</td><td>Partition overwrite on plain Parquet; kill mid-write; read concurrently</td><td>The empty-partition window</td></tr>
+      <tr><td>5</td><td>Same on Iceberg or Delta</td><td><strong><a href="substrate.html#b6">L0 B6</a> arriving as an operational fix</strong></td></tr>
+      <tr><td>6</td><td>Remove every <code>now()</code>; parameterise the logical date; re-run an arbitrary past date and diff</td><td>The rule that makes backfills a loop</td></tr>
+      <tr><td>7</td><td>Backfill 24 months in parallel while the daily job runs. Measure the daily job's runtime</td><td>The backfill as an incident cause</td></tr>
+      <tr><td>8</td><td>Isolate the backfill into its own pool; re-measure</td><td>Resource isolation, quantified</td></tr>
+      <tr><td>9</td><td>Backfill an order-dependent model in parallel; then serialise. Measure both</td><td>The cost of order-dependence, and how to find it before it bites</td></tr>
+      <tr><td>10</td><td>Backfill into a shadow table; diff the overlap window against production; swap</td><td><mark>The procedure. This is the artifact</mark></td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Row counts and output checksums across double runs. The daily job's runtime
+  during an unisolated backfill. The experiment-10 diff — <strong>which rows changed and by how much</strong>
+  — because that diff is what you would show a stakeholder before restating anything.</p>
+
+  <p><b>THE ARTIFACT.</b> <strong>An idempotency and backfill runbook</strong>: write semantics declared
+  per model, an inventory of which models are parallel-safe, and the shadow-diff-swap procedure written
+  down. The sentence it earns: <mark><em>"Every model declares its write semantics and its parallel
+  safety, and no backfill reaches production without a diff."</em></mark></p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> The re-run question is asked in nearly every senior interview. The
+  backfill-caused-an-outage story is one almost every experienced engineer has and few can explain
+  structurally.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> High, and it is the cheapest lab in the Forge to run — no cluster, no
+  streaming, one afternoon.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#p11">P11</a> · <a href="reliability.html">L6</a> ·
+  <a href="system-design.html">L7</a> · <a href="platform.html#e9">L8 cost</a>.</p>
+
+  <div class="note">
+    <span class="lbl">The pattern, for the third time</span>
+    <strong>Write the new thing where nobody is looking. Verify it. Flip one pointer.</strong>
+    <mark>Table commit, blue-green deployment, backfill.</mark> Three contexts, one shape — and the third
+    time you meet it, it stops being a technique and becomes an instinct.
+  </div>
+</section>
+
+<section id="defence">
+  <h2><span class="num">::</span> Interview defence</h2>
+  <p class="sub">The most operationally-flavoured branch, and the questions follow.</p>
+
+  <table>
+    <thead><tr><th>The question</th><th>Node</th><th>What a strong answer contains</th></tr></thead>
+    <tbody>
+      <tr><td>The job failed halfway and you re-ran it. Now what?</td><td><a href="#p4">P4</a></td><td>Three write modes, three behaviours, and which one you design toward</td></tr>
+      <tr><td>How do you make a pipeline idempotent?</td><td><a href="#p4">P4</a></td><td>Partition as the unit of work; overwrite as the write; and <em>atomic</em> overwrite specifically</td></tr>
+      <tr><td>Backfill two years. The schema changed twice</td><td><a href="#p6">P6</a></td><td>Four axes named separately, and shadow-diff-swap as the procedure</td></tr>
+      <tr><td>Which of your models can be backfilled in parallel?</td><td><a href="#p6">P6</a></td><td>That order-dependence is a property you inventory in advance, not discover during</td></tr>
+      <tr><td>Log-based or query-based CDC?</td><td><a href="#p7">P7</a></td><td><mark>They produce different data, not different quality</mark>. Then the deletes argument</td></tr>
+      <tr><td>How do you handle deletes in CDC?</td><td><a href="#p9">P9</a></td><td>Query-based cannot see them at all; then tombstones, retention and soft-delete PII</td></tr>
+      <tr><td>Updates arrive out of order. What happens?</td><td><a href="#p9">P9</a></td><td>Conditional upsert on LSN. One column, one predicate, an entire class removed</td></tr>
+      <tr><td>How do you start CDC on a table with history?</td><td><a href="#p8">P8</a></td><td>Snapshot, record the log position, stitch by key and version. Not by arrival</td></tr>
+      <tr><td>Why is your incremental table different from a full refresh?</td><td><a href="#p10">P10</a></td><td>Drift, its three causes, and a <em>scheduled</em> reconciliation</td></tr>
+      <tr><td>How do you test a pipeline?</td><td><a href="#p11">P11</a></td><td>Code tests and data tests as separate activities — plus the idempotency test nobody writes</td></tr>
+      <tr><td>Job B read stale data although A had "finished". Why?</td><td><a href="#p2">P2</a></td><td>The schedule was being used as a dependency</td></tr>
+      <tr><td>Should we build this pipeline?</td><td><a href="#p12">P12</a></td><td>What decision does it inform — and the permanent maintenance obligation it creates</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The move that distinguishes a senior answer here</span>
+    <strong>Say how you would detect it, not only how you would fix it.</strong>
+    <mark>Every failure in this branch is silent by default</mark> — the pipeline is green, the job
+    succeeded, and the numbers are wrong. Candidates who answer with a fix have solved the problem they
+    were told about. Candidates who answer with a detection mechanism have solved the ones they were not.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next</th><th>What it inherits from L5</th></tr></thead>
+    <tbody>
+      <tr><td><a href="reliability.html">L6 reliability</a></td><td>Direct. You now have pipelines to instrument, and a run ledger that is already half an observability system</td></tr>
+      <tr><td><a href="system-design.html#d3">L7 system design</a></td><td>CDC-to-warehouse is one of the seven designs, and it is now backed by a measured failure matrix</td></tr>
+      <tr><td><a href="platform.html">L8 platform</a></td><td>Self-service ingestion is <a href="#p7">P7</a> made repeatable; deprecation is <a href="#p12">P12</a>'s bill arriving</td></tr>
+      <tr><td><a href="modelling.html">L1 modelling</a></td><td>Backwards: source drift during a backfill is an SCD question, and the grain is what your uniqueness test asserts</td></tr>
+      <tr><td><a href="substrate.html">L0 substrate</a></td><td>Backwards: idempotency, atomic commit and the WAL are all being cashed in here</td></tr>
+      <tr><td><a href="stream-semantics.html">L4 stream semantics</a></td><td>Sideways: the incremental lookback window is a watermark delay, chosen the same way</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Branch complete when</span>
+    Every model you write declares its write semantics and its parallel safety <strong>before</strong> it
+    is scheduled, and you can state, for any pipeline you did not build,
+    <mark>the three ways it is probably losing rows and the check that would prove it.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · L5 · Pipelines &amp; orchestration</footer>
+
+</body>
+</html>

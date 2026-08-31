@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L8 · Data platform engineering — Forge</title>
+<meta name="description" content="Platform as product, golden paths, self-service ingestion, multi-tenant compute, the catalog as substrate, developer experience, chargeback and deprecation — with the capstone laboratory." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#why">The one question</a>
+  <a href="#env">The environment</a>
+  <a href="#map">Internal dependency map</a>
+  <h4>Product</h4>
+  <a href="#e1">E1 · Platform as product</a>
+  <a href="#e2">E2 · Golden paths</a>
+  <a href="#e3">E3 · Self-service ingestion</a>
+  <h4>Substrate</h4>
+  <a href="#e4">E4 · Compute platform</a>
+  <a href="#e5">E5 · Storage standardisation</a>
+  <a href="#e6">E6 · The catalog</a>
+  <h4>Operations</h4>
+  <a href="#e7">E7 · Developer experience</a>
+  <a href="#e8">E8 · Access at scale</a>
+  <a href="#e9">E9 · Cost &amp; chargeback</a>
+  <a href="#e10">E10 · Migration &amp; deprecation</a>
+  <a href="#e11">E11 · When not to build one</a>
+  <h4>Laboratory</h4>
+  <a href="#lab18">18 · Mini Data Platform</a>
+  <h4>Exit</h4>
+  <a href="#defence">Interview defence</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Forge</a><span>/</span>L8 Platform</p>
+
+<div class="hero">
+  <div class="kicker">Branch L8 · new · requires all of L0–L7 · the destination</div>
+  <h1>Data platform engineering</h1>
+  <p class="dropcap">The shift from building pipelines to building the thing other people build pipelines
+  on. The mental change is from solving a problem to <em>solving a class of problems for people you will
+  never meet</em> — which is a product discipline at least as much as an engineering one, and that is
+  precisely why it changes your title.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>Every capability you offer becomes a promise you cannot withdraw.</mark>
+    A platform's cost is not what it takes to build. It is what it takes to never break — for every team
+    that adopted it, in every way you did not anticipate, for as long as the company exists. Which means
+    the discipline is as much about what you decline to offer as about what you ship.
+  </div>
+  <div class="tags">
+    <span class="tag">#platform-as-product</span>
+    <span class="tag t2">#golden-paths</span>
+    <span class="tag t3">#catalog</span>
+    <span class="tag">#adoption</span>
+    <span class="tag t2">#deprecation</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> The one question this branch exists to answer</h2>
+  <p class="sub">Every sub-branch below is an answer to some part of it.</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“How does a company let three hundred people work with data without three hundred bespoke pipelines
+    and three hundred conflicting definitions of ‘active user’?”</b>
+    <mark>Catalog, contracts, self-service, golden paths and chargeback are not five topics. They are five
+    parts of one answer.</mark>
+  </div>
+
+  <p>The second question is the one that tests whether the mental shift has actually happened:</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“A team ignored your platform and built their own pipeline. What do you do?”</b>
+    The junior answer is <em>enforce the standard</em>.
+    <mark>The senior answer is that this is a bug report about your platform.</mark> They chose the harder
+    path, which means yours was harder still, or they did not know it existed, or it did not do what they
+    needed. Find out which, then fix that.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The failure mode of this branch</span>
+    Building capability instead of adoption. <strong>A platform with ten features and two users has failed.
+    One with two features and forty users has not.</strong>
+    <mark>And a mandate converts an adoption problem into a compliance problem</mark> — which produces
+    shadow systems you cannot see, and the pipeline you cannot see is strictly worse than the one you
+    disapprove of.
+  </div>
+</section>
+
+<section id="env">
+  <h2><span class="num">01</span> The environment</h2>
+  <p class="sub">Almost everything is already built. What is missing is one identity.</p>
+
+  <table class="nw">
+    <thead><tr><th>Component</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>Everything from <a href="substrate.html">L0</a> to <a href="reliability.html">L6</a></b></td><td>Table format, compute, orchestrator, contracts, lineage. <mark>You have the parts; what you lack is that they are <em>yours</em></mark> — undocumented, uncatalogued, and requiring you</td></tr>
+      <tr><td><b>A template repository and a scaffolding command</b></td><td>The golden path has to be executable, not described. <code>platform new-source --type postgres</code> or it does not exist</td></tr>
+      <tr><td><b>A catalog</b> — DataHub or OpenMetadata, both free</td><td><a href="#e6">E6</a> is the substrate for access control, cost attribution and deprecation. Nothing above it works without it</td></tr>
+      <tr><td><b>CI running the same checks production runs</b></td><td>Contract validation and quality gates at the point of change (<a href="reliability.html#r5">L6 R5</a>)</td></tr>
+      <tr><td><b>Cost tags flowing to a per-team report</b></td><td><a href="#e9">E9</a>, and it is what keeps the platform team funded</td></tr>
+      <tr><td><b>A second identity — you, as a stranger</b></td><td><strong>The critical instrument.</strong> See the rule below</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The methodological constraint, and it is the whole lab</span>
+    <strong>You must use your own platform as a stranger: a fresh environment, the documentation only, and
+    no right to patch anything you find broken.</strong>
+    <br><br>
+    <mark>Every point at which you had to guess is a documentation bug. Every point at which you reached
+    for knowledge only you have is an adoption barrier.</mark> This is the L8 analogue of sealing the
+    requirements in an envelope for <a href="modelling.html#lab03">L1 Lab 03</a>, and like that
+    constraint, the exercise is worthless without it.
+  </div>
+</section>
+
+<section id="map">
+  <h2><span class="num">02</span> Internal dependency map</h2>
+
+<pre>E1 PLATFORM AS PRODUCT [spine]
+      │
+      ├──→ E2 GOLDEN PATHS &amp; ADOPTION
+      │             │
+      │             ├──→ E3 SELF-SERVICE INGESTION
+      │             │
+      │             └──→ E7 DEVELOPER EXPERIENCE
+      │
+      ├──→ E4 COMPUTE PLATFORM ─────→ E9 COST &amp; CHARGEBACK
+      │
+      ├──→ E5 STORAGE &amp; FORMAT STANDARDISATION
+      │             │
+      │             ↓
+      └──→ E6 THE CATALOG [spine] ──→ E8 ACCESS CONTROL AT SCALE
+                    │
+                    ↓
+            E10 MIGRATION &amp; DEPRECATION
+                    │
+                    ↓
+            E11 WHEN NOT TO BUILD A PLATFORM</pre>
+
+  <div class="note">
+    <span class="lbl">Reading this map</span>
+    <strong>Two spines, and they are of different kinds.</strong> E1 is a disposition — it changes how
+    every other node is judged. <a href="#e6">E6</a> is infrastructure — it is what every other capability
+    queries.
+    <br><br>
+    <mark>Access control needs to know what exists and who owns it. Cost attribution needs to map queries
+    to datasets. Deprecation needs to know who reads what. Discovery needs all three.</mark>
+    Every other platform capability is, structurally, a query against the catalog — which is why building
+    it late is the most common way platform efforts stall.
+  </div>
+</section>
+
+<section id="e1">
+  <h2><span class="num">E1</span> Platform as product <span class="pill pC">spine</span></h2>
+  <p class="sub">Your users are engineers, and they have an alternative: doing it themselves.</p>
+
+  <p><b>WHAT CHANGES.</b> You stop having requirements and start having users. You stop shipping features
+  and start measuring adoption. <strong>You stop being able to fix things by knowing something, because the
+  people using it will not know it.</strong></p>
+
+  <p><b>THE PRODUCT QUESTIONS.</b> Who are the users, and how do they differ? What job are they trying to
+  do? What is their current alternative, and how bad is it really? Why would they switch, and what does
+  switching cost them?</p>
+
+  <div class="rule">
+    <span class="lbl">The metric</span>
+    <strong>Adoption, not capability.</strong>
+    <mark>And beneath it, one number: <em>time-to-first-success</em></mark> — how long from "I want to
+    ingest this source" to "the data is queryable and monitored".
+    <br><br>
+    It is measurable, it is comparable over time, and it is the number that correlates with whether people
+    use the thing. Publish it. A platform team that reports time-to-first-success is having a different
+    conversation from one that reports features shipped.
+  </div>
+
+  <div class="life">
+    <span class="lbl">On mandates</span>
+    <strong>A mandate converts an adoption problem into a compliance problem.</strong> Compliance produces
+    the minimum acceptable use of your platform plus a shadow system for the real work.
+    <mark>You have not removed the duplication; you have made it invisible.</mark>
+    <br><br>
+    Mandates are occasionally correct — for security, for PII, for anything with a legal edge. Everywhere
+    else, <em>if you need a mandate, the product is not good enough yet</em>, and the mandate will conceal
+    that fact from you for about two years.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#e2">E2</a> · <a href="#e11">E11</a>.</p>
+</section>
+
+<section id="e2">
+  <h2><span class="num">E2</span> Golden paths and adoption</h2>
+  <p class="sub">Not the only way. The easy way.</p>
+
+  <p><b>WHAT IT IS.</b> One supported route through a common task, which is fast, documented, and actually
+  works. Deviation remains possible and is simply not supported.</p>
+
+  <div class="rule">
+    <span class="lbl">The rule that decides adoption before you write any code</span>
+    <strong>Make the right thing the easy thing.</strong>
+    <mark>If the compliant path takes two days and the non-compliant path takes two hours, you have chosen
+    non-compliance on your users' behalf</mark> — and then you will spend a year attributing it to
+    culture.
+  </div>
+
+  <p><b>ADOPTION TACTICS THAT WORK.</b> Start with one team as a design partner rather than a survey of
+  ten · instrument usage so you know what is actually used · measure and publish time-to-first-success ·
+  migrate the first team yourself, at your cost, so there is a reference · and
+  <strong>write the documentation by watching someone follow it</strong>, not by describing what you
+  built.</p>
+
+  <div class="trap">
+    <span class="lbl">The design error that guarantees low adoption</span>
+    <strong>Building for the hypothetical hardest user.</strong> There is always one team with an unusual
+    requirement, and designing the platform around them produces something too complex for the eighty
+    percent whose needs are ordinary.
+    <mark>Serve the common case beautifully and let the hard case escape to a supported off-ramp.</mark>
+    An escape hatch is a feature, not a failure.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#e3">E3</a> · <a href="#e7">E7</a> · <a href="#lab18">Lab 18</a>.</p>
+</section>
+
+<section id="e3">
+  <h2><span class="num">E3</span> Self-service ingestion</h2>
+  <p class="sub">The most requested capability, and the one most likely to manufacture a swamp.</p>
+
+  <p><b>WHAT IT IS.</b> A declarative source definition — usually a short YAML file — that produces a
+  working pipeline: connector, landing in the standard format and location, catalog registration, a quality
+  baseline, and cost tags.</p>
+
+  <p><b>THE SCOPE DECISION.</b> <strong>Which source types get self-service, and which require an
+  engineer.</strong> Postgres, S3 prefixes, REST endpoints and Kafka topics are templatable. The
+  proprietary system with a bespoke auth flow is not. <mark>Publish the supported list, and make the
+  boundary explicit rather than discovered.</mark></p>
+
+  <div class="trap">
+    <span class="lbl">The failure that self-service creates faster than humans ever could</span>
+    <strong>Self-service ingestion without self-service governance manufactures a swamp at machine
+    speed.</strong> A hundred new tables, none owned, none catalogued, none tested, none retained
+    deliberately.
+    <br><br>
+    <mark>The template must emit the contract, the checks, the owner and the retention policy — not just
+    the pipeline.</mark> If governance is a separate step, it will not happen, because it is the step that
+    benefits someone other than the person doing the work.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="pipelines.html#p7">L5 P7</a> · <a href="reliability.html#r5">L6 R5</a> ·
+  <a href="#e6">E6</a>.</p>
+</section>
+
+<section id="e4">
+  <h2><span class="num">E4</span> The compute platform</h2>
+  <p class="sub">Multi-tenancy, isolation and quotas — with one non-obvious organising principle.</p>
+
+  <p><b>THE PROBLEMS.</b> Noisy neighbours · one team's backfill starving another team's production run
+  (<a href="pipelines.html#p6">L5 P6</a> at organisational scale) · unbounded ad-hoc queries · a
+  runaway job with no timeout.</p>
+
+  <div class="rule">
+    <span class="lbl">The principle</span>
+    <strong>Isolate by workload class, not by team.</strong>
+    <mark>A team's production job has far more in common with another team's production job than with its
+    own ad-hoc exploration.</mark>
+    <br><br>
+    Production, scheduled-non-critical, ad hoc, and backfill are four classes with four different latency
+    tolerances, four different failure consequences and four different appropriate resource guarantees.
+    Slicing by team gives every team a small copy of the same contention problem.
+  </div>
+
+  <p><b>MECHANISMS.</b> Separate pools, queues or warehouses per class · admission control and concurrency
+  limits · <strong>timeouts as a default rather than an exception</strong> · priority and preemption ·
+  and the intervention that works best, which is not a control at all —
+  <a href="#e9">showing people their own usage</a>.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#e9">E9</a> · <a href="spark.html">L2</a> ·
+  <a href="system-design.html#d7">L7 D7</a> — multi-tenancy for internal teams and for customers is the
+  same problem with different consequences for a leak.</p>
+</section>
+
+<section id="e5">
+  <h2><span class="num">E5</span> Storage and table format standardisation</h2>
+  <p class="sub">Boring on purpose, and the boringness is the value.</p>
+
+  <p><b>WHAT IT IS.</b> One table format, one file format, one layout convention, one naming convention,
+  one retention default. Deviation is possible and requires a written reason.</p>
+
+  <div class="rule">
+    <span class="lbl">The argument for standardising, stated honestly</span>
+    <strong>The cost of a second format is not the second format. It is that every future capability must
+    support both — the catalog, the access control layer, the quality framework, the cost attribution, the
+    migration tooling, and everything you have not built yet.</strong>
+    <br><br>
+    <mark>Standardisation buys compounding leverage and costs optionality.</mark> Say both halves; a
+    platform engineer who only says the first half sounds like someone who has never been the team blocked
+    by a standard.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Zone conventions — raw, staged, curated — and what each guarantees · naming that
+  encodes ownership and grain · retention defaults that expire rather than accumulate · the exception
+  process, which must exist and must be cheap · <strong>a convention everybody follows beats a better
+  convention half of them follow</strong>, which is the whole reason to pick quickly and move on.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="substrate.html#b5">L0 B5</a> · <a href="modelling.html#m11">L1 M11</a> ·
+  <a href="#e6">E6</a>.</p>
+</section>
+
+<section id="e6">
+  <h2><span class="num">E6</span> The catalog <span class="pill pC">spine</span></h2>
+  <p class="sub">Not a search tool. The substrate every other capability queries.</p>
+
+  <p><b>WHAT IT HOLDS.</b> Tables and schemas · owners · lineage (<a href="reliability.html#r10">L6 R10</a>)
+  · classifications and PII tags (<a href="reliability.html#r11">L6 R11</a>) · quality status and freshness
+  · cost · and usage — who queried what, and when.</p>
+
+  <table>
+    <thead><tr><th>Capability</th><th>The catalog query it depends on</th></tr></thead>
+    <tbody>
+      <tr><td>Access control (<a href="#e8">E8</a>)</td><td>What exists, who owns it, what is classified as sensitive</td></tr>
+      <tr><td>Cost attribution (<a href="#e9">E9</a>)</td><td>Which dataset a query touched, and which team owns it</td></tr>
+      <tr><td>Deprecation (<a href="#e10">E10</a>)</td><td><mark>Who still reads this, and when did they last</mark></td></tr>
+      <tr><td>Discovery</td><td>All of the above, plus semantics</td></tr>
+      <tr><td>Incident response (<a href="reliability.html#r9">L6 R9</a>)</td><td>Blast radius, and the owners to notify</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">The one way catalogs reliably fail</span>
+    <strong>Populated by hand.</strong> It rots in weeks, and a catalog that is thirty percent wrong is
+    worse than none, because people stop trusting the seventy percent.
+    <br><br>
+    <mark>It must be populated by instrumentation: pipelines register themselves, lineage comes from
+    parsing, usage comes from query logs, freshness comes from the run ledger.</mark> If a human has to
+    remember to update an entry, that entry is already wrong.
+    <br><br>
+    And the adoption measure is not completeness — it is <strong>search-to-answer</strong>. A complete
+    catalog nobody searches is a database with good intentions.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#e8">E8</a> · <a href="#e10">E10</a> ·
+  <a href="reliability.html#lab20">L6 Lab 20</a>.</p>
+</section>
+
+<section id="e7">
+  <h2><span class="num">E7</span> Developer experience</h2>
+  <p class="sub">Including one practice that makes data pull requests reviewable at all.</p>
+
+  <p><b>WHAT IT IS.</b> Local development against realistic sample data · a scaffolding command that
+  produces a correct pipeline in one step · CI that runs exactly the checks production runs · a preview
+  environment · and fast feedback.</p>
+
+  <div class="rule">
+    <span class="lbl">The metric</span>
+    <strong>Time from clone to a passing local run.</strong>
+    <mark>If it exceeds an hour, people will develop against production — and then you have two
+    problems.</mark> This number is worth defending aggressively, because everything else in developer
+    experience is downstream of it.
+  </div>
+
+  <div class="life">
+    <span class="lbl">The practice that makes a data pull request reviewable</span>
+    <strong>Run the modified model on a fixed sample and diff its output against the current model's
+    output. Post the diff on the pull request.</strong>
+    <br><br>
+    <mark>Code review of a SQL change is nearly worthless — the reviewer cannot see what the change does to
+    the numbers.</mark> A row-count delta plus a sample of changed rows converts "looks fine to me" into an
+    actual review, and it is the data equivalent of the diff that makes software review work at all.
+    Remarkably few teams do this.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Sample data that preserves shape — cardinality, skew and nulls — rather than the
+  first thousand rows · unit tests on transformation logic · contract checks in CI · a compile or dry-run
+  stage · secrets and environment parity · and the scaffolding command, which is the golden path made
+  executable.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="pipelines.html#p11">L5 P11</a> · <a href="reliability.html#r5">L6 R5</a> ·
+  <a href="#e2">E2</a>.</p>
+</section>
+
+<section id="e8">
+  <h2><span class="num">E8</span> Access control at platform scale</h2>
+  <p class="sub">The shift from granting access to defining policy.</p>
+
+  <p><b>WHAT CHANGES AT SCALE.</b> Granting per person per table works for thirty tables and collapses at
+  three thousand. <strong>The unit of administration has to become the policy, not the grant.</strong></p>
+
+  <div class="rule">
+    <span class="lbl">The principle</span>
+    <strong>Attach policy to classification, not to table names.</strong>
+    <mark>A newly created column tagged as PII is protected because it was tagged — not because someone
+    remembered to add a grant.</mark>
+    <br><br>
+    Table-name-based access control rots the instant someone creates a table, which is continuously. This
+    is also the concrete reason <a href="#e6">E6</a> must come first: policy needs something to attach to.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Role design that maps to job functions rather than to org charts · request and
+  approval workflow with a default expiry · time-bounded access for incidents · periodic access review ·
+  masking and tokenisation applied by policy (<a href="reliability.html#r11">L6 R11</a>) · and the two
+  audit questions, which are different: <strong>who <em>can</em> see this, and who <em>did</em></strong>.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#e6">E6</a> · <a href="reliability.html#r11">L6 R11</a> ·
+  <a href="system-design.html#d7">L7 D7</a>.</p>
+</section>
+
+<section id="e9">
+  <h2><span class="num">E9</span> Cost management and chargeback</h2>
+  <p class="sub">Including the number that keeps your team funded.</p>
+
+  <p><b>THE SEQUENCE.</b> Attribute → show back → budget with alerts → charge back, if ever. Most
+  organisations should stop after the second step, because
+  <mark>visibility changes behaviour more than limits do</mark>
+  (<a href="reliability.html#r12">L6 R12</a>).</p>
+
+  <div class="life">
+    <span class="lbl">The number platform teams forget, and then lose their budget</span>
+    <strong>The platform's own cost must itself be attributable — and set against what it saved.</strong>
+    <br><br>
+    <mark>If you cannot say "the platform absorbed X in shared cost and removed Y duplicated pipelines and
+    Z engineer-weeks", you will lose the budget conversation to a product team that can quantify its
+    work.</mark> Platform teams are the easiest thing to cut precisely because their value is diffuse, and
+    the defence is arithmetic rather than advocacy.
+  </div>
+
+  <p><b>UNIT ECONOMICS TO PUBLISH.</b> Cost per pipeline · cost per TB served · cost per query, by class ·
+  and the trend on each, which matters more than the level.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#e4">E4</a> · <a href="reliability.html#r12">L6 R12</a> ·
+  <a href="substrate.html#lab01">L0 Lab 01</a> — cost is bytes scanned, all the way down.</p>
+</section>
+
+<section id="e10">
+  <h2><span class="num">E10</span> Migration and deprecation</h2>
+  <p class="sub">The hardest thing in L8, and what actually consumes platform teams.</p>
+
+  <p><b>WHAT IT IS.</b> Removing or replacing something hundreds of consumers depend on, without breaking
+  any of them, and without the migration taking three years.</p>
+
+  <p><b>THE PATTERN.</b> <strong>Expand → migrate → contract</strong>
+  (<a href="reliability.html#lab20">L6 Lab 20</a>), at organisational scale: add the new thing, dual-write,
+  move consumers, then remove the old. Plus the strangler variant for whole systems — new writes to the new
+  system, background migration of history, and a facade routing reads.</p>
+
+  <div class="rule">
+    <span class="lbl">The two things that make deprecation possible at all</span>
+    <strong>Lineage tells you when the last consumer left</strong> — it is the only reliable signal, and it
+    is why <a href="#e6">E6</a> gates this node entirely.
+    <mark>You cannot deprecate what you cannot see.</mark>
+    <br><br>
+    <strong>And budget the migration at the moment you build the thing.</strong> Every platform capability
+    should ship with an answer to "how would we remove this" — because
+    <a href="pipelines.html#p12">L5 P12</a> is true at platform scale too: requests to build are constant
+    and requests to decommission are approximately zero.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The last five percent</span>
+    <strong>Ninety-five percent of consumers migrate when asked. The last five percent never migrate
+    voluntarily</strong> — the owner left, the team was reorganised, or the dashboard is loadbearing for
+    someone senior and nobody knows it.
+    <br><br>
+    <mark>Deprecation therefore needs a dated policy, an announced end date, and a deliberate breakage
+    plan</mark> — usually a short scheduled outage of the old path, well in advance of removal, which
+    surfaces the invisible consumers faster than any survey.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#e6">E6</a> · <a href="reliability.html#r6">L6 R6</a> ·
+  <a href="pipelines.html#p12">L5 P12</a>.</p>
+</section>
+
+<section id="e11">
+  <h2><span class="num">E11</span> When not to build a platform</h2>
+  <p class="sub">The counterpart node, and at this level it is a career-relevant judgement.</p>
+
+  <div class="note">
+    <span class="lbl">Do not build one when</span>
+    <strong>There are fewer than about three teams.</strong> Two teams do not need a platform; they need to
+    talk to each other.<br>
+    <strong>The variation is genuine.</strong> If every team's needs really do differ, a platform is a
+    straitjacket and what they needed was a consultant.<br>
+    <strong>You could buy it.</strong> A platform team's job is not to build everything — sometimes the
+    golden path is a vendor's product with your conventions wrapped around it.<br>
+    <strong>The organisation will not fund the maintenance.</strong>
+    <mark>A platform built and then unstaffed is worse than no platform, because teams depend on it while
+    it decays.</mark>
+  </div>
+
+  <div class="rule">
+    <span class="lbl">The general test</span>
+    <strong>A platform is a bet that the cost of building the abstraction is less than the cost of the
+    duplication it removes.</strong>
+    <mark>Count the duplication first.</mark> Three teams solving the same problem three ways is evidence.
+    One team predicting that others will eventually need this is not.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="pipelines.html#p12">L5 P12</a> ·
+  <a href="stream-semantics.html#w12">L4 W12</a> · <a href="kafka.html#k12">L3 K12</a> ·
+  <a href="spark.html#s13">L2 S13</a> — five "when not to" nodes across the Forge, and together they are a
+  single professional disposition.</p>
+</section>
+
+<section id="lab18">
+  <h2><span class="num">18</span> Laboratory — Mini Data Platform</h2>
+  <p class="sub">Another team must ship a pipeline without talking to you. <span class="pill pL">capstone</span></p>
+
+  <div class="card">
+    <b>PROBLEM.</b> Build the smallest complete platform — small in scale, complete in shape — and then
+    use it as somebody else.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> Everything from <a href="substrate.html">L0</a> through
+    <a href="reliability.html">L6</a> exists, as <em>your</em> parts: undocumented, uncatalogued, and
+    dependent on knowledge that lives only in your head.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">THE CONSTRAINT THAT MAKES THIS A LABORATORY</span>
+    <strong>After building it, you must use it as a stranger: fresh environment, documentation only, and
+    <em>no right to patch anything you find broken.</em></strong>
+    <br><br>
+    <mark>Every point where you have to guess is a documentation bug. Every point where you reach for
+    knowledge only you have is an adoption barrier.</mark> Write each one down instead of fixing it. The
+    list is the real output of the lab.
+  </div>
+
+  <p><b>THE DELIVERABLE.</b> A scaffolding command that generates, from one short config file: a working
+  pipeline, a contract, quality checks, catalog registration and cost tags · one documented golden path for
+  one source type · an automatically populated catalog · CI enforcing contracts and checks · a per-team
+  cost report · and a written deprecation policy.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Build the scaffold; generate a pipeline. Count the lines of config a user must write</td><td>The size of the ask you are making of your users</td></tr>
+      <tr><td>2</td><td><strong>Time-to-first-success as a stranger.</strong> Fresh environment, docs only, no fixes</td><td><mark>The headline metric. Record every guess</mark></td></tr>
+      <tr><td>3</td><td>Give the docs to an actual other person; watch without helping. Count interventions</td><td>The gap between your documentation and your assumptions</td></tr>
+      <tr><td>4</td><td>Add a second source type. Measure how much generalised versus how much you rewrote</td><td><strong>If most of it was rewritten, you built a script, not a platform</strong></td></tr>
+      <tr><td>5</td><td>Violate the contract in a generated pipeline; confirm CI blocks it</td><td>Enforcement at the point of change</td></tr>
+      <tr><td>6</td><td>Skip catalog registration deliberately; see whether anything notices</td><td>If nothing does, that is the finding</td></tr>
+      <tr><td>7</td><td>Run two workloads concurrently, one a backfill. Measure the production SLA. Then add pool isolation</td><td><a href="#e4">E4</a>, measured (<a href="pipelines.html#lab19">L5 Lab 19</a> at platform scale)</td></tr>
+      <tr><td>8</td><td>Produce the per-team cost report; reconcile it against the actual bill</td><td>Attribution that does not reconcile is worse than none</td></tr>
+      <tr><td>9</td><td>Deprecate one dataset end to end: announce, dual-run, confirm via lineage that the last consumer left, remove</td><td><a href="#e10">E10</a>, the whole loop, once</td></tr>
+      <tr><td>10</td><td>Measure your own time split: supporting users versus building</td><td><mark>The ratio that predicts whether a platform is sustainable</mark></td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Time-to-first-success, before and after fixing the friction list. The
+  intervention count in experiment 3. The generalisation ratio in experiment 4. And the support-to-build
+  ratio in experiment 10, which is the number that tells you whether the golden path is genuinely
+  self-service or merely documented.</p>
+
+  <p><b>THE ARTIFACT.</b> A working mini-platform, <strong>plus the friction list produced by using your
+  own product as a stranger.</strong> The sentence it earns:
+  <mark><em>"A new source of a supported type goes from request to queryable data in forty minutes, by
+  someone who has never spoken to me, and it arrives catalogued, contracted, quality-checked and
+  cost-tagged."</em></mark></p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> This is the job. Not an approximation of it — the same activity at a
+  smaller scale.</p>
+
+  <p><b>PORTFOLIO VALUE.</b> The capstone of the entire Forge. It demonstrates the transition the whole
+  structure was aimed at, and it is the one artifact that reads as
+  <em>platform engineer</em> rather than as <em>data engineer with good projects</em>.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> None. This is the destination.</p>
+</section>
+
+<section id="defence">
+  <h2><span class="num">::</span> Interview defence</h2>
+  <p class="sub">Answers here are judged on judgement and on organisational realism, not on architecture.</p>
+
+  <table>
+    <thead><tr><th>The question</th><th>Node</th><th>What a strong answer contains</th></tr></thead>
+    <tbody>
+      <tr><td>What is a data platform for?</td><td><a href="#e1">E1</a></td><td>Removing duplication and divergence at a scale where coordination stops working</td></tr>
+      <tr><td>A team bypassed your platform. What do you do?</td><td><a href="#e1">E1</a></td><td><mark>Treat it as a bug report. Find out which of the three causes it was</mark></td></tr>
+      <tr><td>How do you measure a platform's success?</td><td><a href="#e2">E2</a></td><td>Adoption, and time-to-first-success. Not features shipped</td></tr>
+      <tr><td>Would you mandate its use?</td><td><a href="#e1">E1</a></td><td>Only for security and legal edges. Elsewhere a mandate hides the product's weakness</td></tr>
+      <tr><td>Where would you start with nothing?</td><td><a href="#e6">E6</a></td><td>The catalog, populated automatically — everything else queries it</td></tr>
+      <tr><td>How do you stop self-service becoming a swamp?</td><td><a href="#e3">E3</a></td><td>The template emits governance, not just a pipeline</td></tr>
+      <tr><td>How do you isolate tenants on shared compute?</td><td><a href="#e4">E4</a></td><td><strong>By workload class, not by team</strong> — and why that is the right cut</td></tr>
+      <tr><td>How do you deprecate something 200 teams use?</td><td><a href="#e10">E10</a></td><td>Expand-migrate-contract, lineage for the exit signal, and a plan for the last five percent</td></tr>
+      <tr><td>Chargeback or showback?</td><td><a href="#e9">E9</a></td><td>Showback first. Visibility beats limits, and it is far cheaper to build</td></tr>
+      <tr><td>How do you justify the platform team's cost?</td><td><a href="#e9">E9</a></td><td>Duplication removed and engineer-weeks saved, quantified. <em>Arithmetic, not advocacy</em></td></tr>
+      <tr><td>How do you make data PRs reviewable?</td><td><a href="#e7">E7</a></td><td>Run on a sample and post the output diff. Few teams do this</td></tr>
+      <tr><td>When would you <em>not</em> build a platform?</td><td><a href="#e11">E11</a></td><td>Fewer than three teams, genuine variation, or unfunded maintenance</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The move that distinguishes a senior answer here</span>
+    <strong>Talk about people as a design constraint, without cynicism.</strong>
+    <mark>"They will route around this if it takes longer than the alternative" is an engineering
+    statement, not a complaint about culture.</mark> Candidates who describe platforms purely in terms of
+    components are describing infrastructure; candidates who describe incentives, adoption and the cost of
+    switching are describing a platform — and only the second group has done the job.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <p class="sub">Nowhere further inside the Forge. Which is the point of a destination.</p>
+
+  <table>
+    <thead><tr><th>Direction</th><th>What it draws on</th></tr></thead>
+    <tbody>
+      <tr><td><b>Backwards, into everything</b></td><td><a href="substrate.html">L0</a> standardises the storage layer · <a href="modelling.html">L1</a> supplies conformed dimensions and metrics · <a href="spark.html">L2</a> and <a href="kafka.html">L3</a> are the compute platform · <a href="stream-semantics.html">L4</a> decides which latency rungs you offer · <a href="pipelines.html">L5</a> becomes the ingestion template · <a href="reliability.html">L6</a> becomes the quality gate and the catalog</td></tr>
+      <tr><td><b>Sideways, into <a href="system-design.html">L7</a></b></td><td>A platform is D1–D7 generalised into paths other people can walk without you</td></tr>
+      <tr><td><b>Outwards</b></td><td><a href="../atlas/systems-thinking.html">Systems Thinking</a> — adoption, incentives and shadow systems are feedback loops, and this is the branch where the Atlas stops being background reading</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Branch complete when</span>
+    Someone who has never spoken to you can ship a correct, catalogued, monitored pipeline by following
+    your documentation — <strong>and you can state the time it took, the friction they hit, and what you
+    would remove rather than add next.</strong>
+    <mark>The instinct to subtract is the last thing this branch teaches, and it is the one that
+    distinguishes a platform engineer from a very productive data engineer.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · L8 · Data platform engineering</footer>
+
+</body>
+</html>

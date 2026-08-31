@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L7 · Data system design — Forge</title>
+<meta name="description" content="The method, the six axes, the seven data characteristics, back-of-envelope numbers, and seven complete design documents with failure modes and cost." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#why">What is being tested</a>
+  <a href="#axes">The six axes</a>
+  <a href="#chars">The seven characteristics</a>
+  <h4>The method</h4>
+  <a href="#method">The seven steps</a>
+  <a href="#opening">The first five minutes</a>
+  <a href="#numbers">Numbers to know cold</a>
+  <h4>The designs</h4>
+  <a href="#d1">D1 · Clickstream ingestion</a>
+  <a href="#d2">D2 · Real-time serving</a>
+  <a href="#d3">D3 · CDC to warehouse</a>
+  <a href="#d4">D4 · Financial analytics</a>
+  <a href="#d5">D5 · Feature platform</a>
+  <a href="#d6">D6 · Reporting at scale</a>
+  <a href="#d7">D7 · Multi-tenant SaaS</a>
+  <h4>Exit</h4>
+  <a href="#anti">How the round is failed</a>
+  <a href="#interrupt">The interruptions</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Forge</a><span>/</span>L7 System design</p>
+
+<div class="hero">
+  <div class="kicker">Branch L7 · new as a disciplined practice · synthesis of L0–L6</div>
+  <h1>Data system design</h1>
+  <p class="dropcap">This is the round you will be judged on most heavily for a senior role, and it is a
+  <em>performance</em> as much as a knowledge test — moving from vague requirements to a defended design in
+  forty-five minutes, out loud, while being interrupted. Which means it is practised differently from
+  everything else in the Forge: by writing, then by saying it.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>You are not being asked for the best design. You are being asked to show
+    that you know what you traded away.</mark> Nobody can evaluate an architecture in forty-five minutes.
+    Everybody can evaluate whether you know the cost of your own choices — and whether you found that cost
+    yourself or waited to be told.
+  </div>
+  <div class="tags">
+    <span class="tag">#trade-offs</span>
+    <span class="tag t2">#failure-modes</span>
+    <span class="tag t3">#estimation</span>
+    <span class="tag">#cost</span>
+    <span class="tag t2">#synthesis</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> What is actually being tested</h2>
+  <p class="sub">And why generic system design preparation transfers only partially.</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“Design a system that ingests five hundred thousand clickstream events per second and lets analysts
+    query them.”</b>
+    <mark>The correct first move is not to draw a box.</mark> It is to ask five questions, estimate two
+    numbers out loud, and only then propose anything. Candidates who begin drawing have already told the
+    interviewer that they design from patterns rather than from requirements.
+  </div>
+
+  <div class="rule">
+    <span class="lbl">What makes this different from generic system design</span>
+    <strong>Generic system design asks "how many servers?" Data system design asks "what happens to this
+    number when the data is late, skewed, or wrong?"</strong>
+    <br><br>
+    <mark>Load balancers, caches and QPS are not the vocabulary here.</mark> The vocabulary is throughput,
+    latency, correctness, schema evolution, cost and recovery — and the questions are about the data's own
+    properties rather than about the traffic hitting it.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The failure mode of this branch</span>
+    Practising it silently. <strong>Writing a good design document is necessary and completely
+    insufficient</strong> — the round is spoken, interrupted, and time-boxed.
+    <mark>Every one of the seven designs below should be written first and then delivered aloud in under
+    twenty minutes, from the document, then again without it.</mark> The gap between what you can write and
+    what you can say under interruption is the actual thing being trained.
+  </div>
+</section>
+
+<section id="axes">
+  <h2><span class="num">01</span> The six axes</h2>
+  <p class="sub">Every trade-off in every design lands on at least one of these.</p>
+
+  <table>
+    <thead><tr><th>Axis</th><th>The question</th><th>Where it was learned</th></tr></thead>
+    <tbody>
+      <tr><td><b>Throughput</b></td><td>Events per second, bytes per day, and the peak-to-average ratio</td><td><a href="kafka.html#k9">L3 K9</a> · <a href="spark.html">L2</a></td></tr>
+      <tr><td><b>Latency</b></td><td>How stale may the answer be, in seconds</td><td><a href="stream-semantics.html#w3">L4 W3</a> · <a href="modelling.html#m4">L1 M4</a></td></tr>
+      <tr><td><b>Correctness</b></td><td>What is the cost of a wrong number, and for how long</td><td><a href="reliability.html#r1">L6 R1</a> · <a href="stream-semantics.html#w9">L4 W9</a></td></tr>
+      <tr><td><b>Schema evolution</b></td><td>What happens when the producer changes something</td><td><a href="reliability.html#r6">L6 R6</a> · <a href="substrate.html#b5">L0 B5</a></td></tr>
+      <tr><td><b>Cost</b></td><td>Storage, compute, and the staffing cost of another system to operate</td><td><a href="substrate.html#lab01">L0 Lab 01</a> · <a href="reliability.html#r12">L6 R12</a></td></tr>
+      <tr><td><b>Recovery</b></td><td>How long to catch up after a day of downtime, and what is lost</td><td><a href="stream-semantics.html#w6">L4 W6</a> · <a href="pipelines.html#p6">L5 P6</a></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Recovery is the axis nobody mentions</span>
+    <strong>"A day of downtime on a daily batch job is one missing partition and a re-run. A day of
+    downtime on a streaming job is a backlog that takes six hours to drain at double throughput — during
+    which you are also processing new data."</strong>
+    <mark>Bringing recovery up unprompted is one of the most reliable ways to sound like someone who has
+    operated systems rather than designed them.</mark>
+  </div>
+</section>
+
+<section id="chars">
+  <h2><span class="num">02</span> The seven data characteristics</h2>
+  <p class="sub">Interrogate these before proposing anything. Two of them are almost never asked about, and both determine the architecture.</p>
+
+  <table>
+    <thead><tr><th>Characteristic</th><th>Why it changes the design</th></tr></thead>
+    <tbody>
+      <tr><td><b>Volume</b></td><td>Bytes per day decides storage tiering and whether compute is the cost driver</td></tr>
+      <tr><td><b>Velocity</b></td><td>Rate, and the <em>peak-to-average ratio</em> — you design for peak, you pay for average</td></tr>
+      <tr><td><b>Cardinality</b></td><td><mark>Decides state size, aggregate explosion, dedup feasibility and partition count</mark>. Almost never asked about</td></tr>
+      <tr><td><b>Skew</b></td><td><mark>Decides whether your partitioning works at all</mark>. Also almost never asked about, and always present</td></tr>
+      <tr><td><b>Lateness</b></td><td>Decides the watermark, the reprocessing strategy and the reconciliation layer</td></tr>
+      <tr><td><b>Mutability</b></td><td>Append-only is easy. Updates and deletes change everything downstream</td></tr>
+      <tr><td><b>Retention</b></td><td>Decides cost, tiering, and whether deletion is even possible</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The two questions that separate you immediately</span>
+    <strong>"What does the cardinality of the key look like?"</strong> and
+    <strong>"Is the distribution skewed — are there hot keys?"</strong>
+    <br><br>
+    <mark>Nearly nobody asks these, and they determine whether the design works.</mark> They are also the
+    questions that let you reference <a href="spark.html#s10">L2 skew</a>,
+    <a href="kafka.html#k9">L3 hot partitions</a> and <a href="stream-semantics.html#w7">L4 state
+    growth</a> as one phenomenon — which is the strongest single move available in this round.
+  </div>
+</section>
+
+<section id="method">
+  <h2><span class="num">03</span> The method</h2>
+  <p class="sub">Seven steps. Three of them are what make it data system design rather than system design.</p>
+
+  <table class="nw">
+    <thead><tr><th>#</th><th>Step</th><th>What it contains</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>Requirements</b></td><td>Who consumes this, and what decision does it drive. Not "what should it do"</td></tr>
+      <tr><td>2</td><td><b>Data characteristics</b></td><td><mark>The seven above, with numbers, estimated aloud</mark></td></tr>
+      <tr><td>3</td><td><b>Options</b></td><td>At least two, named — even if one is obviously better</td></tr>
+      <tr><td>4</td><td><b>Trade-offs</b></td><td>Each option against the six axes</td></tr>
+      <tr><td>5</td><td><b>Design</b></td><td>The chosen one, drawn, with the key decisions justified</td></tr>
+      <tr><td>6</td><td><b>Failure modes</b></td><td><mark>What breaks, how you would know, and the blast radius</mark></td></tr>
+      <tr><td>7</td><td><b>Cost</b></td><td>Storage, compute, and the cost of one more system to operate</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Steps 2, 6 and 7</span>
+    <strong>These three are the difference, and they are the three most people skip.</strong>
+    <br><br>
+    Step 2 because it requires arithmetic in public. Step 6 because it requires admitting your design
+    breaks. Step 7 because it requires an opinion about money.
+    <mark>A design with all three is senior almost independently of the architecture it proposes.</mark>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Time budget for forty-five minutes</span>
+    Requirements and characteristics: <strong>eight minutes</strong>, and do not rush this.
+    Options and trade-offs: <strong>seven</strong>.
+    Design: <strong>fifteen</strong>.
+    Failure modes: <strong>eight</strong>.
+    Cost: <strong>four</strong>. Buffer: three.
+    <br><br>
+    <mark>If you are drawing at minute four, you are already failing.</mark> If you have not reached failure
+    modes by minute thirty-five, cut the design short and go there — <em>the failure section is worth more
+    than the last third of the architecture.</em>
+  </div>
+</section>
+
+<section id="opening">
+  <h2><span class="num">04</span> The first five minutes</h2>
+  <p class="sub">Five questions, in this order, before anything else.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Question</th><th>What it settles</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>Who consumes this, and what decision does it drive?</b></td><td>Latency requirement and correctness stakes, both at once</td></tr>
+      <tr><td>2</td><td><b>How many seconds is "real-time"?</b></td><td><mark>Collapses most streaming requirements into batch</mark></td></tr>
+      <tr><td>3</td><td><b>What is the volume, and the peak-to-average ratio?</b></td><td>Whether you are designing for Tuesday or for Black Friday</td></tr>
+      <tr><td>4</td><td><b>Is the data mutable? Can it arrive late, and how late?</b></td><td>The entire correctness architecture</td></tr>
+      <tr><td>5</td><td><b>Retention, and who is allowed to see it?</b></td><td>Storage cost and the governance layer</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The best single question in the set</span>
+    <strong>"What happens if this number is wrong for a day?"</strong>
+    <br><br>
+    <mark>The answer sets your entire correctness budget in one sentence.</mark> "The marketing team makes a
+    slightly worse decision" and "we misreport to the regulator" are the same question with two
+    architectures, and asking it is how you avoid designing the expensive one for the cheap problem —
+    or, far worse, the reverse.
+  </div>
+</section>
+
+<section id="numbers">
+  <h2><span class="num">05</span> Numbers to know cold</h2>
+  <p class="sub">Doing arithmetic aloud is a large part of the performance. These are the constants that make it possible.</p>
+
+  <table>
+    <thead><tr><th>Quantity</th><th>Rule of thumb</th></tr></thead>
+    <tbody>
+      <tr><td>Event volume</td><td>1 KB × 100k/sec = <b>100 MB/s ≈ 8.6 TB/day raw</b></td></tr>
+      <tr><td>Compression</td><td>Parquet + zstd on event data: <b>roughly 10×</b>. So 8.6 TB/day → <b>~900 GB/day</b></td></tr>
+      <tr><td>Kafka partition</td><td>Comfortably <b>~10 MB/s</b>. 100 MB/s needs 10–20 partitions for throughput, more for consumer parallelism</td></tr>
+      <tr><td>Spark task</td><td>Should process <b>128 MB – 1 GB</b>. A 1 TB job is roughly 1,000–8,000 tasks</td></tr>
+      <tr><td>Object storage</td><td><b>~100 MB/s per connection.</b> Bandwidth comes only from parallelism</td></tr>
+      <tr><td>Network</td><td>Within a datacentre <b>~0.5 ms</b>. Cross-region <b>tens to hundreds of ms</b></td></tr>
+      <tr><td>Warehouse scan</td><td>Order of <b>$5 per TB scanned.</b> A daily 1 TB full scan ≈ <b>$1,800/year</b>, forever</td></tr>
+      <tr><td>Streaming recovery</td><td>A day of backlog drains in <b>~half a day at 2× throughput</b> — while also taking new data</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Why this section exists</span>
+    <strong>"That is about nine hundred gigabytes a day compressed, so two years of retention is roughly
+    six hundred and fifty terabytes — which is a storage problem, not a compute problem"</strong> is a
+    sentence that takes fifteen seconds and changes how the rest of the conversation goes.
+    <mark>The numbers do not need to be right. They need to be reasoned, aloud, and roughly right.</mark>
+  </div>
+</section>
+
+<section id="d1">
+  <h2><span class="num">D1</span> Clickstream and event ingestion at scale</h2>
+  <p class="sub">The append-only case. Easy correctness, hard volume, and one constraint unique to mobile.</p>
+
+  <p><b>THE PROMPT.</b> Five hundred thousand events per second from web and mobile clients. Analysts need
+  to query it. Some subset needs to be near-real-time.</p>
+
+  <p><b>CHARACTERISTICS.</b> Volume 500 MB/s ≈ 43 TB/day raw, <strong>~4 TB/day compressed</strong> ·
+  velocity bursty at 5–10× peak · cardinality high on <code>user_id</code>, low on
+  <code>event_type</code> · <mark>skew from bots and celebrity content</mark> · lateness from mobile
+  clients offline for hours or days · mutability none — append only · retention typically 13 months hot.</p>
+
+  <p><b>DESIGN.</b> Stateless autoscaled collectors → Kafka, <strong>partitioned by session ID rather than
+  user ID</strong> (better distribution, and it preserves the ordering that actually matters) → two
+  independent consumers: a raw archiver writing Iceberg partitioned by hour, and a streaming aggregator for
+  the real-time subset only → hourly compaction.</p>
+
+  <table>
+    <thead><tr><th>Decision</th><th>The trade</th></tr></thead>
+    <tbody>
+      <tr><td>Partition key: session vs user vs random</td><td>Ordering against skew. <mark>Session is usually the right point on that curve</mark></td></tr>
+      <tr><td>At-least-once + dedup on <code>event_id</code>, not exactly-once</td><td>Exactly-once costs throughput and buys nothing here — <em>a duplicated pageview is not a duplicated payment</em></td></tr>
+      <tr><td>Archive everything raw, aggregate a subset</td><td>Storage is cheap; unasked questions are expensive (<a href="modelling.html#m5">L1 M5</a>)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">FAILURE MODES — and the fourth one is specific to clients you do not control</span>
+    Bot traffic creating a hot partition (<a href="kafka.html#k9">L3 K9</a>) ·
+    mobile events arriving hours late and missing hourly windows (<a href="stream-semantics.html#w3">L4 W3</a>) ·
+    small files from the streaming writer (<a href="substrate.html#b7">L0 B7</a>) ·
+    <strong>and a schema change from an app version you cannot force-upgrade.</strong>
+    <br><br>
+    <mark>You cannot deploy to a phone the user has not updated, so the event schema must remain
+    forward-compatible essentially forever.</mark> That constraint does not exist in server-to-server
+    designs, and naming it is a strong signal that you have shipped a mobile pipeline.
+  </div>
+
+  <p><b>COST.</b> 4 TB/day × 13 months ≈ <strong>1.6 PB</strong>. Storage dominates; compute is bursty and
+  should be spot/preemptible. <b>WEAK ANSWER:</b> partitions by user ID, insists on exactly-once, ignores
+  late mobile events, assumes old app versions eventually disappear.</p>
+</section>
+
+<section id="d2">
+  <h2><span class="num">D2</span> Real-time analytics serving</h2>
+  <p class="sub">Usually three different requirements wearing one name.</p>
+
+  <p><b>THE PROMPT.</b> A dashboard showing metrics updated within seconds, over billions of rows, for
+  hundreds of concurrent users.</p>
+
+  <div class="rule">
+    <span class="lbl">The insight that is the design</span>
+    <strong>"Real-time analytics" is normally three requirements bundled together: high-concurrency fixed
+    aggregations, low-latency point lookups, and ad-hoc exploration.</strong>
+    <mark>Separating them is the design; serving all three from one system is the mistake.</mark>
+  </div>
+
+  <p><b>DESIGN.</b> A streaming job maintaining pre-aggregated rollups → a real-time OLAP store (Druid,
+  Pinot or ClickHouse) for the fixed high-concurrency aggregations · a key-value store for point lookups ·
+  the warehouse for ad hoc. Recent data from the real-time layer and history from the batch layer,
+  <strong>unioned at query time</strong>.</p>
+
+  <table>
+    <thead><tr><th>Decision</th><th>The trade</th></tr></thead>
+    <tbody>
+      <tr><td>Pre-aggregate vs compute on the fly</td><td>Fast and inflexible against flexible and slow. <mark>Pre-aggregate the top twenty query shapes only</mark></td></tr>
+      <tr><td>Approximate vs exact</td><td>HyperLogLog for distinct counts, t-digest for quantiles. <em>Ask whether 0.5% error is acceptable — it usually is, and it changes the cost by an order of magnitude</em></td></tr>
+      <tr><td>Union at the seam</td><td>Correct, and the seam is where the two layers will disagree</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>FAILURE MODES.</b> <mark>Cardinality explosion in the rollups</mark> — adding one high-cardinality
+  dimension multiplies the pre-aggregate size, and this is the classic way these systems become
+  unaffordable · the real-time and batch layers disagreeing at the join point · concurrency limits under a
+  Monday-morning dashboard load · the streaming job's state growing (<a href="stream-semantics.html#w7">L4
+  W7</a>).</p>
+
+  <p><b>COST.</b> Real-time OLAP stores are memory-resident and <strong>cost scales with cardinality, not
+  with row count</strong> — which is why the rollup dimension list is a budget decision.
+  <b>WEAK ANSWER:</b> one system for all three query shapes, and no question about acceptable
+  approximation.</p>
+</section>
+
+<section id="d3">
+  <h2><span class="num">D3</span> CDC replication to a warehouse</h2>
+  <p class="sub">The mutable case, and the one design where you can take down the source system.</p>
+
+  <p><b>THE PROMPT.</b> Replicate two hundred tables from Postgres into the warehouse, near-real-time, and
+  prove they match.</p>
+
+  <p><b>CHARACTERISTICS.</b> Mutability is the whole point · volume moderate · <strong>lateness is not the
+  issue; ordering is</strong> · retention driven by the source's own retention plus audit.</p>
+
+  <p><b>DESIGN.</b> Debezium → Kafka, one topic per table keyed by primary key → a sink performing
+  <strong>LSN-conditional upsert</strong> into Iceberg → a scheduled key-set reconciliation job comparing
+  source and target (<a href="reliability.html#r3">L6 R3</a>).</p>
+
+  <table>
+    <thead><tr><th>Decision</th><th>The trade</th></tr></thead>
+    <tbody>
+      <tr><td>Log-based over query-based</td><td>Deletes and intermediate states, at the cost of replication privileges (<a href="pipelines.html#p7">L5 P7</a>)</td></tr>
+      <tr><td>Copy-on-write vs merge-on-read, <em>per table</em></td><td><mark>With two hundred tables you want both, chosen by update frequency</mark> — cheap writes and expensive reads, or the reverse</td></tr>
+      <tr><td>One topic per table</td><td>Independent retention, compaction and replay per table, at the cost of topic sprawl</td></tr>
+    </tbody>
+  </table>
+
+  <div class="trap">
+    <span class="lbl">FAILURE MODES — name the first one before you are asked</span>
+    <strong>A stalled consumer retains WAL until the <em>source database's</em> disk fills.</strong>
+    <mark>This design is the only one in the set where your pipeline can take down the production
+    transactional system</mark>, and saying so unprompted is the single strongest move available in this
+    design (<a href="substrate.html#b10">L0 B10</a>).
+    <br><br>
+    Then: out-of-order updates (<a href="pipelines.html#p9">L5 P9</a>) · the snapshot-to-stream seam
+    (<a href="pipelines.html#p8">L5 P8</a>) · tombstones compacted before consumption · a schema change at
+    source with no coordination.
+  </div>
+
+  <p><b>COST.</b> Dominated by compaction, not by ingest. <b>WEAK ANSWER:</b> query-based polling, no
+  delete handling, no reconciliation, and no awareness that the replication slot is a loaded weapon.</p>
+</section>
+
+<section id="d4">
+  <h2><span class="num">D4</span> Financial transaction analytics with audit requirements</h2>
+  <p class="sub"><span class="pill pC">the one to be best at</span> Correctness dominates; everything else is negotiable.</p>
+
+  <p><b>THE PROMPT.</b> Payments data feeding both analytics and regulatory reporting. Every figure must be
+  auditable and reproducible.</p>
+
+  <div class="rule">
+    <span class="lbl">The clarifying question that reframes the whole design</span>
+    <strong>"What must be reproducible — a number, or the entire report as it stood on the filing
+    date?"</strong>
+    <mark>The second answer requires bi-temporal modelling and snapshot-pinned report runs. The first does
+    not.</mark> Most candidates never ask, and design for the cheaper one by accident.
+  </div>
+
+  <p><b>DESIGN.</b> An immutable event log as the system of record → bi-temporal warehouse models
+  (<a href="modelling.html#m9">L1 M9</a>) carrying valid time and transaction time →
+  <strong>every report run records the snapshot IDs it read</strong>, so it can be reproduced byte for byte
+  later — this is what table-format time travel is genuinely for → effectively-once end-to-end with a
+  written scope statement (<a href="stream-semantics.html#w9">L4 W9</a>) → daily reconciliation against the
+  source of record → append-only audit tables.</p>
+
+  <table>
+    <thead><tr><th>Decision</th><th>The trade</th></tr></thead>
+    <tbody>
+      <tr><td>Batch with a hard cutoff, plus a streaming view labelled <em>provisional</em></td><td><mark>Streaming results depend on a watermark, which is a guess. A regulator does not accept a guess</mark> — but the business still wants the intraday number</td></tr>
+      <tr><td>Late transactions to an exception queue, not a silent restatement</td><td>A known, reviewed exception beats an unexplained number change (<a href="stream-semantics.html#w4">L4 W4</a>)</td></tr>
+      <tr><td>Retention obligation vs erasure request</td><td><strong>A genuine legal conflict.</strong> Usually the transaction record is retained and the PII is pseudonymised — and crypto-shredding is the mechanism (<a href="reliability.html#r11">L6 R11</a>)</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>FAILURE MODES.</b> A transaction arriving after the reporting cutoff · a restatement of an already
+  filed report, and the process for it · the deletion/retention conflict · an exactly-once claim that is
+  true inside Kafka and false at the warehouse boundary ·
+  <mark>and reproducibility quietly lost the day someone expires an old snapshot.</mark></p>
+
+  <p><b>COST.</b> Retention dominates, and audit copies multiply it. <b>WEAK ANSWER:</b> claims
+  exactly-once without scoping it, has no restatement process, and treats correctness as a tunable rather
+  than as the requirement.</p>
+</section>
+
+<section id="d5">
+  <h2><span class="num">D5</span> Feature platform for ML</h2>
+  <p class="sub">One data engineering responsibility inside ML infrastructure, and it is unambiguous.</p>
+
+  <p><b>THE PROMPT.</b> Serve features to models in production, and generate training data that is
+  consistent with what was served.</p>
+
+  <p><b>THE DEFINING PROBLEM.</b> <strong>Train/serve skew</strong> — the same feature computed two
+  different ways in two places, by two teams, with two subtly different definitions.</p>
+
+  <p><b>DESIGN.</b> <mark>One definition, two materialisations.</mark> A single transformation feeds an
+  offline store (Iceberg, for training) and an online store (Redis or DynamoDB, for serving). Never two
+  implementations, regardless of how much faster the second one would be to write.</p>
+
+  <div class="rule">
+    <span class="lbl">Point-in-time correctness, which is the thing to be able to explain</span>
+    <strong>Training data must join the feature value <em>as of the prediction time</em>, not as of
+    now.</strong> Otherwise the model trains on information that did not exist when the decision was made.
+    <br><br>
+    <mark>That is a temporal join (<a href="stream-semantics.html#w8">L4 W8</a>) and a Type 2 lookup
+    (<a href="modelling.html#m9">L1 M9</a>) — the third appearance of one idea.</mark> Getting it wrong
+    produces a model that scores brilliantly offline and fails in production, and it is a
+    <em>data engineering</em> failure rather than a modelling one.
+  </div>
+
+  <p><b>FAILURE MODES.</b> Train/serve skew from two implementations · <strong>label leakage from a
+  non-point-in-time join</strong> · online store staleness against a freshness SLO nobody wrote ·
+  cardinality of the entity space exceeding the online store's budget.</p>
+
+  <p><b>COST.</b> The online store dominates, and it scales with entities × features. <b>WEAK ANSWER:</b>
+  two pipelines, and no mention of point-in-time correctness.</p>
+</section>
+
+<section id="d6">
+  <h2><span class="num">D6</span> Large-scale reporting and the semantic layer</h2>
+  <p class="sub">An organisational problem with a technical component — and saying so is the correct opening.</p>
+
+  <p><b>THE PROMPT.</b> Three hundred analysts, thousands of dashboards, three conflicting definitions of
+  "active user", and a warehouse bill growing faster than headcount.</p>
+
+  <p><b>THE OPENING QUESTIONS.</b> How many of those dashboards were opened last month? What are the top
+  twenty queries by cost? Where do the conflicting definitions physically live?
+  <mark>All three are answerable from metadata you already have, and all three reframe the problem from
+  "we need a tool" to "we need to see what is happening".</mark></p>
+
+  <p><b>DESIGN.</b> Conformed dimensions (<a href="modelling.html#m7">L1 M7</a>) · metric definitions in
+  version control (<a href="modelling.html#m12">L1 M12</a>) · a <strong>tiered trust model</strong> —
+  certified datasets for anything that leaves the company, self-serve for exploration, clearly labelled ·
+  pre-aggregation for the top query shapes only · cost attribution per team
+  (<a href="reliability.html#r12">L6 R12</a>) · lineage-driven deletion of the dashboards nobody opens
+  (<a href="reliability.html#r10">L6 R10</a>).</p>
+
+  <div class="trap">
+    <span class="lbl">THE FAILURE MODE THAT KILLS THIS DESIGN</span>
+    <strong>People route around the semantic layer.</strong> A certification queue that takes two weeks
+    produces a shadow warehouse in someone's personal schema within a month.
+    <mark>If they route around it, it has failed, regardless of its technical merit</mark> — so the design
+    must include a fast path, and the fast path is the actual engineering problem.
+  </div>
+
+  <p><b>COST.</b> Attribution reveals it, and the four findings are always the same: a handful of queries
+  dominate, a dashboard refreshes far more often than anyone reads it, a BI tool issues
+  <code>SELECT *</code>, and something scans the largest table unpartitioned.
+  <b>WEAK ANSWER:</b> proposes a tool.</p>
+</section>
+
+<section id="d7">
+  <h2><span class="num">D7</span> Multi-tenant SaaS data architecture</h2>
+  <p class="sub">One distribution fact drives the entire design, and it is always true.</p>
+
+  <p><b>THE PROMPT.</b> Analytics for thousands of customer tenants, with isolation guarantees.</p>
+
+  <div class="rule">
+    <span class="lbl">The fact to state first</span>
+    <strong>The tenant size distribution is a power law. Always.</strong> The largest tenant is bigger than
+    the bottom half combined.
+    <mark>Which means a single uniform architecture is wrong at both ends</mark> — over-engineered for the
+    long tail and under-provisioned for the whale.
+  </div>
+
+  <p><b>THE ISOLATION SPECTRUM.</b> Shared table with a <code>tenant_id</code> column (cheapest, weakest) →
+  shared table partitioned or clustered by tenant → schema per tenant → database per tenant (strongest,
+  most operational cost). <strong>The answer is usually a hybrid: shared for the long tail, dedicated for
+  the largest tenants</strong>, with a defined promotion path between tiers.</p>
+
+  <p><b>THE CLARIFYING QUESTION.</b> <em>"Is the isolation requirement legal, contractual, or
+  performance?"</em> — three different answers with three different architectures, and they are frequently
+  conflated by the person asking.</p>
+
+  <div class="trap">
+    <span class="lbl">FAILURE MODES — the first one ends the company</span>
+    <strong>The cross-tenant data leak.</strong> A missing <code>WHERE</code> clause in one query is not an
+    acceptable distance between "working" and "catastrophe".
+    <mark>The design must make the leak structurally impossible — row-level security enforced by the
+    engine, or physical separation — rather than checked by convention.</mark>
+    <br><br>
+    Then: a large tenant starving the shared tier · per-tenant schema drift · a tenant requesting deletion
+    from shared physical files · and the migration when a tenant outgrows its tier, which must be designed
+    before it is needed.
+  </div>
+
+  <p><b>COST.</b> Per-tenant chargeback is a <em>product</em> requirement here, not merely an internal one
+  — customers will ask what they are paying for. <b>WEAK ANSWER:</b> one shared table, a
+  <code>WHERE tenant_id =</code> as the only isolation, and no plan for the largest customer.</p>
+</section>
+
+<section id="anti">
+  <h2><span class="num">::</span> How this round is actually failed</h2>
+  <p class="sub">Almost never by proposing the wrong architecture.</p>
+
+  <table>
+    <thead><tr><th>Anti-pattern</th><th>What it signals</th></tr></thead>
+    <tbody>
+      <tr><td><b>Drawing before asking</b></td><td>You design from patterns rather than from requirements</td></tr>
+      <tr><td><b>Naming tools instead of mechanisms</b></td><td>"Kafka and Spark" is a shopping list. <mark>"A partitioned durable log so consumers can replay independently" is a design</mark></td></tr>
+      <tr><td><b>No numbers</b></td><td>The design is not evaluable, and you know it</td></tr>
+      <tr><td><b>One option presented as obvious</b></td><td>You have not considered alternatives, or you cannot articulate why you rejected them</td></tr>
+      <tr><td><b>No failure section</b></td><td><strong>The most common gap and the most damaging</strong></td></tr>
+      <tr><td><b>Refusing a constraint</b></td><td>"Assume no managed services" is a test of adaptability, not a trick</td></tr>
+      <tr><td><b>Over-engineering</b></td><td>Streaming for a daily report. <mark>Strong candidates propose the simpler thing surprisingly often</mark></td></tr>
+      <tr><td><b>Ignoring cost</b></td><td>A design that would cost more than the product earns</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The single highest-value habit</span>
+    <strong>Say the trade-off out loud at the moment you make the choice</strong> — not at the end when
+    asked.
+    <mark>"I am partitioning by session rather than user; that costs me per-user ordering and buys me a
+    distribution that will not develop a hot partition when a bot arrives."</mark> One sentence, at the
+    moment of decision, repeated ten times across a design, is what the round is measuring.
+  </div>
+</section>
+
+<section id="interrupt">
+  <h2><span class="num">::</span> The interruptions</h2>
+  <p class="sub">What the interviewer says mid-design, and what each one is testing.</p>
+
+  <table>
+    <thead><tr><th>They say</th><th>They are testing</th><th>What a strong response does</th></tr></thead>
+    <tbody>
+      <tr><td>“What if the volume were a hundred times larger?”</td><td>Whether your design has a scaling axis or needs a rewrite</td><td>Name the component that breaks first, and at what number</td></tr>
+      <tr><td>“What if you could not use Kafka?”</td><td>Whether you know what Kafka was <em>providing</em></td><td>Durability, replay, and consumer decoupling — then propose a substitute for each</td></tr>
+      <tr><td>“How would you know it was broken?”</td><td><a href="reliability.html">L6</a>, directly</td><td>Named checks and an expected <mark>detection latency</mark></td></tr>
+      <tr><td>“That is expensive. Make it cheaper.”</td><td>Whether you know which component dominates cost</td><td>Cut the dominant line, and state what correctness or latency you gave up</td></tr>
+      <tr><td>“Now it has to be sub-second.”</td><td>Whether you know the latency ladder's cost steps</td><td>Which rung, what it costs, and what becomes approximate at that rung</td></tr>
+      <tr><td>“Why not just use a database?”</td><td>Whether you can defend complexity — <em>and whether you would concede</em></td><td>Sometimes the honest answer is "you are right, up to about this volume"</td></tr>
+      <tr><td>“What would you build first?”</td><td>Prioritisation, and whether you can ship an increment</td><td>The thinnest end-to-end slice that produces one real number</td></tr>
+      <tr><td>“What is the biggest risk in your design?”</td><td><mark>Nothing. This is a gift</mark></td><td>Name a real one. <strong>A candidate who names a genuine weakness is instantly more credible than one who cannot find any</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Practice protocol</span>
+    Write each of the seven designs as a document. <strong>Then deliver it aloud in under twenty minutes
+    from the document. Then again without it. Then have someone interrupt you three times from the table
+    above.</strong>
+    <mark>The written version is preparation; the third delivery is the skill.</mark>
+    <br><br>
+    These seven documents are also portfolio artifacts directly — a repository of design documents with
+    failure-mode and cost sections is unusual, readable in five minutes, and demonstrates the exact thing
+    the round is trying to measure.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next</th><th>What it inherits from L7</th></tr></thead>
+    <tbody>
+      <tr><td><a href="platform.html">L8 platform</a></td><td>Direct. A platform is <a href="#d1">D1</a> through <a href="#d7">D7</a> generalised into paths other teams can walk without you</td></tr>
+      <tr><td><a href="substrate.html">L0</a> · <a href="modelling.html">L1</a> · <a href="spark.html">L2</a> · <a href="kafka.html">L3</a> · <a href="stream-semantics.html">L4</a></td><td>Backwards, all of them. <mark>Every number you quote in a design round came from a lab</mark></td></tr>
+      <tr><td><a href="pipelines.html">L5</a> · <a href="reliability.html">L6</a></td><td>Backwards: the failure-mode and cost sections of every design are these two branches</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Branch complete when</span>
+    You can deliver any of the seven aloud in twenty minutes, <strong>with numbers you computed live, at
+    least two options, a failure section you volunteered, and a cost estimate</strong> — and when an
+    interruption changes your design rather than your composure.
+    <mark>And when, at least once across the seven, your answer is "this should be simpler than what you
+    asked for".</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · L7 · Data system design</footer>
+
+</body>
+</html>

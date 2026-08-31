@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L6 · Reliability &amp; governance — Forge</title>
+<meta name="description" content="Data quality dimensions, contracts, compatibility, observability, silent-failure incident response, lineage, governance and cost attribution — with two laboratories." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>·</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="index.html" class="on">Forge</a>
+      <a href="../log/index.html">Log</a>
+      <a href="../work/index.html">Work</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Frame</h4>
+  <a href="#why">The one question</a>
+  <a href="#env">The environment</a>
+  <a href="#map">Internal dependency map</a>
+  <h4>Quality</h4>
+  <a href="#r1">R1 · The asymmetry</a>
+  <a href="#r2">R2 · Five dimensions</a>
+  <a href="#r3">R3 · Referential integrity</a>
+  <a href="#r4">R4 · Anomaly economics</a>
+  <h4>Contracts</h4>
+  <a href="#r5">R5 · Data contracts</a>
+  <a href="#r6">R6 · Compatibility</a>
+  <h4>Operations</h4>
+  <a href="#r7">R7 · Observability</a>
+  <a href="#r8">R8 · SLAs &amp; SLOs</a>
+  <a href="#r9">R9 · Incident response</a>
+  <h4>Control</h4>
+  <a href="#r10">R10 · Lineage</a>
+  <a href="#r11">R11 · Governance</a>
+  <a href="#r12">R12 · Cost attribution</a>
+  <h4>Laboratories</h4>
+  <a href="#lab17">17 · Silent Failure</a>
+  <a href="#lab20">20 · Contracts &amp; Lineage</a>
+  <h4>Exit</h4>
+  <a href="#defence">Interview defence</a>
+  <a href="#connects">Where this leads</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span><a href="index.html">Forge</a><span>/</span>L6 Reliability</p>
+
+<div class="hero">
+  <div class="kicker">Branch L6 · deepen · the branch that most differentiates for SaaS and payments</div>
+  <h1>Reliability &amp; governance</h1>
+  <p class="dropcap">This branch exists because of one asymmetry, and everything in it is a response to
+  that asymmetry. It is also, more than any other branch, what a company means when it says it wants
+  someone <em>senior</em> — because the failures here are not solved by knowing a tool.</p>
+  <div class="why">
+    <b>The single idea.</b> <mark>A broken service returns an error. A broken pipeline returns plausible
+    numbers.</mark> Nothing throws. Nothing pages. A human reads the number, believes it, and acts on it —
+    and by the time anyone doubts it, they have been acting for weeks. Every technique in this branch is
+    defence against plausibility.
+  </div>
+  <div class="tags">
+    <span class="tag">#silent-failure</span>
+    <span class="tag t2">#contracts</span>
+    <span class="tag t3">#lineage</span>
+    <span class="tag">#detection-latency</span>
+    <span class="tag t2">#governance</span>
+  </div>
+</div>
+
+<section id="why">
+  <h2><span class="num">00</span> The one question this branch exists to answer</h2>
+  <p class="sub">Most candidates answer a different question, confidently.</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“How would you know if this pipeline started producing wrong data?”</b>
+    The common answer — "we'd get an alert if it failed" — <mark>answers a question that was not
+    asked.</mark> The pipeline did not fail. It succeeded, on schedule, and wrote numbers that are wrong.
+    A strong answer names the checks, states which failure each one catches, and admits which failures
+    none of them catch.
+  </div>
+
+  <p>The second is the change-management version, and it is where lineage earns its cost:</p>
+
+  <div class="pq"><span class="qn">?</span>
+    <b>“A producer is about to rename a column. What happens?”</b>
+    Without lineage: you find out when a dashboard breaks, and you do not know how many others will.
+    With table-level lineage: <em>"thirty-seven tables might be affected."</em>
+    <mark>With column-level lineage: "three will break, here they are, and here are their
+    owners."</mark> That gap is the entire business case, stated in one sentence.
+  </div>
+
+  <div class="rule">
+    <span class="lbl">The quantity this branch actually engineers</span>
+    <strong>Detection latency</strong> — the interval between a fault occurring and someone knowing.
+    <br><br>
+    <mark>Cost ≈ blast radius × detection latency × decision stakes.</mark> You cannot much reduce blast
+    radius — a warehouse exists precisely to make data widely reachable. Stakes are not yours to set.
+    <strong>Detection latency is the only term you control</strong>, which is why almost all of L6 is about
+    noticing rather than preventing.
+  </div>
+</section>
+
+<section id="env">
+  <h2><span class="num">01</span> The environment</h2>
+  <p class="sub">Resist buying tooling for a problem you have not yet measured.</p>
+
+  <table class="nw">
+    <thead><tr><th>Component</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><b>The <a href="pipelines.html">L5</a> pipelines and run ledger</b></td><td>You cannot instrument what you have not built. The run ledger is already half an observability system</td></tr>
+      <tr><td><b>dbt tests</b>, plus <b>Soda Core</b> or <b>Great Expectations</b></td><td>All free. <mark>The honest note: dbt tests plus a metrics table gets you most of the way</mark>, and knowing that is worth more than knowing the tools</td></tr>
+      <tr><td><b>A fault injector</b> — deterministic, parameterised, repeatable</td><td><strong>The instrument of <a href="#lab17">Lab 17</a>.</strong> You must be able to introduce a specific silent fault on demand and measure how long it survives</td></tr>
+      <tr><td><b>OpenLineage + Marquez</b>, or <b>DataHub</b> / <b>OpenMetadata</b></td><td>Free and open source. <a href="#lab20">Lab 20</a> needs a real lineage graph, not a diagram</td></tr>
+      <tr><td><b>A SQL parser</b> — sqlglot or equivalent</td><td>Column-level lineage is produced by parsing, and building a small version yourself teaches more than adopting one</td></tr>
+      <tr><td><b>Two alert channels</b>, deliberately separated</td><td>A page and a ticket queue. <mark>If everything goes to one channel, you have one channel that is ignored</mark></td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">Three habits, and the first one is a discipline</span>
+    <strong>Every check must state its false-positive cost and the action its owner will take.</strong> If
+    nobody can say what they would do when it fires, do not build it.
+    <strong>Measure detection latency, not detection.</strong> "We caught it" is meaningless without
+    "in four minutes" or "in six weeks".
+    <strong>Alert on the data, not on the job.</strong>
+    <mark>A green job with wrong output is the entire subject; alerting on job failure is solving the
+    easy half.</mark>
+  </div>
+</section>
+
+<section id="map">
+  <h2><span class="num">02</span> Internal dependency map</h2>
+
+<pre>R1 THE ASYMMETRY [spine] ........ everything below is a response to it
+      │
+      ├──→ R2 THE FIVE QUALITY DIMENSIONS
+      │            │
+      │            ├──→ R3 REFERENTIAL INTEGRITY ACROSS SYSTEMS
+      │            │
+      │            └──→ R4 ANOMALY DETECTION &amp; FALSE-POSITIVE ECONOMICS
+      │
+      ├──→ R5 DATA CONTRACTS ──────→ R6 COMPATIBILITY, PRECISELY DEFINED
+      │                                        ↑
+      │                              L3 K11 schema registry
+      │
+      └──→ R7 OBSERVABILITY
+                   │
+                   ├──→ R8 DATA SLAs &amp; SLOs
+                   │
+                   └──→ R9 INCIDENT RESPONSE FOR SILENT FAILURE
+                                  │
+                                  ↓
+                         R10 LINEAGE [spine]
+                                  │
+                     ┌────────────┴────────────┐
+                     ↓                         ↓
+              R11 GOVERNANCE           R12 COST ATTRIBUTION</pre>
+
+  <div class="note">
+    <span class="lbl">Reading this map</span>
+    <strong>R10 is placed low but is depended on by everything above it in practice.</strong> Incident
+    response without lineage is guesswork; governance without lineage cannot answer "where did this PII
+    go"; cost attribution without lineage cannot say which team's query caused the bill.
+    <br><br>
+    <mark>It sits late because building lineage before you have felt the absence of it produces a graph
+    nobody uses</mark> — which is the most common way lineage projects fail.
+  </div>
+</section>
+
+<section id="r1">
+  <h2><span class="num">R1</span> The asymmetry <span class="pill pC">spine</span></h2>
+  <p class="sub">The defining fact of the discipline, and the reason this branch is not optional.</p>
+
+  <p><b>WHAT IT IS.</b> In software, a bug produces an exception, a 500, a failed health check — a signal
+  that something is wrong, emitted by the system itself. <strong>In data, a bug produces a number. Numbers
+  do not throw.</strong></p>
+
+  <p><b>WHY IT COMPOUNDS.</b> Because the number is consumed by a human who will believe it. There is no
+  type system between your pipeline and someone's decision.
+  <mark>By the time anyone doubts the figure, they have been acting on it for weeks and reporting it
+  upward.</mark></p>
+
+  <p><b>DEPENDENCIES.</b> <a href="pipelines.html">L5</a> — you need pipelines to instrument.</p>
+
+  <div class="life">
+    <span class="lbl">The framing to carry into an interview</span>
+    <strong>"The failure mode I design against is not the pipeline breaking. It is the pipeline
+    succeeding and being wrong."</strong>
+    <br><br>
+    <mark>That single sentence reorganises how an interviewer hears everything you say afterwards</mark>,
+    because it demonstrates that you have understood the discipline's actual hazard rather than importing a
+    web-services mental model into it.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#r2">R2</a> · <a href="#r9">R9</a> ·
+  <a href="../atlas/data-engineering.html#n7">Data Engineering N7</a>.</p>
+</section>
+
+<section id="r2">
+  <h2><span class="num">R2</span> The five quality dimensions</h2>
+  <p class="sub">And a ranking, because a list of five is not advice.</p>
+
+  <table>
+    <thead><tr><th>Dimension</th><th>The check</th><th>Catches</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td><b>Freshness</b></td><td><code>max(event_time)</code> against an expectation</td><td>Stalled sources, stalled watermarks, dead schedules</td><td><mark>Near zero. Start here, everywhere</mark></td></tr>
+      <tr><td><b>Volume</b></td><td>Row count within bounds, by partition</td><td><strong>Partial loads</strong> — the most common silent failure there is</td><td>Near zero</td></tr>
+      <tr><td><b>Distribution</b></td><td>Null rate, mean, cardinality, category proportions</td><td>Semantic changes, unit changes, upstream logic changes</td><td>Real, in false positives</td></tr>
+      <tr><td><b>Schema</b></td><td>Columns present, types unchanged</td><td>Structural breaks — <em>and remarkably little else</em></td><td>Near zero</td></tr>
+      <tr><td><b>Uniqueness</b></td><td>The grain columns are unique</td><td>Join fan-out, duplicate loads, broken merge keys</td><td>Moderate — it is a full scan</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The prioritisation, which is the actual content of this node</span>
+    <strong>Freshness and volume catch the majority of real incidents and cost almost nothing.
+    Put them on every table before you put a distribution check on any table.</strong>
+    <br><br>
+    <mark>Teams routinely start with elaborate statistical profiling and never get freshness checks onto
+    half their tables</mark> — which is backwards, and the reason is that profiling is more interesting to
+    build than a <code>max(timestamp)</code> comparison.
+  </div>
+
+  <div class="card">
+    <b>PRIMARY RESOURCE</b><br>
+    <em>Type:</em> Free documentation · <em>Title:</em> <strong>dbt's tests and source freshness
+    documentation</strong>, plus <strong>Soda Core</strong>'s check reference<br>
+    <em>Why this one:</em> free, and dbt's built-in tests are exactly the four cheapest checks —
+    <code>unique</code>, <code>not_null</code>, <code>accepted_values</code>,
+    <code>relationships</code> — which is a useful signal about what actually matters.
+    <mark>Anything beyond those four should be justified by an incident you have had.</mark>
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab17">Laboratory 17 — Silent Failure.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="#r3">R3</a> · <a href="#r4">R4</a> ·
+  <a href="pipelines.html#p11">L5 P11</a> · <a href="modelling.html#m5">L1 M5</a> — a uniqueness test is a
+  grain assertion.</p>
+</section>
+
+<section id="r3">
+  <h2><span class="num">R3</span> Referential integrity across systems</h2>
+  <p class="sub">Inside a database the engine enforces it. Across systems there is only reconciliation.</p>
+
+  <p><b>WHAT IT IS.</b> Facts referencing dimension members that do not exist, dimension members with no
+  facts, and counts that should agree between two systems and do not.</p>
+
+  <p><b>WHY IT IS SEPARATE FROM R2.</b> Because it cannot be checked from inside one dataset.
+  <strong>It requires reading two systems and comparing them, which nothing will trigger for you</strong> —
+  nothing goes wrong; things merely stop being true.</p>
+
+  <div class="note">
+    <span class="lbl">The cheap version that catches the expensive failure</span>
+    <strong>Compare key sets, not rows.</strong> Pull the primary keys from source and target, hash each
+    set, compare. Cheap enough to run hourly on tables far too large to compare row by row.
+    <br><br>
+    <mark>This is the only thing that catches the invisible hard delete from
+    <a href="pipelines.html#p9">L5 P9</a></mark>, and it is roughly thirty lines of code.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Orphaned facts and the inferred-member pattern · scheduled reconciliation as a
+  first-class job · sampling versus full comparison and when each is defensible · reconciliation across a
+  system boundary you do not control · what to do when the source is itself wrong.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="pipelines.html#lab16">L5 Lab 16</a> · <a href="modelling.html#m7">L1 M7</a> ·
+  <a href="#r9">R9</a>.</p>
+</section>
+
+<section id="r4">
+  <h2><span class="num">R4</span> Anomaly detection and its false-positive economics</h2>
+  <p class="sub">The most seductive idea in the branch, and the one most likely to make things worse.</p>
+
+  <p><b>THE IDEA.</b> Learn what normal looks like, alert on deviation. It is appealing because it appears
+  to require no domain knowledge.</p>
+
+  <p><b>WHY IT MISBEHAVES.</b> Because <strong>data is seasonal, bursty, and legitimately changes.</strong>
+  Black Friday is an anomaly. A marketing campaign is an anomaly. Onboarding a large client is an anomaly.
+  A naive detector fires on all of them, correctly identifying that something is unusual and uselessly
+  failing to identify that it is fine.</p>
+
+  <div class="rule">
+    <span class="lbl">The economics, stated plainly</span>
+    <strong>An alert that is wrong ninety percent of the time trains people to ignore the channel — which
+    means the other ten percent is ignored too.</strong>
+    <br><br>
+    <mark>A bad detector is worse than no detector, because it consumes the signal value of the channel it
+    uses.</mark> This is the argument that stops a well-meaning quality initiative from making a team
+    permanently less responsive, and it is worth being able to make it out loud.
+  </div>
+
+  <div class="note">
+    <span class="lbl">The two-channel rule</span>
+    <strong>Page when someone is being harmed right now. Ticket for everything else.</strong>
+    <mark>Almost every data quality signal is a ticket</mark> — and deciding that per check, in advance,
+    is what keeps the page meaningful.
+    <br><br>
+    The practical middle ground: wide static thresholds catch most things at near-zero false-positive
+    cost; use statistical detection only where you have measured the base rate; and route anything
+    uncertain to the ticket queue by default.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#r8">R8</a> · <a href="#lab17">Lab 17</a> experiment 8 ·
+  <a href="../atlas/probability.html#n5">Probability N5</a> — base rates are why a 99%-accurate detector
+  on a rare event is still mostly wrong.</p>
+</section>
+
+<section id="r5">
+  <h2><span class="num">R5</span> Data contracts</h2>
+  <p class="sub">A producer obligation and a consumer expectation, enforced by a machine.</p>
+
+  <p><b>WHAT IT IS.</b> A written, versioned specification of a dataset: its schema, the <em>meaning</em> of
+  each field, its guarantees (freshness, completeness, uniqueness), and the process by which it may
+  change.</p>
+
+  <div class="rule">
+    <span class="lbl">The distinction that decides whether it works</span>
+    <strong>A contract without enforcement is documentation, and documentation drifts.</strong>
+    <br><br>
+    <mark>The only enforcement point that works is the producer's CI pipeline</mark> — the build fails when
+    a change would break the contract. That moves the cost to the person making the change, at the moment
+    they make it, which is the only arrangement that survives contact with a deadline.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The reason contracts fail, and it is not technical</span>
+    <strong>The producing team did not sign up to be a data provider.</strong> An application team owns a
+    database because their service needs one; your dependency on it is something that happened to them.
+    <br><br>
+    <mark>A data contract is a negotiation artifact at least as much as a technical one</mark>, and
+    proposing one without an answer to "what is in it for the producer" is how the initiative dies.
+    That negotiation is an <a href="platform.html#e1">L8</a> problem, which is why L6 and L8 are adjacent.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Contract contents — schema, semantics, guarantees, change process, owner ·
+  contracts at which boundaries (source-to-lake, lake-to-mart, mart-to-consumer) and why not everywhere ·
+  versioning · the schema registry as the enforcement mechanism for streams
+  (<a href="kafka.html#k11">L3 K11</a>) · contract tests in CI on both sides.</p>
+
+  <p><b>THE LAB.</b> <a href="#lab20">Laboratory 20 — Contracts &amp; Lineage.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="#r6">R6</a> · <a href="kafka.html#k11">L3 K11</a> ·
+  <a href="substrate.html#b4">L0 B4</a> — Avro's schema resolution rules are where "compatible" is defined
+  concretely.</p>
+</section>
+
+<section id="r6">
+  <h2><span class="num">R6</span> Compatibility, precisely defined</h2>
+  <p class="sub">Backward, forward, full — and the change type that no schema check will ever catch.</p>
+
+  <table>
+    <thead><tr><th>Kind</th><th>Means</th><th>Example</th><th>Upgrade order</th></tr></thead>
+    <tbody>
+      <tr><td><b>Backward</b></td><td>The new schema can read old data</td><td>Adding an optional field</td><td><mark>Consumers first</mark></td></tr>
+      <tr><td><b>Forward</b></td><td>The old schema can read new data</td><td>Removing an optional field</td><td><mark>Producers first</mark></td></tr>
+      <tr><td><b>Full</b></td><td>Both</td><td>Adding an optional field with a default</td><td>Either</td></tr>
+      <tr><td><b>Breaking</b></td><td>Neither</td><td>Adding a required field; changing a type; <strong>renaming anything</strong></td><td>Coordinated, or not at all</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">The mnemonic, and why people get this backwards</span>
+    <strong>The direction is named after the <em>data</em>, not the code.</strong> Backward compatibility
+    means the new code is compatible <em>backwards</em>, with data written before it.
+    <mark>The practical payoff is knowing which side to upgrade first</mark>, which is the only reason the
+    distinction is worth holding.
+    <br><br>
+    And note that <strong>a rename is a delete plus an add</strong> — the most destructive change in the
+    table, and the one most casually proposed.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">The semantic break, which no schema check catches</span>
+    <strong>The column stays. The type stays. The meaning changes.</strong> <code>amount</code> was in
+    rupees and is now in paise. Every value is a hundred times larger and every schema validation passes.
+    <br><br>
+    <mark>Only a distribution check catches this</mark> — which is why <a href="#r2">R2</a> and R6 are
+    complements rather than alternatives, and why a contract must specify <em>semantics</em> and not only
+    structure. <a href="#lab17">Lab 17</a>'s second fault is exactly this.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#r2">R2</a> · <a href="#r10">R10</a> · <a href="platform.html#e10">L8
+  migration</a>.</p>
+</section>
+
+<section id="r7">
+  <h2><span class="num">R7</span> Observability</h2>
+  <p class="sub">You are not observing a system. You are observing a dataset, and the tooling differs accordingly.</p>
+
+  <p><b>WHAT IT IS.</b> A time series per table, not a trace per request. Freshness, row counts, run
+  duration and its trend, check pass rates — and one metric nobody has: <strong>the age of the oldest
+  unresolved data quality failure.</strong></p>
+
+  <div class="rule">
+    <span class="lbl">The minimum viable version, which is genuinely sufficient to start</span>
+    <strong>One table: <code>(table_name, run_id, timestamp, rows_in, rows_out, duration,
+    checks_passed, checks_failed)</code>. One dashboard over it.</strong>
+    <br><br>
+    <mark>That is it. No vendor, no platform, no evaluation cycle.</mark> Build this before evaluating
+    anything, because it will tell you what your actual failure profile is — and the tool you would have
+    bought first is usually not the one that profile calls for.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Metrics per dataset rather than per service · why request tracing does not transfer ·
+  trend detection on run duration as an early warning for cost and for skew · check pass rate as a health
+  signal · <strong>surfacing freshness to consumers</strong>, in the dashboard itself, so that staleness is
+  visible where the decision is made rather than in a channel they do not read.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#r8">R8</a> · <a href="pipelines.html#env">L5 run ledger</a> ·
+  <a href="#r12">R12</a>.</p>
+</section>
+
+<section id="r8">
+  <h2><span class="num">R8</span> Data SLAs and SLOs</h2>
+  <p class="sub">Imported from SRE, and usually imported badly.</p>
+
+  <p><b>WHAT IT IS.</b> A numerical definition of "working": <em>"the orders table is no more than ninety
+  minutes stale, ninety-nine percent of the time."</em> Measured continuously, with an error budget that
+  is spent deliberately.</p>
+
+  <div class="trap">
+    <span class="lbl">The question that exposes most "data SLAs"</span>
+    <strong>Who is the SLA with, and what happens when it is breached?</strong>
+    <br><br>
+    An SLA implies a consumer who cares and a consequence for failure.
+    <mark>Most published data SLAs have neither, which makes them aspirations written in the grammar of
+    commitments.</mark> Saying so — and then proposing an SLO with a named owner instead — is a genuinely
+    senior contribution.
+  </div>
+
+  <div class="life">
+    <span class="lbl">The move that saves the most money in this entire branch</span>
+    <strong>Negotiate the SLO down.</strong> Most consumers ask for real-time and need daily, because
+    "real-time" is free to ask for.
+    <br><br>
+    <mark>An SLO conversation is where <a href="stream-semantics.html#w12">L4 W12</a> and
+    <a href="pipelines.html#p12">L5 P12</a> get their evidence</mark> — you are not arguing against
+    streaming, you are asking what decision changes if the number is four hours old, and letting the answer
+    decide the architecture.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#r9">R9</a> · <a href="system-design.html">L7</a> ·
+  <a href="platform.html">L8</a>.</p>
+</section>
+
+<section id="r9">
+  <h2><span class="num">R9</span> Incident response for silent failure</h2>
+  <p class="sub">Three ways it differs from a service incident, and one step everybody skips.</p>
+
+  <table>
+    <thead><tr><th>Difference</th><th>Consequence</th></tr></thead>
+    <tbody>
+      <tr><td><b>There was no page</b></td><td>You learn from a human's doubt. <mark>The first task is establishing <em>when it started</em></mark>, which requires history you may not have kept</td></tr>
+      <tr><td><b>The blast radius is downstream and already consumed</b></td><td>Numbers were reported and decisions were made. The response includes communication, not only repair</td></tr>
+      <tr><td><b>Rollback is insufficient</b></td><td>Fixing forward leaves wrong history. You must also decide whether to restate — which is <a href="modelling.html#m9">L1 M9</a> and <a href="pipelines.html#p6">L5 P6</a> again</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">The runbook, and the step people skip</span>
+    Detect → establish the time window → establish the blast radius via <a href="#r10">lineage</a> →
+    <strong>notify</strong> → fix → backfill → verify → communicate the restatement.
+    <br><br>
+    <mark>Notify <em>before</em> you fix.</mark> Consumers acting on wrong data need to stop acting now,
+    not in three hours when the repair is finished. Engineers reliably invert these two steps because
+    fixing feels like progress and notifying feels like admitting fault.
+  </div>
+
+  <p><b>CONNECTS TO.</b> <a href="#r10">R10</a> · <a href="pipelines.html#p6">L5 P6 backfills</a> ·
+  <a href="pipelines.html#lab19">L5 Lab 19</a> — shadow-diff-swap is how you land the correction.</p>
+</section>
+
+<section id="r10">
+  <h2><span class="num">R10</span> Lineage <span class="pill pC">spine</span></h2>
+  <p class="sub">Table-level answers "what might break". Column-level answers "what will".</p>
+
+  <p><b>WHAT IT IS.</b> The dependency graph of your data — which tables feed which, and at the finer
+  granularity, which columns feed which.</p>
+
+  <p><b>HOW IT IS PRODUCED.</b> By parsing SQL (practical, and buildable yourself with a parser like
+  sqlglot) · by instrumenting the engine (OpenLineage) · or by manual declaration, which
+  <strong>rots immediately and should not be attempted.</strong></p>
+
+  <table>
+    <thead><tr><th>Use</th><th>What it enables</th></tr></thead>
+    <tbody>
+      <tr><td><b>Impact analysis</b></td><td>Before a change: who breaks, and who owns them</td></tr>
+      <tr><td><b>Root cause</b></td><td>After an incident: walk upstream instead of guessing</td></tr>
+      <tr><td><b>Deprecation</b></td><td>Knowing when the last consumer has moved off</td></tr>
+      <tr><td><b>Deletion</b></td><td><mark>Finding the tables nobody reads — the most underrated use, and the one that pays <a href="pipelines.html#p12">L5 P12</a>'s bill</mark></td></tr>
+      <tr><td><b>PII tracing</b></td><td>Where did this column's data end up (<a href="#r11">R11</a>)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">The honest cost note</span>
+    <strong>Column-level lineage is expensive to build and to keep accurate. Table-level covers most
+    incident work.</strong>
+    <mark>Build table-level first and universally; add column-level only where the blast radius justifies
+    it.</mark> Saying that in an interview signals that you have costed the thing rather than admired it.
+  </div>
+
+  <p><b>THE LAB.</b> <a href="#lab20">Laboratory 20.</a></p>
+
+  <p><b>CONNECTS TO.</b> <a href="#r11">R11</a> · <a href="#r12">R12</a> ·
+  <a href="platform.html#e6">L8 catalog</a>.</p>
+</section>
+
+<section id="r11">
+  <h2><span class="num">R11</span> Governance</h2>
+  <p class="sub">Access, PII, retention — and one genuinely hard problem.</p>
+
+  <p><b>WHAT IT IS.</b> Column-level access control, masking and tokenisation, PII classification as a
+  required tag, and retention policies that are enforced rather than documented.</p>
+
+  <div class="trap">
+    <span class="lbl">The hard problem: deletion in an immutable architecture</span>
+    An erasure request arrives for one subject. Your lakehouse is built on immutable files and retained
+    snapshots. <strong>You rewrite the affected files, expire every snapshot that still references the old
+    ones — and then remember where else that data went.</strong>
+    <br><br>
+    <mark>The same rows are in your Kafka topics, your backups, your dev environment, the extract someone
+    emailed, and the Parquet files in a bucket nobody catalogued.</mark> Deletion is a distributed problem
+    dressed as a table operation, which is why it is the question that separates people who have done this
+    from people who have read about it.
+  </div>
+
+  <div class="life">
+    <span class="lbl">The answer worth having ready</span>
+    <strong>Crypto-shredding.</strong> Encrypt each subject's data with a per-subject key. To erase, delete
+    the key.
+    <mark>Deletion becomes O(1) and works everywhere the ciphertext travelled — backups, topics, forgotten
+    buckets — without finding any of them.</mark>
+    <br><br>
+    It is not free: key management becomes critical infrastructure, and losing a key is an unrecoverable
+    data loss. But it is the design that actually solves the problem rather than chasing copies, and being
+    able to propose it is a strong signal in any regulated context.
+  </div>
+
+  <p><b>SUBTOPICS.</b> Column-level access control and masking · dynamic masking by role · tokenisation
+  versus encryption versus hashing, and why hashing is usually insufficient for low-cardinality PII ·
+  classification as a required tag enforced at creation, not audited afterwards · retention as an
+  automated expiry job · <strong>soft-deleted rows are still PII</strong>
+  (<a href="pipelines.html#p9">L5 P9</a>) · data residency.</p>
+
+  <p><b>CONNECTS TO.</b> <a href="#r10">R10</a> · <a href="substrate.html#b5">L0 B5</a> ·
+  <a href="platform.html#e8">L8 access at platform scale</a>.</p>
+</section>
+
+<section id="r12">
+  <h2><span class="num">R12</span> Cost attribution and query economics</h2>
+  <p class="sub">Where L0's measurement becomes an organisational lever.</p>
+
+  <p><b>WHAT IT IS.</b> Knowing which team, job or dashboard caused which portion of the bill — bytes
+  scanned plus compute time, tagged and aggregated.</p>
+
+  <div class="rule">
+    <span class="lbl">The behavioural finding</span>
+    <strong>Cost visibility changes behaviour more than cost limits do.</strong>
+    <mark>A team that can see its own bill optimises. A team that hits a quota files a ticket.</mark>
+    <br><br>
+    Which means showback is usually the higher-leverage intervention, and it is far cheaper to build than
+    real chargeback.
+  </div>
+
+  <p><b>WHAT YOU FIND THE FIRST TIME YOU ATTRIBUTE COST.</b> A handful of queries are most of the bill ·
+  a dashboard refreshing every five minutes that three people open weekly · <code>SELECT *</code> issued by
+  a BI tool · and unpartitioned scans of the largest table in the warehouse.
+  <mark>All four are fixable in a day once visible, and invisible forever otherwise.</mark></p>
+
+  <p><b>CONNECTS TO.</b> <a href="substrate.html#lab01">L0 Lab 01</a> — cost is bytes scanned ·
+  <a href="platform.html#e9">L8 chargeback</a> · <a href="#r10">R10</a>.</p>
+</section>
+
+<section id="lab17">
+  <h2><span class="num">17</span> Laboratory — Silent Failure</h2>
+  <p class="sub">Four faults that leave every pipeline green.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> A working pipeline suite. Every job succeeds. Every dashboard renders. Introduce four
+    faults that produce wrong data <em>without producing any failure</em>, then instrument until each one is
+    caught — and measure how long each took to catch.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> The <a href="pipelines.html">L5</a> pipelines, green, with no data tests at all.
+    Plus a deterministic <strong>fault injector</strong> and a saved copy of the correct outputs.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE — four, all green</span>
+    <strong>1. Partial load.</strong> A paginated source silently returns 60% of rows. Counts drop.
+    Nothing errors.<br>
+    <strong>2. Semantic change.</strong> <code>amount</code> moves from rupees to paise upstream. Schema
+    identical, types identical, <mark>every value a hundred times larger.</mark><br>
+    <strong>3. Join fan-out.</strong> A dimension acquires duplicate rows. The join multiplies facts.
+    Revenue rises twelve percent and every job succeeds.<br>
+    <strong>4. Timezone shift.</strong> An upstream system moves from IST to UTC. Every daily boundary
+    slides by five and a half hours — wrong for one day, then <em>subtly wrong at the boundary
+    forever.</em>
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Green is not correct → the five quality dimensions and what each actually
+  catches → why schema checks are nearly useless against real failures → distribution checks and their
+  false-positive cost → seasonality → detection latency as the engineered quantity → page versus ticket
+  routing.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>All four faults, no checks. <strong>Measure how long until you notice by inspection</strong></td><td><mark>The honest baseline, and it is uncomfortable</mark></td></tr>
+      <tr><td>2</td><td>Add freshness checks; re-run all four</td><td>Catches none of them — freshness is necessary and not sufficient</td></tr>
+      <tr><td>3</td><td>Add row-count bounds per partition; re-run</td><td>Fault 1 caught. Record the detection latency</td></tr>
+      <tr><td>4</td><td>Add schema checks; re-run</td><td><strong>None of the four is caught.</strong> The instructive negative result of the lab</td></tr>
+      <tr><td>5</td><td>Add distribution checks — mean, null rate, cardinality</td><td>Faults 2 and 4 caught</td></tr>
+      <tr><td>6</td><td>Add uniqueness on the grain</td><td>Fault 3 caught, immediately and unambiguously</td></tr>
+      <tr><td>7</td><td>Add cross-system key-set reconciliation</td><td>What it adds beyond everything above</td></tr>
+      <tr><td>8</td><td>Replay a simulated sale day through the tuned distribution checks. <strong>Count false positives</strong></td><td><mark>The cost side of R4, measured rather than asserted</mark></td></tr>
+      <tr><td>9</td><td>Compute precision per check type; assign page or ticket to each</td><td>Routing as an engineering decision, not a default</td></tr>
+      <tr><td>10</td><td>Build the full fault × check × detection-latency table</td><td>The artifact</td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Which checks catch which faults — the mapping is not intuitive, and experiment
+  4 is the surprise. Detection latency for each fault under each configuration. False positives under
+  seasonality in experiment 8.</p>
+
+  <p><b>THE ARTIFACT.</b> <strong>A fault-to-check matrix with measured detection latencies</strong>, plus
+  a page/ticket routing decision per check. The sentence it earns:
+  <mark><em>"Schema checks caught zero of the four most common silent failures. Volume and distribution
+  checks caught all four, at a false-positive cost of N per week."</em></mark></p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> Every data quality tool evaluation, and every post-incident review that
+  concludes "we should have had monitoring" without specifying which monitoring.
+  <strong>This lab specifies it, with numbers.</strong></p>
+
+  <p><b>PORTFOLIO VALUE.</b> Very high. It is a measurement study on a topic normally discussed in
+  adjectives, and the matrix is directly usable in a real job in week one.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="#r5">R5</a> · <a href="#r9">R9</a> ·
+  <a href="#lab20">Lab 20</a> · <a href="platform.html">L8</a>.</p>
+</section>
+
+<section id="lab20">
+  <h2><span class="num">20</span> Laboratory — Contracts &amp; Lineage</h2>
+  <p class="sub">A schema change caught before it ships, rather than after it breaks a dashboard.</p>
+
+  <div class="card">
+    <b>PROBLEM.</b> A producer team is about to rename a column. Today, you would find out when something
+    downstream breaks — and you cannot say in advance how much.
+    <br><br>
+    <b>INITIAL SYSTEM.</b> A realistic dependency graph: one source table, several intermediate models, a
+    dozen leaf reports with different owners. No contracts, no lineage, no CI gate.
+  </div>
+
+  <div class="trap">
+    <span class="lbl">FAILURE TO INTRODUCE</span>
+    <strong>Rename the column. Watch the cascade.</strong> Then count how many consumers broke — and, more
+    importantly, <mark>how many you did not know existed until they broke.</mark>
+    <br><br>
+    That second number is the one that justifies everything built in the rest of this lab, and it is
+    always larger than the estimate you wrote down beforehand. Write the estimate down first.
+  </div>
+
+  <p><b>CONCEPTS THAT EMERGE.</b> Table-level lineage by SQL parsing → column-level lineage and the
+  precision it buys → contracts as schema plus semantics plus guarantees → compatibility classification →
+  CI enforcement at the producer → expand-migrate-contract as the safe deprecation path → the friction cost
+  of a gate, which decides whether it survives.</p>
+
+  <table>
+    <thead><tr><th>#</th><th>Experiment</th><th>What it isolates</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Rename with no defence. <strong>Estimate the blast radius first, then measure it</strong></td><td>The gap between what you believed and what was true</td></tr>
+      <tr><td>2</td><td>Build table-level lineage by parsing the SQL; re-run the impact analysis</td><td>"Thirty-seven might break" — useful, and imprecise</td></tr>
+      <tr><td>3</td><td>Build column-level lineage for the affected path</td><td><mark>"Three will break, here are the owners." The whole business case</mark></td></tr>
+      <tr><td>4</td><td>Write contracts for three exposed tables: schema, semantics, freshness guarantee, owner</td><td>What a contract must contain to be actionable</td></tr>
+      <tr><td>5</td><td>Add a CI check classifying a proposed change as backward / forward / full / breaking</td><td>Enforcement at the producer, where the cost belongs</td></tr>
+      <tr><td>6</td><td>Test the classifier against six changes: add optional, add required, drop, rename, widen type, narrow type</td><td>Where the rules are genuinely subtle</td></tr>
+      <tr><td>7</td><td>Make a <em>semantic-only</em> change (units). Confirm the classifier misses it. Add the distribution check that catches it</td><td><strong>The limit of structural contracts</strong></td></tr>
+      <tr><td>8</td><td>Implement expand-migrate-contract: add new, dual-write, migrate consumers, remove old</td><td>The only safe rename, and how long it really takes</td></tr>
+      <tr><td>9</td><td>Use lineage to find tables with no downstream consumers; propose deletions</td><td><a href="pipelines.html#p12">L5 P12</a>'s bill, arriving with evidence</td></tr>
+      <tr><td>10</td><td>Measure the CI gate's friction: added build time, false blocks, developer complaints</td><td><mark>A gate developers route around is worse than none</mark></td></tr>
+    </tbody>
+  </table>
+
+  <p><b>WHAT TO OBSERVE.</b> Predicted versus actual blast radius at both granularities. Whether the CI
+  gate is respected or bypassed. The true elapsed time of experiment 8 — expand-migrate-contract is
+  correct and slow, and knowing how slow is what lets you plan a migration honestly.</p>
+
+  <p><b>THE ARTIFACT.</b> <strong>A contract specification, a working CI gate, and a lineage-driven impact
+  report</strong> — plus the friction measurement from experiment 10, which is the finding most write-ups
+  of this topic omit.</p>
+
+  <p><b>REAL-WORLD CONNECTION.</b> This is the entire "data contracts" discourse, made concrete and
+  measured. <mark>Most of that discourse is advocacy; almost none of it reports what enforcement
+  costs.</mark></p>
+
+  <p><b>PORTFOLIO VALUE.</b> High, and the most <a href="platform.html">L8</a>-adjacent artifact in L6 —
+  it is a platform capability built at small scale, which is exactly the transition this Forge is aimed
+  at.</p>
+
+  <p><b>NEXT CONNECTED TOPICS.</b> <a href="platform.html#e10">L8 catalog and migration</a> ·
+  <a href="system-design.html">L7</a> · <a href="kafka.html#k11">L3 K11</a>.</p>
+</section>
+
+<section id="defence">
+  <h2><span class="num">::</span> Interview defence</h2>
+  <p class="sub">The branch where "it depends" is usually the wrong answer and a number is the right one.</p>
+
+  <table>
+    <thead><tr><th>The question</th><th>Node</th><th>What a strong answer contains</th></tr></thead>
+    <tbody>
+      <tr><td>How would you know the data is wrong?</td><td><a href="#r2">R2</a></td><td>Named checks, what each catches, <mark>and what none of them catch</mark></td></tr>
+      <tr><td>Where would you start on a system with no monitoring?</td><td><a href="#r2">R2</a></td><td>Freshness and volume on every table before distribution on any</td></tr>
+      <tr><td>Why not just use anomaly detection?</td><td><a href="#r4">R4</a></td><td>Seasonality, base rates, and that a noisy channel is worse than a silent one</td></tr>
+      <tr><td>What is a data contract, really?</td><td><a href="#r5">R5</a></td><td>Enforced in the producer's CI, or it is documentation. Plus the incentive problem</td></tr>
+      <tr><td>Is adding a column a breaking change?</td><td><a href="#r6">R6</a></td><td>Optional no, required yes — and which side upgrades first in each case</td></tr>
+      <tr><td>The column and type are unchanged but the numbers moved</td><td><a href="#r6">R6</a></td><td><strong>A semantic break. No schema check catches it; a distribution check does</strong></td></tr>
+      <tr><td>A producer wants to rename a column</td><td><a href="#r10">R10</a></td><td>Column-level impact analysis, then expand-migrate-contract</td></tr>
+      <tr><td>Walk me through a data incident</td><td><a href="#r9">R9</a></td><td>Establish the window, then the blast radius, <mark>then notify before fixing</mark></td></tr>
+      <tr><td>How do you delete one user from a lakehouse?</td><td><a href="#r11">R11</a></td><td>File rewrite and snapshot expiry — then every copy you forgot. Then crypto-shredding</td></tr>
+      <tr><td>Do you need column-level lineage?</td><td><a href="#r10">R10</a></td><td>Table-level first and everywhere; column-level where blast radius justifies the cost</td></tr>
+      <tr><td>How would you cut our warehouse bill?</td><td><a href="#r12">R12</a></td><td>Attribute first. Then the four things attribution always reveals</td></tr>
+      <tr><td>What SLA would you offer on this table?</td><td><a href="#r8">R8</a></td><td>Ask who the consumer is and what breaches cost — then negotiate it down</td></tr>
+    </tbody>
+  </table>
+
+  <div class="life">
+    <span class="lbl">The move that distinguishes a senior answer here</span>
+    <strong>Give a detection latency, not a reassurance.</strong>
+    <mark>"We would catch a partial load within one run, a semantic change within a day, and a slow drift
+    possibly never" is a categorically stronger answer than "we have monitoring"</mark> — because it
+    concedes a gap, and conceding a specific gap is the most reliable evidence that the rest of the answer
+    was measured rather than hoped.
+  </div>
+</section>
+
+<section id="connects">
+  <h2><span class="num">::</span> Where this leads</h2>
+
+  <table>
+    <thead><tr><th>Next</th><th>What it inherits from L6</th></tr></thead>
+    <tbody>
+      <tr><td><a href="system-design.html">L7 system design</a></td><td>Every design's failure-mode section is this branch. <mark>Designs without one read as junior regardless of the architecture</mark></td></tr>
+      <tr><td><a href="platform.html">L8 platform</a></td><td>Contracts, catalog, quality gates and chargeback are L6 capabilities offered as a product to other teams</td></tr>
+      <tr><td><a href="pipelines.html">L5 pipelines</a></td><td>Backwards: the run ledger becomes observability, and the idempotency test becomes a quality gate</td></tr>
+      <tr><td><a href="modelling.html">L1 modelling</a></td><td>Backwards: a uniqueness test is the grain, and restatement policy is an SCD decision</td></tr>
+      <tr><td><a href="kafka.html">L3 Kafka</a></td><td>Sideways: the schema registry's compatibility modes are <a href="#r6">R6</a> enforced by a broker</td></tr>
+      <tr><td><a href="substrate.html">L0 substrate</a></td><td>Backwards: deletion in an immutable architecture is the snapshot model's bill</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">Branch complete when</span>
+    For any pipeline — including one you did not build — you can state
+    <strong>the three most likely silent failures, the check that would catch each, and the expected
+    detection latency</strong>.
+    <mark>And you can name at least one failure your checks would not catch, which is the part that makes
+    the rest credible.</mark>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Forge · L6 · Reliability &amp; governance</footer>
+
+</body>
+</html>
