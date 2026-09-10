@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L4 Stream Processing Semantics - Atmos Reference Notes</title>
+<meta name="description" content="Diagram-first reference notes for Forge L4: event time, windows, watermarks, late data, state, checkpoints, joins, exactly-once, and backpressure." />
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/pages.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+<header><div class="hwrap"><div class="brand">Mitesh <span>&middot;</span> notebook</div><nav class="sitenav">
+<a href="../../index.html">Home</a><a href="../../tracks/index.html">Tracks</a><a href="../../atlas/index.html">Atlas</a><a href="../../forge/index.html">Forge</a><a href="../index.html" class="on">Atmos</a>
+</nav></div><div id="bar"></div></header>
+
+<div class="shell">
+<nav id="toc">
+<h4>Orientation</h4><a href="#model">One-screen model</a>
+<h4>Time</h4><a href="#w1">W1 · Three times</a><a href="#w2">W2 · Windows</a><a href="#w3">W3 · Watermarks</a><a href="#w4">W4 · Late data</a>
+<h4>State</h4><a href="#w5">W5 · Keyed state</a><a href="#w6">W6 · Checkpointing</a><a href="#w7">W7 · State growth</a><a href="#w8">W8 · Streaming joins</a><a href="#w9">W9 · Exactly-once</a>
+<h4>Operation</h4><a href="#w10">W10 · Backpressure</a><a href="#w11">W11 · Engines compared</a><a href="#w12">W12 · When not to stream</a>
+<h4>Boundary</h4><a href="#depth">Depth boundary</a><a href="#connections">Forge connections</a>
+</nav>
+
+<main>
+<p class="crumbs"><a href="../../index.html">Home</a><span>/</span><a href="../index.html">Atmos</a><span>/</span>L4 · Stream Semantics</p>
+<div class="hero">
+<div class="kicker">Reference collection L4 &middot; 12 mechanisms &middot; source-grounded, not lab evidence</div>
+<h1>Stream Processing Semantics</h1>
+<p class="dropcap">A stream has no end, so completeness cannot be observed directly. Windows,
+watermarks, lateness policies, state, and checkpoints decide <em>when to act despite an unfinished world</em>.</p>
+<div class="why"><b>The reconstruction test.</b> Given one output, state its event-time interval, the
+watermark that triggered it, which late events can still change it, what state was retained, and how that
+state and the sink recover together.</div>
+<div class="tags"><span class="tag">#event-time</span><span class="tag t2">#watermark</span><span class="tag t3">#state</span><span class="tag">#exactly-once</span></div>
+</div>
+
+<section id="model">
+<h2><span class="num">00</span> One-screen mental model</h2>
+<p class="sub">Events arrive out of order; estimated progress bounds waiting and retained state.</p>
+<pre>EVENTS (key, value, event_time)
+          |
+          | arrive at processing_time, possibly late
+          v
+PARTITIONED OPERATORS -------> keyed state per window / join
+          |                              |
+          | watermark                    | checkpoint barriers
+          | estimated event-time         v
+          | progress              recoverable state snapshot
+          v
+WINDOW TRIGGER
+   +-- on-time result
+   +-- correction / side output / drop
+   `-- cleanup after lateness horizon
+          |
+          v
+SINK COMMIT
+   +-- participates transactionally/idempotently -> effect converges
+   `-- does not participate ----------------------> guarantee stops
+
+latency <---------------- tradeoff ----------------> completeness + state</pre>
+<div class="note"><span class="lbl">Evidence status</span>This is a source-grounded mechanism reference. VERIFY blocks name measurements to collect; no run is claimed.</div>
+</section>
+
+<section id="w1">
+<h2><span class="num">W1</span> Event, ingestion, and processing time</h2>
+<p class="sub">One event can occupy three clocks; confusing them turns transport delay into business behavior.</p>
+<pre>action occurs              broker receives             operator handles
+event=10:00:00             ingestion=10:07:12          processing=10:07:14
+      |                          |                            |
+      +--- offline/network -----+--- queue/scheduling -------+
+
+EVENT TIME       when represented event happened
+INGESTION TIME   when it crossed a controlled system edge
+PROCESSING TIME  when this operator saw it
+
+group by processing hour -> delayed event joins the wrong business interval
+group by event hour      -> correct interval, but needs lateness policy</pre>
+<table><thead><tr><th>Clock</th><th>Gives</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Event</td><td>Domain-time answers</td><td>Source clock may be wrong or absent</td></tr>
+<tr><td>Ingestion</td><td>Stable edge timestamp</td><td>Already includes source/network delay</td></tr>
+<tr><td>Processing</td><td>Simple immediate execution</td><td>Changes with load, outage, and retry</td></tr>
+</tbody></table>
+</section>
+
+<section id="w2">
+<h2><span class="num">W2</span> Windows</h2>
+<p class="sub">Windows create finite logical groups; assignment and firing are separate decisions.</p>
+<pre>EVENT-TIME AXIS
+00----05----10----15----20
+
+TUMBLING size=5
+[00,05)[05,10)[10,15)[15,20)       one window per event
+
+SLIDING size=10, slide=5
+[00,10)      [10,20)
+     [05,15)                       event fans into several windows
+
+SESSION gap=3
+A at 01--A at 03      A at 10--A at 11
+[ session 1 ]         [ session 2 ]
+
+ASSIGNMENT   which window owns the event?
+TRIGGER      when is a pane emitted?
+OUTPUT       append, replace, update, or retract?</pre>
+<table><thead><tr><th>Window</th><th>Pressure solved</th><th>Cost / boundary</th></tr></thead><tbody>
+<tr><td>Tumbling</td><td>Non-overlapping reports</td><td>Boundary effects</td></tr>
+<tr><td>Sliding</td><td>Rolling signal</td><td>One event updates many windows</td></tr>
+<tr><td>Session</td><td>Activity episodes</td><td>Late event can merge published sessions</td></tr>
+<tr><td>Global</td><td>Custom lifetime</td><td>Unbounded without trigger and cleanup</td></tr>
+</tbody></table>
+</section>
+
+<section id="w3">
+<h2><span class="num">W3</span> Watermarks</h2>
+<p class="sub">A watermark is a configured estimate of event-time progress, not proof of completeness.</p>
+<pre>P0 observed through 10:14 -> watermark 10:09
+P1 observed through 10:11 -> watermark 10:06
+P2 idle since 09:40       -> watermark 09:35
+                                  |
+operator watermark = minimum active input watermark = 09:35
+
+window [10:00,10:05) waits although P0 and P1 advanced
+idle-input policy may eventually exclude P2
+
+watermark passes window end
+   -> on-time trigger may fire
+   -> earlier arrivals are classified late
+   -> state survives until allowed-lateness cleanup</pre>
+<pre>aggressive watermark -> earlier result + less state + more correction/loss
+conservative watermark -> later result + more state + greater first-result completeness</pre>
+<div class="trap"><span class="lbl">Boundary</span>Watermark definitions differ by engine. Treat one as a monotonic progress signal under a policy, never as certainty that no earlier event can arrive.</div>
+<div class="life"><span class="lbl">Verify</span>Record delay distribution, watermark per partition/operator, idle status, firing time, and late-event count on one timeline.</div>
+</section>
+
+<section id="w4">
+<h2><span class="num">W4</span> Late data</h2>
+<p class="sub">Once output is published, later truth requires an explicit correction contract.</p>
+<pre>window [10:00,11:00) published count=100
+at 13:00, event_time=10:42 arrives
+                 |
+        +--------+---------+
+        v                  v
+      DROP               ACCEPT
+count remains 100          +-- restate count=101
+known loss                 |   consumers update/retract
+                           `-- side output
+                               repair path owns reconciliation</pre>
+<table><thead><tr><th>Policy</th><th>Gives</th><th>Costs</th></tr></thead><tbody>
+<tr><td>Drop</td><td>Stable low-latency output, bounded state</td><td>Measured incompleteness</td></tr>
+<tr><td>Restate/retract</td><td>Converges toward event-time truth</td><td>Every consumer must accept changing history</td></tr>
+<tr><td>Side output</td><td>Separates fast path from repair</td><td>Second path can lag, fail, or be ignored</td></tr>
+</tbody></table>
+<div class="rule"><span class="lbl">Decision</span>The lateness horizon prices latency against correction. It is a business contract disguised as an engine setting.</div>
+</section>
+
+<section id="w5">
+<h2><span class="num">W5</span> Keyed state</h2>
+<p class="sub">Correlation over time requires memory; key partitioning decides its logical owner.</p>
+<pre>events partitionBy(customer_id)
+          |
+     +----+----+
+     v         v
+operator 0   operator 1
+C1 -> state  C2 -> state
+C3 -> state  C4 -> state
+
+event C1 -> route to owner -> read/update C1 -> emit
+
+HEAP STATE                       EMBEDDED KV / ROCKSDB
+fast object access               serialized, disk-backed state
+bounded by managed heap          larger capacity + cache/compaction
+full snapshots can be costly     incremental snapshots possible</pre>
+<table><thead><tr><th>Mechanism</th><th>Gain</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Key partitioning</td><td>One owner sees all events for a key</td><td>Hot key remains indivisible</td></tr>
+<tr><td>Key groups/shards</td><td>State can move during rescale</td><td>Redistribution and restore cost</td></tr>
+<tr><td>External checkpoint</td><td>State survives process loss</td><td>Checkpoint age determines replay</td></tr>
+</tbody></table>
+</section>
+
+<section id="w6">
+<h2><span class="num">W6</span> Checkpointing and recovery</h2>
+<p class="sub">Recovery needs source positions, operator state, and sink intent from one compatible cut.</p>
+<pre>SOURCE A: records -- barrier C7 -------- records -->
+SOURCE B: records -------- barrier C7 -- records -->
+                              |
+                              v
+OPERATOR aligns or captures C7 boundary
+state before C7 -> durable snapshot
+records after C7 -> post-checkpoint work
+                              |
+                              v
+COORDINATOR marks checkpoint complete
+
+CRASH
+ -> restore C7 operator state
+ -> reset sources to C7 positions
+ -> replay post-C7 records
+ -> sink must abort or deduplicate repeated effects</pre>
+<table><thead><tr><th>Choice</th><th>Gain</th><th>Cost / boundary</th></tr></thead><tbody>
+<tr><td>Aligned barriers</td><td>Clear consistent cut</td><td>Slow input delays checkpoint</td></tr>
+<tr><td>Capture in-flight data</td><td>Progress under backpressure</td><td>Larger, more complex snapshot</td></tr>
+<tr><td>Frequent checkpoint</td><td>Less replay after failure</td><td>More I/O and runtime interference</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Boundary</span>Internal state consistency does not make an arbitrary external side effect exactly once.</div>
+</section>
+
+<section id="w7">
+<h2><span class="num">W7</span> State growth and TTL</h2>
+<p class="sub">Stable throughput can hide state that grows until recovery or memory fails.</p>
+<pre>state bytes ~= active keys x bytes/key/window x retained windows
+
+constant 10k events/s + new keys never expire
+       |
+       v
+hour 1: 1 GB -> hour 6: 6 GB -> day 2: OOM / huge checkpoint
+
+TTL / window cleanup
+state -- inactive past horizon H --> delete
+                          |
+                          v
+bounded resources, but later recurrence loses prior context</pre>
+<table><thead><tr><th>Control</th><th>Gain</th><th>Semantic cost</th></tr></thead><tbody>
+<tr><td>TTL</td><td>Bounds inactive-key lifetime</td><td>Late recurrence becomes new state</td></tr>
+<tr><td>Lateness cleanup</td><td>Releases closed-window state</td><td>Later events drop or enter repair path</td></tr>
+<tr><td>Approximation</td><td>Bounds bytes</td><td>Error probability or lost detail</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Plot state entries/bytes, checkpoint bytes/duration, unique-key rate, and cleanup count. Throughput alone cannot reveal this failure.</div>
+</section>
+
+<section id="w8">
+<h2><span class="num">W8</span> Streaming joins</h2>
+<p class="sub">An unbounded join must know how long to retain an unmatched record.</p>
+<pre>ORDERS stream                     PAYMENTS stream
+order 7 at 10:00                 payment 7 at 10:08
+       |                                |
+       +---- key by order_id -----------+
+                    |
+                    v
+                 JOIN STATE
+
+same key, NO time bound
+ -> unmatched records may wait forever
+ -> state has no semantic cleanup point
+
+payment time within order time + 30 minutes
+ -> watermark passes bound
+ -> unmatched state can expire / emit timeout outcome</pre>
+<table><thead><tr><th>Join</th><th>State retained</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Stream-stream</td><td>Recent records from both sides</td><td>Needs event-time bound for finite state</td></tr>
+<tr><td>Stream-table</td><td>Current replicated table state</td><td>Result inherits table-version semantics</td></tr>
+<tr><td>Temporal table</td><td>Versions addressable by as-of time</td><td>History retention and time consistency</td></tr>
+</tbody></table>
+</section>
+
+<section id="w9">
+<h2><span class="num">W9</span> End-to-end exactly-once</h2>
+<p class="sub">The claim is composed across source, state, identity, and externally visible effect.</p>
+<pre>CHECKPOINT C9
++ source offsets: P0=500, P1=620
++ operator state snapshot
+` sink transaction / stable result identity
+              |
+              v
+coordinated completion
+
+FAIL AFTER SINK WRITE, BEFORE C9 COMPLETES
+restore C8 -> replay records
+     +-- transaction aborts uncommitted C9 effect
+     `-- idempotent sink recognizes key/version and converges
+
+non-idempotent email / charge / append
+replay -> second effect -> guarantee ended at that boundary</pre>
+<table><thead><tr><th>Required piece</th><th>Why</th></tr></thead><tbody>
+<tr><td>Replayable source</td><td>Recovery can revisit recorded input position</td></tr>
+<tr><td>Consistent checkpoint</td><td>State and offsets describe one prefix</td></tr>
+<tr><td>Stable identity</td><td>Repeated logical effect can be recognized</td></tr>
+<tr><td>Transactional/idempotent sink</td><td>Replay does not duplicate visibility</td></tr>
+</tbody></table>
+<div class="rule"><span class="lbl">Honest phrase</span>Records may execute again during recovery. "Effectively once" often names the externally visible convergence more precisely.</div>
+</section>
+
+<section id="w10">
+<h2><span class="num">W10</span> Backpressure</h2>
+<p class="sub">When service rate falls below arrival rate, the deficit becomes delay, queue, loss, or upstream slowdown.</p>
+<pre>arrival 10k/s -> A 10k/s -> B 6k/s -> sink 6k/s
+                              |
+                              v
+                         backlog +4k/s
+                    +---------+---------+
+                    v         v         v
+                buffer     block      shed
+                    |         |         |
+                    v         v         v
+                exhaustion  source lag explicit loss
+
+backlog -> larger state/checkpoints -> slower processing -> more backlog</pre>
+<table><thead><tr><th>Response</th><th>Gives</th><th>Cost</th></tr></thead><tbody>
+<tr><td>Buffer</td><td>Absorbs finite burst</td><td>Memory/disk and latency; no cure for sustained deficit</td></tr>
+<tr><td>Propagate</td><td>Bounds internal queue</td><td>Source lag or lower ingestion</td></tr>
+<tr><td>Scale/optimize</td><td>Raises service rate if partitionable</td><td>Cost; hot key/sink may remain fixed</td></tr>
+<tr><td>Shed/degrade</td><td>Protects essential path</td><td>Explicit correctness/product loss</td></tr>
+</tbody></table>
+</section>
+
+<section id="w11">
+<h2><span class="num">W11</span> Engines compared</h2>
+<p class="sub">Compare execution and semantic constraints, not product checklists.</p>
+<pre>SPARK STRUCTURED STREAMING          FLINK
+unbounded table model              streaming-first operator graph
+commonly micro-batch epochs        pipelined record processing
+Spark SQL/Catalyst integration     explicit time/state machinery
+checkpointed offsets/state         distributed barrier snapshots
+
+SAME QUESTIONS
+event-time extraction | watermark | state backend | output mode
+recovery | sink commit | backpressure | observability</pre>
+<table><thead><tr><th>Pressure</th><th>Spark tendency</th><th>Flink tendency</th></tr></thead><tbody>
+<tr><td>Existing batch/SQL estate</td><td>Shared engine and APIs</td><td>Additional platform</td></tr>
+<tr><td>Fine-grained state/time control</td><td>Structured model constrains expression</td><td>Richer explicit primitives</td></tr>
+<tr><td>Operational shape</td><td>Epoch scheduling and Spark runtime</td><td>Long-running stateful jobs and checkpoints</td></tr>
+</tbody></table>
+</section>
+
+<section id="w12">
+<h2><span class="num">W12</span> When not to stream</h2>
+<p class="sub">Continuous state and correction machinery are waste when consumers do not value the latency.</p>
+<pre>REQUIREMENT
+  +-- decision can wait for bounded hourly/daily data? --> batch
+  +-- source bounded and replay cheap? -----------------> batch
+  +-- consumers cannot accept correction? -------------> wait/finalize
+  +-- low latency changes a valuable action? ----------> streaming may fit
+  `-- continuous control over unbounded input? --------> streaming likely fits
+
+streaming tax:
+24x7 operation + state + checkpoints + lateness + replay + sink contract</pre>
+<table><thead><tr><th>Use streaming when</th><th>Prefer batch when</th></tr></thead><tbody><tr><td>Latency changes action, input is continuous, and correction semantics are owned</td><td>Freshness has weak value, bounded recomputation is cheap, or simplicity dominates</td></tr></tbody></table>
+</section>
+
+<section id="depth"><h2><span class="num">::</span> Depth boundary</h2>
+<table><thead><tr><th>Must understand now</th><th>Useful later</th><th>Source-code / research depth</th></tr></thead><tbody><tr><td>Three clocks; assignment vs trigger; watermark as estimate; late-data policies; state ownership; checkpoint cut; TTL math; bounded joins; sink boundary; backpressure; engine tradeoffs</td><td>Trigger APIs, key-group rescaling, incremental/unaligned checkpoints, changelog formats, state compaction</td><td>Distributed-snapshot theory, Beam model, Flink checkpoint implementation, state backends, transactional sinks</td></tr></tbody></table>
+</section>
+
+<section id="connections"><h2><span class="num">::</span> Connection to the rest of the Forge</h2>
+<pre>L3 partitions + offsets -> W5 ownership + W6 source positions
+
+W1 time -> W2 windows -> W3 watermarks -> W4 late-data contract
+                         |                  |
+                         v                  v
+                    W7 cleanup         L6 metric trust
+
+W5 state -> W6 checkpoint -> W9 exactly-once -> L5 idempotent sink
+    `----------> W8 joins + W10 backpressure
+
+time + state pressure -> L7 latency/cardinality/correctness design</pre>
+<div class="cpy"><span class="lbl">Source branch</span>Use <a href="../../forge/stream-semantics.html"><strong>Forge L4 · Stream Processing Semantics</strong></a> for dependencies, resources, and laboratories. This page explains mechanisms; it does not claim lab completion.</div>
+</section>
+</main>
+</div>
+<nav class="pagenav"><a class="pn prev" href="l3-kafka.html"><span class="pnk">Previous</span><span class="pnt">L3 · Kafka</span></a><a class="pn up" href="../index.html"><span class="pnk">All</span><span class="pnt">Atmos notes</span></a><a class="pn next" href="l5-pipelines.html"><span class="pnk">Next</span><span class="pnt">L5 · Pipelines</span></a></nav>
+<footer>Atmos · L4 reference collection · mechanisms to verify, not observations claimed</footer>
+</body>
+</html>

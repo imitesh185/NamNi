@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L5 Pipelines and Orchestration - Atmos Reference Notes</title>
+<meta name="description" content="Diagram-first reference notes for Forge L5: ETL and ELT, orchestration, idempotency, incremental models, backfills, CDC, stitching, materialization, and testing." />
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/pages.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+<header><div class="hwrap"><div class="brand">Mitesh <span>&middot;</span> notebook</div><nav class="sitenav">
+<a href="../../index.html">Home</a><a href="../../tracks/index.html">Tracks</a><a href="../../atlas/index.html">Atlas</a><a href="../../forge/index.html">Forge</a><a href="../index.html" class="on">Atmos</a>
+</nav></div><div id="bar"></div></header>
+<div class="shell">
+<nav id="toc">
+<h4>Orientation</h4><a href="#model">One-screen model</a>
+<h4>Execution</h4><a href="#p1">P1 · ETL vs ELT</a><a href="#p2">P2 · Orchestration</a><a href="#p3">P3 · Internals</a><a href="#p4">P4 · Idempotency</a>
+<h4>Change and replay</h4><a href="#p5">P5 · Incremental models</a><a href="#p6">P6 · Backfills</a><a href="#p7">P7 · CDC methods</a><a href="#p8">P8 · Snapshot stitching</a><a href="#p9">P9 · Deletes and order</a>
+<h4>Outputs</h4><a href="#p10">P10 · Materialization</a><a href="#p11">P11 · Testing</a><a href="#p12">P12 · When no pipeline</a>
+<h4>Boundary</h4><a href="#depth">Depth boundary</a><a href="#connections">Forge connections</a>
+</nav>
+<main>
+<p class="crumbs"><a href="../../index.html">Home</a><span>/</span><a href="../index.html">Atmos</a><span>/</span>L5 · Pipelines</p>
+<div class="hero">
+<div class="kicker">Reference collection L5 &middot; 12 mechanisms &middot; source-grounded, not lab evidence</div>
+<h1>Pipelines &amp; Orchestration</h1>
+<p class="dropcap">A pipeline is not merely a program that runs. It is a program that will be run
+again, over data that may have changed, after code and schemas may also have changed.</p>
+<div class="why"><b>The reconstruction test.</b> For any rerun, identify the input version, code version,
+target grain, write semantics, recovery position, and whether repeating every side effect converges.</div>
+<div class="tags"><span class="tag">#idempotency</span><span class="tag t2">#backfill</span><span class="tag t3">#cdc</span><span class="tag">#reconciliation</span></div>
+</div>
+
+<section id="model">
+<h2><span class="num">00</span> One-screen mental model</h2>
+<p class="sub">A dependable pipeline makes time, identity, state transitions, and replay explicit.</p>
+<pre>SOURCE STATE / CHANGE LOG
+          |
+          | extraction position + schema version
+          v
+ORCHESTRATED TASK GRAPH
+          |
+          | transform under code version
+          v
+OUTPUT AT DECLARED GRAIN
+          |
+          | append / merge / partition replace / snapshot commit
+          v
+VISIBLE TARGET STATE
+          +-- quality + reconciliation
+          +-- lineage + run ledger
+          `-- retry / backfill from known boundary
+
+CRASH OR RERUN
+  -> same logical inputs and stable identities
+  -> repeated execution converges
+  -> changed history is deliberate and measured</pre>
+<div class="note"><span class="lbl">Evidence status</span>This is a source-grounded mechanism reference. VERIFY blocks specify evidence to collect; no run is claimed.</div>
+</section>
+
+<section id="p1">
+<h2><span class="num">P1</span> ETL versus ELT</h2>
+<p class="sub">The choice moves transformation ownership, compute, and replay across the load boundary.</p>
+<pre>ETL
+source -> external transform -> modeled output -> warehouse
+          |
+          `-- raw source may never reach target
+
+ELT
+source -> raw target layer -> SQL/model transform -> served tables
+    |                       |
+    +-- replayable input    +-- versioned readable logic
+
+ELT pressure:
+analytical engine already owns scalable compute
++ SQL is reviewable by data consumers
++ retained input permits model replay</pre>
+<table><thead><tr><th>Choice</th><th>Gives</th><th>Costs / boundary</th></tr></thead><tbody>
+<tr><td>ETL</td><td>Filter/redact before target; specialized runtime</td><td>External bottleneck and weaker raw replay if input is discarded</td></tr>
+<tr><td>ELT</td><td>Raw retention, visible SQL, target compute</td><td>Sensitive/noisy data and compute cost move into target</td></tr>
+</tbody></table>
+</section>
+
+<section id="p2">
+<h2><span class="num">P2</span> Orchestration</h2>
+<p class="sub">A schedule says when to consider work; a dependency says what must be true first.</p>
+<pre>WRONG
+A scheduled 01:00
+B scheduled 02:00
+assumption: A completed before B
+        |
+        X A runs late
+        v
+B reads partial or stale output
+
+EXPLICIT DAG
+A success + interval ready ----> B
+external dataset/sensor -------> B
+retry + timeout + ownership ---> task state
+
+logical data interval != task start time != completion time</pre>
+<table><thead><tr><th>Mechanism</th><th>Gives</th><th>Failure boundary</th></tr></thead><tbody>
+<tr><td>Task DAG</td><td>Explicit ordering and retry units</td><td>Success may still contain wrong data</td></tr>
+<tr><td>Sensor/dataset dependency</td><td>Waits for actual upstream condition</td><td>Poor polling can consume scheduler capacity</td></tr>
+<tr><td>Data interval</td><td>Deterministic partition/time under work</td><td>Bad tasks still leak wall-clock assumptions</td></tr>
+</tbody></table>
+</section>
+
+<section id="p3">
+<h2><span class="num">P3</span> Orchestrator internals</h2>
+<p class="sub">The scheduler reasons over metadata; executors launch work; workers do not own the global graph.</p>
+<pre>METADATA DATABASE
+DAG runs | task instances | state | retries | heartbeats
+  ^                                      |
+  |                                      v
+SCHEDULER LOOP                         stale-task detection
+find runnable tasks
+respect dependencies, pools, concurrency
+  |
+  v
+EXECUTOR / QUEUE -> WORKER -> task process -> state update
+
+10,000 tiny tasks
+ -> metadata transitions and scheduling dominate
+ -> workers may be idle while control plane is saturated</pre>
+<table><thead><tr><th>Symptom</th><th>Likely layer</th><th>Evidence</th></tr></thead><tbody>
+<tr><td>Queued, not launched</td><td>Scheduler, pool, executor, queue</td><td>Scheduling delay and slot state</td></tr>
+<tr><td>Running, no heartbeat</td><td>Worker/process/network</td><td>Heartbeat age and worker logs</td></tr>
+<tr><td>Tiny tasks overwhelm system</td><td>Control plane</td><td>Metadata DB load and loop duration</td></tr>
+</tbody></table>
+</section>
+
+<section id="p4">
+<h2><span class="num">P4</span> Idempotency and write semantics</h2>
+<p class="sub">Retries are inevitable; target semantics decide whether repetition duplicates, replaces, or converges.</p>
+<pre>same input interval, run twice
+
+APPEND                         UPSERT
+run 1 -> A,B                   key = declared grain
+run 2 -> A,B,A,B               apply A,B again -> same keyed state
+duplicate by design            only if key/version rule is correct
+
+PARTITION REPLACE              SNAPSHOT COMMIT
+compute full partition         write immutable files + metadata
+atomically replace target      atomically publish new snapshot
+
+DELETE then INSERT without atomic boundary
+delete -> reader sees empty -> insert -> full
+   ^ exposed failure window</pre>
+<table><thead><tr><th>Write mode</th><th>Safe replay condition</th><th>Failure</th></tr></thead><tbody>
+<tr><td>Append</td><td>Stable event identity plus downstream dedup</td><td>Duplicate effects</td></tr>
+<tr><td>Upsert</td><td>Key equals grain; source version is valid</td><td>Collapsed facts or stale overwrite</td></tr>
+<tr><td>Partition replace</td><td>Partition deterministic and replacement atomic</td><td>Partial/empty visibility</td></tr>
+<tr><td>Snapshot publish</td><td>Readers resolve committed metadata</td><td>Writer conflicts and orphan files remain</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Kill the task at each write boundary, rerun twice, and compare target keys, counts, and checksum to a clean oracle.</div>
+</section>
+<section id="p5">
+<h2><span class="num">P5</span> Incremental models and change detection</h2>
+<p class="sub">Incremental work needs a reliable definition of what changed since a durable position.</p>
+<pre>TIMESTAMP WATERMARK
+SELECT ... WHERE updated_at > last_seen
+          |
+          +-- equal timestamp tie may be skipped
+          +-- late commit may carry old timestamp
+          +-- hard delete emits no row
+          `-- clock/transaction boundary is ambiguous
+
+LOG POSITION
+WAL/LSN 120 ---- committed changes ----> checkpoint 150
+ordered transaction records, including delete
+
+SNAPSHOT DIFF
+state T1 vs state T2 -> insert/update/delete set
+cost: scan and compare whole or hashed key space</pre>
+<table><thead><tr><th>Method</th><th>Gives</th><th>Failure boundary</th></tr></thead><tbody>
+<tr><td>Timestamp</td><td>Simple query-based increment</td><td>Ties, late commits, deletes, clock semantics</td></tr>
+<tr><td>Log CDC</td><td>Ordered committed changes and deletes</td><td>Retention, connector/schema failure, source burden</td></tr>
+<tr><td>Snapshot diff</td><td>Independent state reconciliation</td><td>Expensive; intermediate changes disappear</td></tr>
+<tr><td>Row hash</td><td>Compact equality signal</td><td>Still needs candidate discovery and normalization</td></tr>
+</tbody></table>
+</section>
+
+<section id="p6">
+<h2><span class="num">P6</span> Backfills</h2>
+<p class="sub">A backfill runs old intervals under today's code, source availability, and shared capacity.</p>
+<pre>REQUEST: recompute two years
+  +-- CODE: which historical logic?
+  +-- SOURCE: do old values/schemas remain?
+  +-- ORDER: can intervals run independently?
+  +-- WRITE: replace or duplicate?
+  +-- COST: can production coexist?
+  `-- VALIDATE: what independent oracle?
+
+SAFE SHAPE
+pin code + input snapshot
+ -> write shadow output
+ -> compare counts/checksums/business totals
+ -> atomically publish
+ -> retain rollback snapshot
+
+production pool != backfill pool
+quota prevents history replay from starving current data</pre>
+<table><thead><tr><th>Risk</th><th>Control</th><th>Residual cost</th></tr></thead><tbody>
+<tr><td>Logic drift</td><td>Version code and metric contract</td><td>Choose whether history should restate</td></tr>
+<tr><td>Source drift</td><td>Snapshot and temporal dimensions</td><td>Old source may no longer exist</td></tr>
+<tr><td>Production starvation</td><td>Pool, quota, rate limit</td><td>Longer completion</td></tr>
+<tr><td>Partial publication</td><td>Shadow, validate, atomic publish</td><td>Temporary duplicate storage</td></tr>
+</tbody></table>
+</section>
+
+<section id="p7">
+<h2><span class="num">P7</span> CDC: log-based versus query-based</h2>
+<p class="sub">Query capture samples current state; log capture consumes the database's ordered commit record.</p>
+<pre>QUERY-BASED
+T1: SELECT rows after marker
+T2: SELECT rows after marker
+
+row inserted, updated, deleted between T1 and T2
+ -> no current row remains to reveal the delete/intermediate state
+
+LOG-BASED
+transaction -> WAL: BEGIN, INSERT, UPDATE, DELETE, COMMIT
+          |
+          v
+connector decodes committed changes + source positions
+
+consumer stalls -> retained WAL grows -> source disk fills -> outage</pre>
+<table><thead><tr><th>Method</th><th>Gives</th><th>Costs / failures</th></tr></thead><tbody>
+<tr><td>Query-based</td><td>Simple current-state extraction</td><td>Source scans, invisible deletes, marker gaps</td></tr>
+<tr><td>Log-based</td><td>Deletes, transaction order, low query load</td><td>Privileges, decoding, schema changes, slot/retention risk</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Correction</span>Log-based CDC closes several query-marker gaps; it is not failure-free. Logs age out, replication slots retain disk, connectors stop, and schema changes can break decoding.</div>
+</section>
+
+<section id="p8">
+<h2><span class="num">P8</span> Snapshot and stream stitching</h2>
+<p class="sub">Bootstrap joins finite state to an ongoing log without a gap or stale overlap winning.</p>
+<pre>SOURCE LOG ---- 100 ---- 120 ---- 140 ---->
+          |
+      agreed boundary B=120
+
+1. reserve/record B
+2. take snapshot associated with B
+3. retain changes after B
+4. load snapshot
+5. apply post-B changes by key + source version
+6. continue streaming
+
+snapshot K@118 arrives after stream K@125
+unconditional upsert -> target becomes stale 118
+conditional upsert   -> 118 rejected; target remains 125</pre>
+<table><thead><tr><th>Invariant</th><th>Why</th></tr></thead><tbody>
+<tr><td>No source-position gap</td><td>Every commit belongs to snapshot or stream</td></tr>
+<tr><td>Overlap tolerated</td><td>Repeated changes converge</td></tr>
+<tr><td>Source version beats arrival time</td><td>Bootstrap and network reorder delivery</td></tr>
+</tbody></table>
+</section>
+<section id="p9">
+<h2><span class="num">P9</span> Deletes, tombstones, and out-of-order updates</h2>
+<p class="sub">Three silent failures can all leave plausible current state.</p>
+<pre>1. HARD DELETE INVISIBLE
+query current rows -> key absent, but old target row remains
+
+2. TOMBSTONE EXPIRES TOO EARLY
+delete K@v8 removed before slow consumer reads it
+consumer retains K@v7 forever
+
+3. UPDATE REORDERED
+K@v12 arrives -> target=v12
+K@v11 arrives later -> naive target=v11 WRONG
+
+DEFENCE
+store source_version with target
+apply only when incoming_version > stored_version
+delete is a versioned transition, not "no row"</pre>
+<table><thead><tr><th>Control</th><th>Guarantee</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Versioned tombstone</td><td>Delete competes in update order</td><td>Retention must exceed outage/replay horizon</td></tr>
+<tr><td>Conditional upsert</td><td>Old arrival cannot overwrite new source state</td><td>Version must be authoritative</td></tr>
+<tr><td>Reconciliation</td><td>Detects drift outside streaming assumptions</td><td>Delayed and resource-consuming</td></tr>
+</tbody></table>
+</section>
+
+<section id="p10">
+<h2><span class="num">P10</span> Materialization strategies</h2>
+<p class="sub">Visibility strategy decides update cost, read cost, and crash behavior.</p>
+<pre>VIEW
+query -> recompute every read
+
+MATERIALIZED TABLE
+scheduled changes -> stored result -> cheap read
+
+COPY-ON-WRITE
+update -> rewrite affected files -> publish snapshot
+read -> simple base files
+
+MERGE-ON-READ
+update -> append delta/delete files
+read -> merge base + deltas
+later compaction pays accumulated write debt
+
+IMMUTABLE FACT
+correction -> compensating/versioned event, not erased history</pre>
+<table><thead><tr><th>Choice</th><th>Gives</th><th>Costs</th></tr></thead><tbody>
+<tr><td>View</td><td>Current logic</td><td>Repeated compute and unstable upstream</td></tr>
+<tr><td>Materialized table</td><td>Fast stable reads</td><td>Refresh, storage, staleness</td></tr>
+<tr><td>Copy-on-write</td><td>Simple reads</td><td>Write amplification</td></tr>
+<tr><td>Merge-on-read</td><td>Cheap frequent changes</td><td>Read amplification and compaction</td></tr>
+</tbody></table>
+</section>
+
+<section id="p11">
+<h2><span class="num">P11</span> Testing pipelines and data</h2>
+<p class="sub">Code success is one layer; contracts, grain, replay, and reconciliation need their own falsifiers.</p>
+<pre>transform unit tests
+  |
+schema/contract compatibility
+  |
+integration across real boundaries
+  |
+data checks: grain, freshness, volume, distribution, references
+  |
+idempotency: run same interval twice
+  |
+reconciliation against independent oracle
+
+green task + wrong rows = pipeline failure</pre>
+<table><thead><tr><th>Test</th><th>Falsifies</th></tr></thead><tbody>
+<tr><td>Uniqueness on grain</td><td>Duplicate or collapsed facts</td></tr>
+<tr><td>Run twice, compare checksum</td><td>Non-idempotent target behavior</td></tr>
+<tr><td>Source-target key set</td><td>Missing, deleted, orphan records</td></tr>
+<tr><td>Fault injection at commit points</td><td>False recovery assumptions</td></tr>
+</tbody></table>
+</section>
+
+<section id="p12">
+<h2><span class="num">P12</span> When a pipeline should not exist</h2>
+<p class="sub">Every copy creates another owner, latency boundary, cost center, and place for truth to diverge.</p>
+<pre>REQUEST: "send this data somewhere"
+  +-- governed source/read replica is queryable? -> no copy
+  +-- existing view/model can serve it? ---------> no new pipeline
+  +-- event delivery already exists? ------------> subscribe
+  +-- low latency earns continuous operation? ---> maybe stream
+  `-- independent retention/shape/scale needed? -> pipeline justified
+
+NEW PIPELINE TAX
+schedule + retry + storage + lineage + contract
++ monitoring + backfill + ownership + on-call</pre>
+<table><thead><tr><th>Build when</th><th>Decline when</th></tr></thead><tbody><tr><td>A real boundary requires independent storage, compute, retention, security, or latency</td><td>An existing query, view, export, or contract already satisfies the need</td></tr></tbody></table>
+</section>
+
+<section id="depth"><h2><span class="num">::</span> Depth boundary</h2>
+<table><thead><tr><th>Must understand now</th><th>Useful later</th><th>Source-code / research depth</th></tr></thead><tbody><tr><td>ETL/ELT boundary; schedule vs dependency; scheduler/executor roles; write modes; incremental positions; four backfill risks; CDC methods; bootstrap invariants; tombstones/version order; CoW/MoR; data and idempotency tests</td><td>Asset-aware scheduling, dynamic mapping, transaction-log decoding, schema-history topics, incremental compaction, advanced reconciliation</td><td>Scheduler internals, logical-decoding implementations, table-format update algorithms, formal replay/idempotency models</td></tr></tbody></table>
+</section>
+
+<section id="connections"><h2><span class="num">::</span> Connection to the rest of the Forge</h2>
+<pre>L0 atomic commit + partial failure -> P4 write semantics
+L0 WAL ---------------------------> P7 CDC
+L1 grain -------------------------> P4 merge key + P11 uniqueness
+L1 temporal model ---------------> P6 historical replay
+L3 offsets/delivery -------------> P8 stitching + P9 ordering
+L4 state/sink boundary ----------> P4 idempotent effects
+P11 checks ----------------------> L6 reliability
+P2-P10 choices ------------------> L7 design + L8 platform paths</pre>
+<div class="cpy"><span class="lbl">Source branch</span>Use <a href="../../forge/pipelines.html"><strong>Forge L5 · Pipelines &amp; Orchestration</strong></a> for dependencies, resources, and laboratories. This page explains mechanisms; it does not claim lab completion.</div>
+</section>
+</main>
+</div>
+<nav class="pagenav"><a class="pn prev" href="l4-stream-semantics.html"><span class="pnk">Previous</span><span class="pnt">L4 · Stream semantics</span></a><a class="pn up" href="../index.html"><span class="pnk">All</span><span class="pnt">Atmos notes</span></a><a class="pn next" href="l6-reliability.html"><span class="pnk">Next</span><span class="pnt">L6 · Reliability</span></a></nav>
+<footer>Atmos · L5 reference collection · mechanisms to verify, not observations claimed</footer>
+</body>
+</html>

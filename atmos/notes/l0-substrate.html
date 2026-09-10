@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L0 The Substrate - Atmos Reference Notes</title>
+<meta name="description" content="Diagram-first reference notes for Forge L0: physical layout, Parquet, table formats, atomic commits, database internals, and Python data paths." />
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/pages.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>&middot;</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../../index.html">Home</a>
+      <a href="../../tracks/index.html">Tracks</a>
+      <a href="../../atlas/index.html">Atlas</a>
+      <a href="../../forge/index.html">Forge</a>
+      <a href="../index.html" class="on">Atmos</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#model">One-screen model</a>
+  <h4>Physical layout</h4>
+  <a href="#b1">B1 · Row vs columnar</a>
+  <a href="#b2">B2 · Parquet</a>
+  <a href="#b3">B3 · Compression</a>
+  <a href="#b4">B4 · Format choice</a>
+  <h4>Table state</h4>
+  <a href="#b5">B5 · Metadata tree</a>
+  <a href="#b6">B6 · Atomic commit</a>
+  <a href="#b7">B7 · Compaction</a>
+  <a href="#b8">B8 · Partial failure</a>
+  <h4>Execution substrate</h4>
+  <a href="#b9">B9 · Planning and joins</a>
+  <a href="#b10">B10 · LSM, MVCC, WAL</a>
+  <a href="#b11">B11 · Python for DE</a>
+  <h4>Boundary</h4>
+  <a href="#depth">Depth boundary</a>
+  <a href="#connections">Forge connections</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../../index.html">Home</a><span>/</span><a href="../index.html">Atmos</a><span>/</span>L0 · The Substrate</p>
+
+<div class="hero">
+  <div class="kicker">Reference collection L0 &middot; 11 mechanisms &middot; source-grounded, not lab evidence</div>
+  <h1>The Substrate</h1>
+  <p class="dropcap">Most performance and correctness properties above this layer are inherited from two
+  decisions below it: <em>how bytes are arranged</em>, and <em>which state transition is atomic</em>.</p>
+  <div class="why">
+    <b>The reconstruction test.</b> Given a slow scan or a half-visible table update, trace the behavior
+    downward until you can point to the bytes read, metadata consulted, or single commit operation. A tool
+    name is not an explanation.
+  </div>
+  <div class="tags">
+    <span class="tag">#physical-layout</span>
+    <span class="tag t2">#metadata</span>
+    <span class="tag t3">#atomicity</span>
+    <span class="tag">#write-path</span>
+  </div>
+</div>
+
+<section id="model">
+  <h2><span class="num">00</span> One-screen mental model</h2>
+  <p class="sub">Logical rows become physical bytes; metadata avoids work; one commit point controls visibility.</p>
+
+<pre>                         LOGICAL DATA
+                              |
+             +----------------+----------------+
+             |                                 |
+             v                                 v
+      PHYSICAL LAYOUT                     TABLE STATE
+  rows / columns / pages          snapshots / manifests / files
+             |                                 |
+             v                                 v
+     HOW MUCH WORK IS DONE              WHAT READERS CAN SEE
+             |                                 |
+      +------+------+                    +-----+------+
+      |             |                    |            |
+      v             v                    v            v
+  bytes read    CPU decoded          old state     new state
+      |             |                    \            /
+      +------+------+                     \          /
+             |                             v        v
+             v                        ONE ATOMIC COMMIT
+       QUERY LATENCY                  never half-and-half
+
+             EXECUTION SUBSTRATE
+   planner + database write path + runtime
+             |
+             v
+   decides which physical path is actually taken</pre>
+
+  <div class="note">
+    <span class="lbl">Evidence status</span>
+    This is a <strong>source-grounded reference note</strong>. Statements describe mechanisms and expected
+    signals; they are not labelled as your observations. Every <strong>VERIFY</strong> block names the smallest
+    measurement that can turn a reference claim into evidence.
+  </div>
+</section>
+
+<section id="b1">
+  <h2><span class="num">B1</span> Row versus columnar layout</h2>
+  <p class="sub">Pressure: analytical queries touch many records but only a few attributes.</p>
+
+<pre>DATA
+id | city | fare
+1  | BLR  | 120
+2  | DEL  | 250
+3  | BLR  | 180
+
+ROW LAYOUT                         COLUMN LAYOUT
+[1,BLR,120][2,DEL,250][3,BLR,180] [1,2,3][BLR,DEL,BLR][120,250,180]
+
+SELECT SUM(fare)                   SELECT SUM(fare)
+        |                                  |
+        v                                  v
+read id + city + fare              read fare bytes only
+discard two fields                 contiguous values, same type</pre>
+
+<h4>Why the simple thing fails</h4>
+<pre>store complete records together
+        -> excellent point lookup / whole-row update
+        -> scan 1 column across 100 columns
+        -> read roughly 99 unwanted columns
+        -> I/O and decode work dominate</pre>
+
+<table>
+  <thead><tr><th>Layout</th><th>Gives</th><th>Costs</th><th>Breaks down when</th></tr></thead>
+  <tbody>
+    <tr><td>Row</td><td>Whole record in one locality unit; cheap inserts and point reads</td><td>Analytical projection reads unwanted fields</td><td>Queries scan few columns across many rows</td></tr>
+    <tr><td>Columnar</td><td>Column pruning, type-local encoding, vectorized processing</td><td>Reconstructing one row touches several streams; updates are awkward</td><td>Workload is dominated by point writes or full-record lookup</td></tr>
+  </tbody>
+</table>
+
+<div class="life"><span class="lbl">Verify</span>Write the same wide dataset as a row-oriented file and Parquet. Query one column, then all columns. Record bytes read, elapsed time, and CPU. The mechanism predicts the gap should collapse as projection width approaches the full schema.</div>
+</section>
+
+<section id="b2">
+  <h2><span class="num">B2</span> Parquet, opened up</h2>
+  <p class="sub">Core idea: package columnar data into independently skippable and decodable units.</p>
+
+<pre>PARQUET FILE
+|
++-- ROW GROUP 0 -----------------------------+
+|   +-- column chunk: id                     |
+|   |   +-- page: values + encoding metadata |
+|   +-- column chunk: city                   |
+|   |   +-- page: dictionary + encoded ids   |
+|   `-- column chunk: fare                   |
+|       `-- page: encoded values             |
+|
++-- ROW GROUP 1 -----------------------------+
+|   `-- same column-chunk structure          |
+|
+`-- FOOTER
+    +-- schema
+    +-- row-group locations
+    +-- column offsets and codecs
+    `-- statistics: null_count, min, max ...
+
+READ WHERE fare > 500
+        |
+        v
+read footer -> reject row groups with max(fare) <= 500
+            -> fetch only requested column chunks
+            -> decode selected pages</pre>
+
+<h4>Causal chain</h4>
+<pre>footer statistics selective
+   -> row groups rejected before data fetch
+   -> fewer compressed bytes transferred
+   -> fewer values decompressed and decoded
+   -> lower I/O + CPU
+
+projection requests 2 of 100 columns
+   -> only 2 column chunks fetched per surviving row group
+   -> column pruning removes about 98% of column payload</pre>
+
+<table class="nw">
+  <thead><tr><th>Unit</th><th>Job</th><th>Main tuning consequence</th></tr></thead>
+  <tbody>
+    <tr><td>Row group</td><td>Horizontal partition with one chunk per column</td><td>Larger groups improve sequential I/O; smaller groups improve pruning and parallelism</td></tr>
+    <tr><td>Column chunk</td><td>All values for one column inside one row group</td><td>Projection can skip every unrequested chunk</td></tr>
+    <tr><td>Page</td><td>Encoding/compression unit inside a chunk</td><td>Smaller recovery/read unit, but more metadata overhead</td></tr>
+    <tr><td>Footer</td><td>Map from logical schema to physical locations and statistics</td><td>A final range read is required before selective access</td></tr>
+  </tbody>
+</table>
+
+<div class="trap"><span class="lbl">Boundary</span>Min/max statistics are not magic indexes. If values are randomly distributed, nearly every row group may have the same broad range and none can be pruned. Sorting or clustering makes the metadata selective.</div>
+<div class="life"><span class="lbl">Verify</span>Inspect the footer, record row-group min/max, and compare the same predicate on randomly ordered versus sorted data. Confirm skipped row groups in the query profile rather than inferring pruning from elapsed time.</div>
+</section>
+
+<section id="b3">
+  <h2><span class="num">B3</span> Compression and splittability</h2>
+  <p class="sub">Compression saves I/O by spending CPU; block boundaries decide whether readers can work independently.</p>
+
+<pre>WHOLE-FILE COMPRESSION
+file bytes -> [ one compression stream ------------------- ]
+                                  ^
+reader cannot begin here without earlier stream state
+
+BLOCK / PAGE COMPRESSION
+file bytes -> [block 0][block 1][block 2][block 3]
+                 ^        ^        ^        ^
+              worker 0 worker 1 worker 2 worker 3
+
+COLUMNAR ENCODING PIPELINE
+similar typed values
+      -> encode structure (dictionary / RLE / delta)
+      -> compress remaining bytes (Snappy / ZSTD / ...)
+      -> store block metadata</pre>
+
+<h4>Why the benefit exists</h4>
+<pre>fewer stored bytes
+   -> fewer bytes read from disk/object storage
+   -> less network transfer
+   -> more data fits in cache
+   -> decode CPU may be repaid many times
+
+but:
+high compression level -> more write CPU + more read CPU
+whole-file stream       -> weak split parallelism
+tiny blocks             -> metadata and call overhead</pre>
+
+<table>
+  <thead><tr><th>Priority</th><th>Likely choice</th><th>Reason</th><th>Cost</th></tr></thead>
+  <tbody>
+    <tr><td>Fast repeated analytics</td><td>Fast block codec</td><td>Decode latency matters on every scan</td><td>Larger files than maximum-ratio codec</td></tr>
+    <tr><td>Cold archival</td><td>Denser codec</td><td>Storage saved for long retention</td><td>More CPU when eventually read</td></tr>
+    <tr><td>Parallel distributed reads</td><td>Independent blocks/pages</td><td>Workers seek directly to assigned ranges</td><td>Per-block framing and metadata</td></tr>
+  </tbody>
+</table>
+
+<div class="life"><span class="lbl">Verify</span>Hold data and layout fixed. Change only codec, then record file size, write time, read time, CPU, and bytes fetched. A codec cannot be called "better" without naming which column wins.</div>
+</section>
+
+<section id="b4">
+  <h2><span class="num">B4</span> Avro, ORC, and format choice</h2>
+  <p class="sub">Choose from the access path and compatibility requirement, not from a universal ranking.</p>
+
+<pre>EVENT EDGE                         ANALYTICAL INTERIOR
+record arrives                    many records queried
+      |                                  |
+      v                                  v
+[field,value][field,value]        [column][column][column]
+      |                                  |
+      v                                  v
+AVRO-LIKE ROW RECORD              PARQUET / ORC COLUMNAR FILE
+schema resolution                 pruning + encoding + vectorization
+
+             conversion boundary
+events ---------> durable analytical table
+  row                 columnar</pre>
+
+<table>
+  <thead><tr><th>Format</th><th>Optimizes</th><th>Core mechanism</th><th>Main mismatch</th></tr></thead>
+  <tbody>
+    <tr><td>Avro</td><td>Record transport and schema evolution</td><td>Writer and reader schemas resolve fields during decode</td><td>Analytical projection still traverses records</td></tr>
+    <tr><td>Parquet</td><td>Engine-neutral analytical scans</td><td>Row groups, column chunks, pages, statistics</td><td>Frequent row mutation requires rewriting file units</td></tr>
+    <tr><td>ORC</td><td>Columnar analytics with rich indexes, historically Hive-centered</td><td>Stripes, streams, indexes, encodings</td><td>Ecosystem fit may be narrower than Parquet</td></tr>
+  </tbody>
+</table>
+
+<div class="note"><span class="lbl">Decision rule</span>Ask four questions: Is the unit of work one record or many? Which columns are read? Must old and new schemas interoperate? Which engines must read the file? The answer is a workload fit, not a format reputation.</div>
+</section>
+
+<section id="b5">
+  <h2><span class="num">B5</span> Open table formats and the metadata tree</h2>
+  <p class="sub">A directory of immutable data files becomes a table when metadata defines one coherent snapshot.</p>
+
+<pre>CATALOG POINTER
+      |
+      v
+TABLE METADATA v42
+      |
+      +-- schema + partition specification
+      +-- current snapshot id
+      `-- snapshot history
+              |
+              v
+        MANIFEST LIST
+          /       \
+         v         v
+   MANIFEST A   MANIFEST B
+      |            |
+      v            v
+ data files     data files
++ stats         + stats
+
+QUERY category = 'books'
+      -> metadata prunes irrelevant manifests
+      -> manifest stats prune irrelevant data files
+      -> Parquet footer prunes row groups
+      -> pages are decoded</pre>
+
+<h4>Why a file list is insufficient</h4>
+<pre>list object prefix
+   -> thousands / millions of objects
+   -> no single declaration of "the table at time T"
+   -> concurrent writes expose ambiguous membership
+   -> schema and partition evolution have no versioned home
+
+versioned metadata tree
+   -> immutable snapshot names exact file set
+   -> readers pin one snapshot
+   -> metadata pruning avoids listing and opening everything</pre>
+
+<table>
+  <thead><tr><th>Gain</th><th>Mechanism</th><th>Cost / boundary</th></tr></thead>
+  <tbody>
+    <tr><td>Snapshot isolation</td><td>Reader follows one immutable snapshot</td><td>Old metadata/files remain until expiration</td></tr>
+    <tr><td>Time travel</td><td>Retained snapshot history</td><td>Retention raises storage and metadata cost</td></tr>
+    <tr><td>Partition evolution</td><td>Snapshot records the active specification</td><td>Readers must understand multiple specs</td></tr>
+    <tr><td>File pruning</td><td>Manifest-level statistics</td><td>Metadata itself can become large and need maintenance</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="b6">
+  <h2><span class="num">B6</span> Atomic commit on object storage</h2>
+  <p class="sub">Construct new state privately; publish it by changing one authoritative pointer.</p>
+
+<pre>BEFORE
+catalog -> metadata v41 -> snapshot S41 -> {A.parquet, B.parquet}
+
+WRITER BUILDS OFF TO THE SIDE
+                         write C.parquet
+                               |
+                               v
+                    snapshot S42 = {A, B, C}
+                               |
+                               v
+                         metadata v42
+
+COMMIT
+compare catalog pointer == v41 ?
+       | yes                         | no
+       v                             v
+catalog: v41 -> v42              CONFLICT: retry/rebase
+
+READERS
+resolved before commit -> follow v41 -> complete old state
+resolved after commit  -> follow v42 -> complete new state
+                         never a mixed file set</pre>
+
+<h4>State machine</h4>
+<pre>OLD_VISIBLE
+    |
+    | create immutable files + metadata
+    v
+NEW_PRIVATE -------------------X crash
+    |                            |
+    | conditional pointer update| old pointer unchanged
+    v                            v
+NEW_VISIBLE                  OLD_VISIBLE + orphan files
+                                  |
+                                  v
+                           later orphan cleanup</pre>
+
+<div class="trap"><span class="lbl">Precision</span>Object storage does not generally provide a filesystem-style atomic directory rename. The atomic boundary is supplied by a catalog transaction, conditional metadata update, or equivalent compare-and-swap. Data files are immutable; one authoritative reference changes.</div>
+
+<table>
+  <thead><tr><th>Guarantee</th><th>Requires</th><th>Does not guarantee</th></tr></thead>
+  <tbody>
+    <tr><td>Readers see old or new snapshot</td><td>All readers resolve through the authoritative metadata pointer</td><td>Two writers will both commit; one may lose the compare-and-swap race</td></tr>
+    <tr><td>Crash before commit is invisible</td><td>New files are not discoverable as table state without committed metadata</td><td>No orphan files; cleanup is separate</td></tr>
+    <tr><td>Optimistic concurrency</td><td>Commit validates the base version</td><td>Automatic semantic merge of conflicting changes</td></tr>
+  </tbody>
+</table>
+
+<div class="life"><span class="lbl">Verify</span>Run one reader pinned to the old snapshot while a writer creates a new snapshot. Kill the writer before and after pointer update. Record the catalog pointer and exact file set each reader resolves.</div>
+</section>
+
+<section id="b7">
+  <h2><span class="num">B7</span> Compaction</h2>
+  <p class="sub">Frequent small writes optimize arrival; analytical readers pay the accumulated file-open tax.</p>
+
+<pre>INGEST-OPTIMIZED STATE
+[2 MB][1 MB][3 MB][2 MB][1 MB] ... x 10,000 files
+   |      per-file request + metadata + footer + planning
+   v
+high fixed overhead before useful scan work
+
+COMPACTION
+read small files -> sort/cluster if useful -> write large files
+                                          -> commit new snapshot
+                                          -> expire old files later
+
+READ-OPTIMIZED STATE
+[256 MB][256 MB][256 MB] ... fewer files
+   |
+   v
+fewer opens + larger sequential reads + more useful statistics</pre>
+
+<table>
+  <thead><tr><th>Compaction gives</th><th>Compaction costs</th><th>Boundary</th></tr></thead>
+  <tbody>
+    <tr><td>Lower planning/file-open overhead; better clustering; larger scan units</td><td>Read + rewrite I/O, compute, temporary duplicate storage, write amplification</td><td>Compact files read often enough for future savings to repay rewrite cost</td></tr>
+  </tbody>
+</table>
+
+<h4>Decision equation</h4>
+<pre>compact when:
+
+future_read_savings_over_retention
+    > rewrite_compute + rewrite_I/O + operational risk
+
+not merely when:
+
+small_files_exist</pre>
+
+<div class="life"><span class="lbl">Verify</span>Hold total bytes fixed while varying file count. Plot planning time, first-row latency, total scan time, and request count. Compact once; measure how many future reads are needed to repay it.</div>
+</section>
+
+<section id="b8">
+  <h2><span class="num">B8</span> Partial failure and idempotency</h2>
+  <p class="sub">A timeout cannot tell the caller whether an operation failed or merely lost its reply.</p>
+
+<pre>CLIENT                         SERVICE                         SINK
+  |                              |                              |
+  | write item 42, key=K42       |                              |
+  |----------------------------->| apply write                  |
+  |                              |----------------------------->|
+  |                              |                  COMMITTED   |
+  |                X reply lost  |                              |
+  |<-----------------------------X                              |
+  | timeout: outcome UNKNOWN                                    |
+  | retry K42                                                   |
+  |----------------------------->|                              |
+
+NAIVE APPEND                    IDEMPOTENT EFFECT
+retry -> second row             retry same key/version
+      -> duplicate                   -> same final state</pre>
+
+<h4>Core pressure</h4>
+<pre>partial failure
+   -> caller cannot distinguish "not done" from "done, reply lost"
+   -> retry is required for availability
+   -> retry may duplicate effects
+   -> operation needs a stable identity or replaceable target
+   -> repeated execution converges to one state</pre>
+
+<table>
+  <thead><tr><th>Pattern</th><th>Idempotency mechanism</th><th>Boundary</th></tr></thead>
+  <tbody>
+    <tr><td>Request</td><td>Deduplication key stored with result</td><td>Key retention must exceed retry horizon</td></tr>
+    <tr><td>Table load</td><td>Overwrite a deterministic partition or merge on true grain</td><td>Wrong grain turns legitimate rows into collisions</td></tr>
+    <tr><td>Versioned state</td><td>Apply only if incoming source version is newer</td><td>Requires a trustworthy monotonic version</td></tr>
+    <tr><td>Snapshot commit</td><td>Publish immutable state through one conditional pointer change</td><td>Orphan cleanup and writer conflicts remain</td></tr>
+  </tbody>
+</table>
+
+<div class="trap"><span class="lbl">Boundary</span>Idempotent delivery is not exactly-once execution. Work may execute several times; only its externally visible effect converges. Every side effect must participate, or the guarantee stops at the first non-idempotent boundary.</div>
+</section>
+
+<section id="b9">
+  <h2><span class="num">B9</span> Query planning and joins</h2>
+  <p class="sub">Equivalent SQL has many physical executions; statistics let the planner estimate which one is cheaper.</p>
+
+<pre>SQL
+ | parse + resolve
+ v
+LOGICAL PLAN
+ Join
+ /  \
+A    B
+ |
+ | enumerate physical alternatives
+ v
++----------------+------------------+----------------+
+| broadcast hash | partitioned hash | sort-merge     |
++--------+-------+--------+---------+--------+-------+
+         |                |                   |
+         v                v                   v
+ small build side   both sides repartition   both sides sorted
+
+statistics estimate:
+rows + bytes + distinct keys + nulls + value ranges
+         -> cardinality after filters
+         -> memory and movement cost
+         -> chosen plan</pre>
+
+<h4>Failure chain</h4>
+<pre>stale / absent statistics
+   -> wrong cardinality estimate
+   -> choose broadcast for a relation that is not small
+   -> memory pressure or driver/executor failure
+
+or
+
+underestimate skew
+   -> average partition looks safe
+   -> one partition dominates
+   -> straggler / spill / OOM</pre>
+
+<table>
+  <thead><tr><th>Join</th><th>Gives</th><th>Needs</th><th>Primary risk</th></tr></thead>
+  <tbody>
+    <tr><td>Broadcast hash</td><td>Avoids moving the large side</td><td>Build side fits safely in each consumer</td><td>Misestimated table exhausts memory</td></tr>
+    <tr><td>Partitioned hash</td><td>Linear build/probe after partitioning</td><td>Hash tables fit per partition</td><td>Shuffle and skew</td></tr>
+    <tr><td>Sort-merge</td><td>Bounded memory and sequential merge</td><td>Compatible ordering/partitioning or an explicit sort</td><td>Sort and shuffle cost</td></tr>
+    <tr><td>Nested loop</td><td>Works for non-equi predicates</td><td>Tiny input or index-assisted lookup</td><td>Quadratic work</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="b10">
+  <h2><span class="num">B10</span> LSM, MVCC, and the WAL</h2>
+  <p class="sub">Three different mechanisms answer three different pressures; vocabulary overlap does not make them one design.</p>
+
+<pre>WRITE-AHEAD LOG (durability / recovery)
+transaction change -> append WAL -> flush required record -> acknowledge
+                              |
+                              +-> replay after crash
+                              `-> CDC reads ordered changes
+
+MVCC (concurrent visibility)
+row key -> version 7 [visible to snapshot T1]
+        -> version 8 [visible to snapshot T2]
+readers choose versions; writers need not overwrite readers' view
+
+LSM TREE (write-optimized indexing)
+write -> memory table -> immutable sorted run -> level 0
+                                      |
+                                      v
+                                  compaction
+                                      |
+                                      v
+                               larger sorted levels</pre>
+
+<table>
+  <thead><tr><th>Mechanism</th><th>Pressure solved</th><th>Benefit</th><th>Cost / failure boundary</th></tr></thead>
+  <tbody>
+    <tr><td>WAL</td><td>Crash between logical change and durable page update</td><td>Sequential durable record supports redo/recovery and replication</td><td>Retention and replication-slot lag can exhaust disk</td></tr>
+    <tr><td>MVCC</td><td>Readers and writers need concurrent, stable views</td><td>Snapshot reads without blocking every writer</td><td>Old versions accumulate; vacuum/garbage collection is required</td></tr>
+    <tr><td>LSM</td><td>Random writes are expensive</td><td>Turns writes into memory updates and sequential runs</td><td>Read and write amplification; compaction consumes I/O</td></tr>
+  </tbody>
+</table>
+
+<div class="trap"><span class="lbl">Category correction</span>Kafka stores append-only partition segments with sparse indexes and may compact records by key. It is not an LSM tree: it does not maintain sorted runs across levels for key lookup. RocksDB, Cassandra, and many streaming state stores are LSM-based.</div>
+</section>
+
+<section id="b11">
+  <h2><span class="num">B11</span> Python as a data-path instrument</h2>
+  <p class="sub">The useful question is not whether Python is slow; it is where Python enters the path and what crosses that boundary.</p>
+
+<pre>SOURCE BYTES
+    |
+    v
+native reader / socket / file buffer
+    |
+    | deserialize
+    v
+PYTHON OBJECTS  x millions
+    |
+    +-- allocation + reference counting
+    +-- per-object headers
+    +-- interpreter dispatch
+    `-- GIL for Python bytecode
+    |
+    | serialize
+    v
+SINK BYTES
+
+ALTERNATIVE PATH
+columnar native buffer -> vectorized native operation -> columnar buffer
+                           ^
+                           |
+                 Python coordinates; values do not
+                 become one Python object per cell</pre>
+
+<h4>Decision tree</h4>
+<pre>DATA FINITE AND SMALL?
+  | yes -> simple list/dataframe may be correct
+  | no
+  v
+CAN PROCESS ONE CHUNK/RECORD AT A TIME?
+  | yes -> iterator/generator; bound memory
+  | no  -> external state, partitioning, or distributed engine
+
+TIME SPENT WAITING ON I/O?
+  | yes -> batching + threads/async may help
+  | no
+  v
+TIME SPENT IN PYTHON CPU?
+  | yes -> vectorize/native extension/processes/change algorithm
+  ` no  -> measure serialization, network, storage, and engine work</pre>
+
+<table>
+  <thead><tr><th>Choice</th><th>Gives</th><th>Costs / boundary</th></tr></thead>
+  <tbody>
+    <tr><td>Generator</td><td>Memory proportional to in-flight item/chunk</td><td>Single pass; upstream resource lifetime must be managed</td></tr>
+    <tr><td>Threads / async</td><td>Overlap waiting</td><td>Does not remove CPU-bound interpreter contention</td></tr>
+    <tr><td>Processes</td><td>Parallel Python CPU</td><td>Serialization and duplicated memory</td></tr>
+    <tr><td>Vectorized/native path</td><td>Compact buffers and compiled loops</td><td>Crossing back into per-row Python can erase the gain</td></tr>
+  </tbody>
+</table>
+
+<div class="life"><span class="lbl">Verify</span>Measure peak memory and elapsed time for list materialization versus streaming chunks. Then profile one version before changing concurrency. The deliverable is the dominant cost with evidence, not a Python slogan.</div>
+</section>
+
+<section id="depth">
+  <h2><span class="num">::</span> Depth boundary</h2>
+  <p class="sub">Know enough to reconstruct behavior; park implementation archaeology until a failure demands it.</p>
+
+<table>
+  <thead><tr><th>Must understand now</th><th>Useful later</th><th>Source-code / research depth</th></tr></thead>
+  <tbody>
+    <tr><td>Row vs column locality; row groups/chunks/pages/footer; pruning; codec trade; metadata snapshots; conditional commit; idempotency; WAL/MVCC/LSM distinction</td><td>Page indexes, bloom filters, delete files, copy-on-write vs merge-on-read, vacuum policies, detailed codec selection</td><td>Parquet encodings, Iceberg/Delta commit implementations, object-store consistency protocols, vectorized execution engines, compaction scheduling research</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="connections">
+  <h2><span class="num">::</span> Connection to the rest of the Forge</h2>
+  <p class="sub">L0 does not stay below the tree; its mechanisms recur under different names.</p>
+
+<pre>B1-B3 physical layout ---------> Spark I/O, pruning, vectorization
+        |
+        `----------------------> warehouse scan cost
+
+B5-B6 metadata + commit -------> idempotent pipeline writes
+        |                        backfill shadow-and-swap
+        `----------------------> platform table standards
+
+B8 partial failure -----------> Kafka retries and delivery semantics
+        `----------------------> end-to-end effectively-once
+
+B9 plans and joins -----------> Catalyst, join selection, skew
+
+B10 WAL + MVCC + LSM ---------> CDC, streaming state, source safety
+
+B11 Python data path ---------> serialization cost, memory, concurrency</pre>
+
+  <div class="cpy">
+    <span class="lbl">Source branch</span>
+    Use <a href="../../forge/substrate.html"><strong>Forge L0 · The Substrate</strong></a> for its dependency
+    map, primary resources, and laboratory specifications. This Atmos page is the visual mechanism reference;
+    it does not claim those laboratories were run.
+  </div>
+</section>
+
+</main>
+</div>
+
+<nav class="pagenav">
+  <a class="pn up" href="../index.html"><span class="pnk">All</span><span class="pnt">Atmos notes</span></a>
+  <a class="pn next" href="l1-modelling.html"><span class="pnk">Next</span><span class="pnt">L1 · Modelling</span></a>
+</nav>
+
+<footer>Atmos · L0 reference collection · mechanisms to verify, not observations claimed</footer>
+
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L3 Apache Kafka - Atmos Reference Notes</title>
+<meta name="description" content="Diagram-first reference notes for Forge L3: Kafka partitions, storage, producers, consumers, groups, rebalancing, replication, delivery, lag, and failures." />
+<link rel="stylesheet" href="../../assets/base.css" /><link rel="stylesheet" href="../../assets/pages.css" /><script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+<header><div class="hwrap"><div class="brand">Mitesh <span>&middot;</span> notebook</div><nav class="sitenav"><a href="../../index.html">Home</a><a href="../../tracks/index.html">Tracks</a><a href="../../atlas/index.html">Atlas</a><a href="../../forge/index.html">Forge</a><a href="../index.html" class="on">Atmos</a></nav></div><div id="bar"></div></header>
+<div class="shell">
+<nav id="toc">
+  <h4>Orientation</h4><a href="#model">One-screen model</a>
+  <h4>Log and clients</h4><a href="#k1">K1 · Architecture</a><a href="#k2">K2 · Storage engine</a><a href="#k3">K3 · Producers</a><a href="#k4">K4 · Consumers</a>
+  <h4>Coordination</h4><a href="#k5">K5 · Consumer groups</a><a href="#k6">K6 · Rebalancing</a><a href="#k7">K7 · Replication</a><a href="#k8">K8 · Delivery semantics</a>
+  <h4>Operation</h4><a href="#k9">K9 · Performance and lag</a><a href="#k10">K10 · Failure modes</a><a href="#k11">K11 · Ecosystem</a><a href="#k12">K12 · When not to use Kafka</a>
+  <h4>Boundary</h4><a href="#depth">Depth boundary</a><a href="#connections">Forge connections</a>
+</nav>
+<main>
+<p class="crumbs"><a href="../../index.html">Home</a><span>/</span><a href="../index.html">Atmos</a><span>/</span>L3 · Kafka</p>
+<div class="hero">
+  <div class="kicker">Reference collection L3 &middot; 12 mechanisms &middot; source-grounded, not lab evidence</div>
+  <h1>Apache Kafka</h1>
+  <p class="dropcap">The partition is the unit of ordering, parallelism, assignment, replication, offset,
+  and lag. Most surprising Kafka behavior is the result of expecting a topic-wide property from a
+  partition-scoped mechanism.</p>
+  <div class="why"><b>The reconstruction test.</b> For any Kafka incident, name the partition, its leader and
+  ISR, the producer acknowledgment path, the consumer position, and the committed group offset.</div>
+  <div class="tags"><span class="tag">#partition</span><span class="tag t2">#consumer-group</span><span class="tag t3">#isr</span><span class="tag">#delivery</span></div>
+</div>
+
+<section id="model">
+  <h2><span class="num">00</span> One-screen mental model</h2>
+  <p class="sub">A topic is several independent ordered logs; clients and replicas coordinate around each one.</p>
+<pre>PRODUCERS
+ key=A | key=B | key=A
+   |       |       |
+   +--- partitioner + batching ---+
+                    |
+          +---------+---------+
+          v                   v
+TOPIC PARTITION 0         TOPIC PARTITION 1
+leader: B1                leader: B2
+[0][1][2][3][4]           [0][1][2]
+ | replicated to ISR       | replicated to ISR
+ v                          v
+followers B2,B3            followers B1,B3
+
+CONSUMER GROUP G
+consumer C1 <- assigned P0 -> position 5 -> committed offset 4
+consumer C2 <- assigned P1 -> position 3 -> committed offset 3
+
+ordering: within one partition
+parallelism ceiling: partition count
+lag: log-end offset - consumer/group position, per partition</pre>
+  <div class="note"><span class="lbl">Evidence status</span>This is a source-grounded mechanism reference. VERIFY blocks describe observations to collect; they are not claims that a cluster was run.</div>
+</section>
+
+<section id="k1">
+  <h2><span class="num">K1</span> Architecture</h2>
+  <p class="sub">Pressure: retain an ordered event history while distributing throughput and surviving broker loss.</p>
+<pre>CLUSTER
++-- controller quorum: metadata leadership and broker/partition state
++-- broker 1
+|   +-- P0 leader
+|   `-- P1 follower
++-- broker 2
+|   +-- P1 leader
+|   `-- P0 follower
+`-- broker 3
+    +-- P0 follower
+    `-- P1 follower
+
+TOPIC = named collection of partitions
+PARTITION = ordered append-only sequence with offsets
+REPLICA = copy of one partition
+LEADER = replica serving reads/writes for that partition</pre>
+<table><thead><tr><th>Scope</th><th>Property</th><th>Not implied</th></tr></thead><tbody>
+  <tr><td>Partition</td><td>Total order by offset for appended records</td><td>Order across other partitions</td></tr>
+  <tr><td>Topic</td><td>Aggregate capacity across partitions</td><td>One global cursor or transaction history</td></tr>
+  <tr><td>Cluster</td><td>Placement and replication across brokers</td><td>Application-level exactly-once effect</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Boundary</span>Offsets identify positions, not event time, business sequence, or globally comparable order.</div>
+</section>
+
+<section id="k2">
+  <h2><span class="num">K2</span> The storage engine</h2>
+  <p class="sub">Append sequentially, index sparsely, and let the operating-system page cache serve hot data.</p>
+<pre>PARTITION DIRECTORY
+00000000000000000000.log     records 0 ... 999
+00000000000000000000.index   sparse offset -> byte positions
+00000000000000000000.timeindex
+00000000000000001000.log     active segment, records 1000 ...
+
+FETCH offset 742
+  -> choose segment by base offset
+  -> sparse index finds nearby byte position
+  -> scan forward to exact record
+  -> page cache may satisfy read
+  -> file region transferred to socket with minimal copying
+
+segment roll -> old segment immutable -> retention/deletion manageable</pre>
+<h4>Compaction is not an LSM tree</h4>
+<pre>log compaction by key:
+K1=v1, K2=v1, K1=v2, K2=tombstone
+                    |
+                    v
+retain latest K1=v2; eventually remove superseded K1 and deleted K2
+
+records remain in offset order; Kafka does not maintain sorted levels for key lookup</pre>
+<table><thead><tr><th>Mechanism</th><th>Gain</th><th>Cost / boundary</th></tr></thead><tbody>
+  <tr><td>Segments</td><td>Retention and indexes operate on bounded immutable files</td><td>Deletion occurs by segment, not individual record</td></tr>
+  <tr><td>Sparse index</td><td>Small index with short sequential scan</td><td>Not direct key lookup</td></tr>
+  <tr><td>Page cache / zero-copy path</td><td>Reuse OS cache and reduce user-space copies</td><td>Cold reads and cache contention still hit storage</td></tr>
+  <tr><td>Tiered storage</td><td>Long retention without local disk for all history</td><td>Remote fetch latency and operational complexity</td></tr>
+</tbody></table>
+</section>
+
+<section id="k3">
+  <h2><span class="num">K3</span> Producers</h2>
+  <p class="sub">A producer trades latency, throughput, durability, and ordering through a partition-scoped send path.</p>
+<pre>record(key, value)
+      |
+      v
+serialize -> choose partition -> append to per-partition batch
+                               |
+                     linger.ms / batch.size reached
+                               |
+                               v
+                         compress batch
+                               |
+                               v
+                    send to partition leader
+                               |
+              +----------------+----------------+
+              v                v                v
+           acks=0           acks=1           acks=all
+        no broker ack    leader appends     leader waits for
+                                          current ISR replicas
+
+retry after ambiguous response -> idempotent producer sequence numbers
+                                let broker reject duplicate append</pre>
+<table><thead><tr><th>Lever</th><th>Gain</th><th>Cost / boundary</th></tr></thead><tbody>
+  <tr><td><code>linger.ms</code></td><td>More records per batch, better compression/throughput</td><td>Intentional queueing latency</td></tr>
+  <tr><td><code>batch.size</code></td><td>Larger efficient requests when traffic fills them</td><td>Memory; does not force sparse traffic to wait until full</td></tr>
+  <tr><td><code>acks</code></td><td>Selects acknowledgment durability path</td><td>Higher waiting and availability constraints</td></tr>
+  <tr><td><code>max.in.flight</code></td><td>More pipeline concurrency</td><td>Without idempotence/config safeguards, retries can reorder</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Record batch size, request rate, compression ratio, record queue time, request latency, retries, and error rate while changing one producer lever.</div>
+</section>
+
+<section id="k4">
+  <h2><span class="num">K4</span> Consumers</h2>
+  <p class="sub">Processing position and committed recovery position are separate state.</p>
+<pre>partition log:  [40][41][42][43][44][45]
+                         ^           ^
+                  committed=42   position=46 after poll
+
+poll -> receive 43,44,45 -> process -> side effect -> commit 46
+
+CRASH WINDOWS
+commit before effect:
+  commit 46 -> crash -> restart at 46 -> effects 43..45 LOST
+
+effect before commit:
+  effects 43..45 -> crash -> restart at 43 -> effects DUPLICATED
+
+atomic/idempotent sink boundary decides whether replay is safe</pre>
+<table><thead><tr><th>Choice</th><th>Behavior</th><th>Main risk</th></tr></thead><tbody>
+  <tr><td>Auto commit</td><td>Library periodically advances group offset</td><td>Commit may not correspond to completed business effect</td></tr>
+  <tr><td>Sync manual commit</td><td>Caller waits for coordinator response</td><td>Latency and still an external-sink gap</td></tr>
+  <tr><td>Async manual commit</td><td>Caller continues while commit is in flight</td><td>Callbacks/reordering and uncertain final commit on shutdown</td></tr>
+  <tr><td>Seek/replay</td><td>Reset position to chosen offset</td><td>Side effects must tolerate repeated records</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Poll contract</span>If processing prevents another poll longer than <code>max.poll.interval.ms</code>, the group may evict the member even while its process is alive.</div>
+</section>
+
+<section id="k5">
+  <h2><span class="num">K5</span> Consumer groups</h2>
+  <p class="sub">A group divides partitions; it does not divide individual records from one partition concurrently.</p>
+<pre>TOPIC: P0 P1 P2 P3
+
+GROUP G with 2 consumers       GROUP G with 6 consumers
+C1 <- P0,P1                    C1 <- P0   C2 <- P1
+C2 <- P2,P3                    C3 <- P2   C4 <- P3
+                               C5 <- idle C6 <- idle
+
+GROUP H is independent
+H1 <- P0,P1,P2,P3
+
+parallelism within one group <= partition count
+each group maintains its own committed offsets</pre>
+<h4>Assignment protocol</h4>
+<pre>members join -> coordinator identifies generation
+             -> assignment strategy maps partitions to members
+             -> members sync assignment
+             -> consumption resumes
+
+membership or partition change -> new assignment required</pre>
+<div class="note"><span class="lbl">Guarantee boundary</span>"One consumer per partition" is a group assignment invariant for active members, not a guarantee that business effects occur once. A revoked consumer may still have in-flight work.</div>
+</section>
+
+<section id="k6">
+  <h2><span class="num">K6</span> Rebalancing</h2>
+  <p class="sub">Membership change requires ownership transfer; transfer strategy determines pause and duplicate-risk shape.</p>
+<pre>EAGER REBALANCE
+C1 owns P0,P1     C2 owns P2,P3
+      |
+      v
+all members revoke all partitions ---- consumption stops
+      |
+      v
+new complete assignment ---- consumption restarts
+
+COOPERATIVE INCREMENTAL
+C1 keeps P0; revokes P1 -> new C3 acquires P1
+C2 keeps P2,P3
+only moving partitions pause across coordinated rounds</pre>
+<h4>Rebalance storm loop</h4>
+<pre>slow processing
+   -> poll interval exceeded
+   -> member removed
+   -> rebalance pauses/moves work
+   -> backlog and processing pressure rise
+   -> replacement also misses poll
+   `--------------------------------> repeats</pre>
+<table><thead><tr><th>Mitigation</th><th>Mechanism</th><th>Cost</th></tr></thead><tbody>
+  <tr><td>Cooperative assignor</td><td>Moves ownership incrementally</td><td>Protocol takes coordinated rounds; clients must support it</td></tr>
+  <tr><td>Static membership</td><td>Stable instance identity tolerates brief restart</td><td>Stale identity must be fenced correctly</td></tr>
+  <tr><td>Bound poll work</td><td>Keep group liveness separate from long processing</td><td>Requires internal queue/backpressure and offset discipline</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Record rebalance count/rate, assignment duration, records-lag-max, poll interval, processing time, and revoked/assigned partitions on one timeline.</div>
+</section>
+
+<section id="k7">
+  <h2><span class="num">K7</span> Replication</h2>
+  <p class="sub">Durability comes from replica state at acknowledgment time and the election rules used after failure.</p>
+<pre>PARTITION P0
+leader B1:    [0][1][2][3][4][5]
+follower B2:  [0][1][2][3][4][5]  in ISR
+follower B3:  [0][1][2][3]        lagging, may leave ISR
+                         ^
+                  high watermark
+          records at/below committed boundary visible to consumers
+
+acks=1:
+leader appends -> ACK; leader may fail before followers copy
+
+acks=all:
+leader appends -> wait for every replica currently in ISR -> ACK
+
+min.insync.replicas:
+minimum ISR size required to accept an acks=all write</pre>
+<div class="rule"><span class="lbl">Precise interaction</span><code>acks=all</code> and <code>min.insync.replicas</code> do different jobs. With ISR size 3 and minimum 1, <code>acks=all</code> still waits for the current ISR and is stronger than <code>acks=1</code>. The danger is availability after ISR shrinks: minimum 1 permits writes with only the leader in sync, so the redundancy guarantee has degraded without rejecting writes.</div>
+<table><thead><tr><th>Failure choice</th><th>Gain</th><th>Cost / loss mode</th></tr></thead><tbody>
+  <tr><td>Higher minimum ISR</td><td>Reject writes before redundancy falls below policy</td><td>Lower write availability during replica loss</td></tr>
+  <tr><td>Unclean leader election allowed</td><td>Partition may recover availability from out-of-sync replica</td><td>Acknowledged records can disappear</td></tr>
+  <tr><td>Unclean election disabled</td><td>Preserves committed history</td><td>Partition can remain unavailable until valid replica returns</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Track ISR membership and high watermark. Stop followers, observe when ISR shrinks, then attempt <code>acks=all</code> writes under different minimum ISR settings.</div>
+</section>
+
+<section id="k8">
+  <h2><span class="num">K8</span> Delivery semantics</h2>
+  <p class="sub">The end-to-end outcome is the composition of producer retry, broker durability, consumer commit, and sink behavior.</p>
+<pre>PRODUCER              KAFKA              CONSUMER              SINK
+retry/idempotence -> replication -> poll/offset commit -> write semantics
+       |                 |                 |                    |
+       +-----------------+-----------------+--------------------+
+                                 |
+                                 v
+                         END-TO-END EFFECT
+
+AT-MOST-ONCE: commit/advance before effect -> loss possible, no replay duplicate
+AT-LEAST-ONCE: effect before commit         -> replay duplicate possible, no loss if source retained
+EFFECTIVELY-ONCE: replay occurs, sink dedup/upsert makes repeated effect converge
+TRANSACTIONAL EOS: coordinated Kafka read-process-write within supported transaction boundary</pre>
+<table><thead><tr><th>Claim</th><th>Where it stops</th></tr></thead><tbody>
+  <tr><td>Idempotent producer</td><td>Prevents duplicate appends from that producer session/path; does not deduplicate sink effects</td></tr>
+  <tr><td>Kafka transaction</td><td>Coordinates supported Kafka records and consumed offsets; external systems need their own cooperation</td></tr>
+  <tr><td><code>read_committed</code></td><td>Hides aborted transactional records; does not validate business correctness</td></tr>
+  <tr><td>Exactly once</td><td>Must name source, state, sink, identity, and failure window; otherwise it is not a complete claim</td></tr>
+</tbody></table>
+</section>
+
+<section id="k9">
+  <h2><span class="num">K9</span> Performance and lag</h2>
+  <p class="sub">Lag is a symptom measured per partition; its distribution distinguishes capacity from skew.</p>
+<pre>lag(P) = log_end_offset(P) - consumed_or_committed_offset(P)
+
+PATTERN A                         PATTERN B
+P0: 1,000                        P0: 100,000
+P1: 1,200                        P1: 20
+P2:   900                        P2: 15
+P3: 1,100                        P3: 18
+    |                                |
+    v                                v
+all partitions behind            one hot/stuck partition
+capacity / downstream issue      key skew / owner / data issue
+
+drain condition:
+consumer service rate > arrival rate
+backlog drain rate = service rate - arrival rate</pre>
+<table><thead><tr><th>Lever</th><th>Improves</th><th>Cost / boundary</th></tr></thead><tbody>
+  <tr><td>More consumers</td><td>Parallel service until partition ceiling</td><td>No help to one hot partition already owned by one member</td></tr>
+  <tr><td>More partitions</td><td>Potential write/read parallelism</td><td>Metadata, files, replication work; key-to-partition mapping changes</td></tr>
+  <tr><td>Larger batches/compression</td><td>Throughput per request/byte</td><td>Latency, CPU, memory</td></tr>
+  <tr><td>Better key</td><td>Distribution</td><td>May sacrifice required per-key ordering</td></tr>
+</tbody></table>
+</section>
+
+<section id="k10">
+  <h2><span class="num">K10</span> Failure modes</h2>
+  <p class="sub">A useful incident model ties each failure to an observable transition and a guarantee boundary.</p>
+<table><thead><tr><th>Failure</th><th>State transition</th><th>Observable signal</th><th>Risk</th></tr></thead><tbody>
+  <tr><td>Leader broker dies</td><td>Eligible ISR follower elected</td><td>Leader-election errors, temporary request failures</td><td>Unclean election policy decides loss vs outage</td></tr>
+  <tr><td>Consumer crashes after effect</td><td>Partition reassigned from last committed offset</td><td>Rebalance + replay</td><td>Duplicate external effect</td></tr>
+  <tr><td>Consumer stalls</td><td>Lag rises; poll interval may expire</td><td>Lag slope, poll metrics, rebalance</td><td>Feedback loop into storm</td></tr>
+  <tr><td>ISR shrinks</td><td>Replica removed from acknowledgment set</td><td>Under-replicated partitions, ISR changes</td><td>Durability policy may silently degrade if minimum is low</td></tr>
+  <tr><td>Retention passes unread offset</td><td>Required segment deleted</td><td>Offset out of range</td><td>Replay source is gone</td></tr>
+</tbody></table>
+<pre>FAILURE QUESTION
+  -> which partition?
+  -> what was leader/ISR/high watermark?
+  -> what was produced and acknowledged?
+  -> what side effect completed?
+  -> what offset was committed?
+  -> what data still exists under retention?</pre>
+</section>
+
+<section id="k11">
+  <h2><span class="num">K11</span> Ecosystem</h2>
+  <p class="sub">Connect and Schema Registry move operational contracts out of bespoke client code, but do not remove them.</p>
+<pre>SOURCE SYSTEM
+   |
+   v
+CONNECT SOURCE -> Kafka topic -> CONNECT SINK -> TARGET
+      |               |
+      |               +-> schema id in record
+      |                       |
+      `-> offsets/state       v
+                        SCHEMA REGISTRY
+                  writer schema + compatibility policy
+
+schema evolution:
+producer CI -> compatibility check -> register -> produce
+consumer uses writer + reader schema to decode/resolve</pre>
+<table><thead><tr><th>Component</th><th>Gives</th><th>Still requires</th></tr></thead><tbody>
+  <tr><td>Connect</td><td>Standard connector lifecycle, offsets, task scaling</td><td>Correct transforms, delete semantics, monitoring, source/sink safety</td></tr>
+  <tr><td>Schema Registry</td><td>Versioned schemas and compatibility enforcement</td><td>Semantic contracts beyond field shape</td></tr>
+  <tr><td>Client library</td><td>Protocol, batching, retries, metrics</td><td>Application-level identity and side-effect correctness</td></tr>
+</tbody></table>
+</section>
+
+<section id="k12">
+  <h2><span class="num">K12</span> When not to use Kafka</h2>
+  <p class="sub">A replicated replayable log is expensive when the requirement is only a queue, request, or current value.</p>
+<pre>REQUIREMENT
+  |
+  +-- replayable ordered history + many independent consumers? -> Kafka may fit
+  +-- simple task dispatch with per-message ack? --------------> work queue
+  +-- request/response with tight tail latency? ---------------> RPC/service
+  +-- current state / key lookup? ------------------------------> database/KV
+  +-- one producer, one consumer, low volume? ------------------> file/DB/simple queue
+  `-- global ordering across all events? -----------------------> partitioned Kafka conflicts with it</pre>
+<table><thead><tr><th>Kafka gives</th><th>You pay</th></tr></thead><tbody><tr><td>Retention, replay, partitioned scale, consumer independence, replication</td><td>Broker operations, partition planning, rebalances, schema/retention discipline, eventual cross-partition reasoning</td></tr></tbody></table>
+</section>
+
+<section id="depth"><h2><span class="num">::</span> Depth boundary</h2>
+<table><thead><tr><th>Must understand now</th><th>Useful later</th><th>Source-code / research depth</th></tr></thead><tbody><tr><td>Partition scope; segment/index read path; producer batching/acks/idempotence; consumer position vs commit; group ceiling; rebalance; ISR/high watermark/minimum ISR; end-to-end delivery; lag distributions; failure matrix</td><td>KRaft administration, tiered-storage details, transaction coordinator, assignment protocol versions, quotas, rack awareness, Connect internals</td><td>Kafka protocol and log source, controller metadata model, replication/election implementation, transaction markers and coordinator state machines</td></tr></tbody></table>
+</section>
+
+<section id="connections"><h2><span class="num">::</span> Connection to the rest of the Forge</h2>
+<pre>L0 partial failure --------> K3 retry + K7 durability + K8 delivery
+
+partition ----------------> producer ordering
+   |                        consumer-group parallelism
+   |                        replica placement
+   |                        lag and hot keys
+   `----------------------> L4 keyed state and watermark partitions
+
+K4 commit gap ------------> L5 idempotent sink + CDC
+K7 ISR -------------------> L7 correctness/availability tradeoff
+K11 schemas --------------> L6 contracts and compatibility</pre>
+<div class="cpy"><span class="lbl">Source branch</span>Use <a href="../../forge/kafka.html"><strong>Forge L3 · Apache Kafka</strong></a> for dependencies, resources, and lab specifications. This page explains mechanisms; it does not claim lab completion.</div>
+</section>
+</main></div>
+<nav class="pagenav"><a class="pn prev" href="l2-spark.html"><span class="pnk">Previous</span><span class="pnt">L2 · Spark</span></a><a class="pn up" href="../index.html"><span class="pnk">All</span><span class="pnt">Atmos notes</span></a><a class="pn next" href="l4-stream-semantics.html"><span class="pnk">Next</span><span class="pnt">L4 · Stream semantics</span></a></nav>
+<footer>Atmos · L3 reference collection · mechanisms to verify, not observations claimed</footer>
+</body></html>

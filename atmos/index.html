@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Atmos - Engineering Mechanism Notes</title>
+<meta name="description" content="Diagram-first mechanism references for all nine Forge branches, plus a two-pass protocol for closing notes with experimental evidence." />
+<link rel="stylesheet" href="../assets/base.css" />
+<link rel="stylesheet" href="../assets/pages.css" />
+<script src="../assets/nav.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">Mitesh <span>&middot;</span> notebook</div>
+    <nav class="sitenav">
+      <a href="../index.html">Home</a>
+      <a href="../tracks/index.html">Tracks</a>
+      <a href="../atlas/index.html">Atlas</a>
+      <a href="../forge/index.html">Forge</a>
+      <a href="index.html" class="on">Atmos</a>
+    </nav>
+  </div>
+  <div id="bar"></div>
+</header>
+
+<div class="shell">
+
+<nav id="toc">
+  <h4>Orientation</h4>
+  <a href="#contract">The temporal contract</a>
+  <a href="#passes">The two passes</a>
+  <a href="#evidence">Evidence discipline</a>
+  <h4>Use</h4>
+  <a href="#generator">The generator</a>
+  <a href="#closure">What closes a note</a>
+  <a href="#boundary">Atmos and Forge</a>
+  <h4>Register</h4>
+  <a href="#reference">Reference collections</a>
+  <a href="#notes">Evidence-closed notes</a>
+</nav>
+
+<main>
+
+<p class="crumbs"><a href="../index.html">Home</a><span>/</span>Atmos</p>
+
+<div class="hero">
+  <div class="kicker">102 mechanisms &middot; nine branches &middot; evidence after failure</div>
+  <h1>Atmos</h1>
+  <p class="dropcap">Engineering notes in two states. <em>Reference collections</em> compress the Forge
+  into visual mechanisms. <em>Field notes</em> close one of those mechanisms only after a written prediction
+  meets a measured system.</p>
+  <div class="why">
+    <b>The governing distinction.</b> A source-grounded reference may explain how a system is expected to
+    behave. It must never claim that you observed that behavior. Only rerun and ablation evidence can close
+    a field note. <mark>Reference is a model; experiment turns it into evidence.</mark>
+  </div>
+  <div class="tags">
+    <span class="tag">#prediction-first</span>
+    <span class="tag t2">#measured-failure</span>
+    <span class="tag t3">#ablation</span>
+    <span class="tag">#transfer</span>
+  </div>
+</div>
+
+<section id="contract">
+  <h2><span class="num">00</span> The temporal contract</h2>
+  <p class="sub">This contract governs evidence-closed notes; reference collections remain explicitly unverified.</p>
+
+<pre>LAB ENTRY PROBLEM
+        |
+        v
+WRITTEN PREDICTION + FALSIFIER
+        |
+        v
+SIMPLE / WRONG VERSION
+        |
+        v
+BASELINE FAILURE + RAW EVIDENCE
+        |
+        v
+PASS 1: POST-FAILURE NOTE
+        |
+        v
+COMMITTED REPAIR HYPOTHESIS
+        |
+        v
+MODIFY + RERUN + ABLATE
+        |
+        v
+PASS 2: EVIDENCE CLOSURE
+        |
+        v
+COLD RECONSTRUCTION + TRANSFER</pre>
+
+  <div class="trap">
+    <span class="lbl">Two invalid shortcuts</span>
+    A mechanism revealed before the baseline run converts the lab into confirmation. A closed note written
+    before rerun and ablation converts predictions into fabricated evidence.
+  </div>
+</section>
+
+<section id="passes">
+  <h2><span class="num">01</span> The two passes</h2>
+  <p class="sub">One investigation, one evolving artifact, two evidence gates.</p>
+
+  <table>
+    <thead><tr><th>Mode</th><th>Required evidence</th><th>Produces</th><th>Must not claim</th></tr></thead>
+    <tbody>
+      <tr><td>Gate</td><td>Baseline inputs incomplete</td><td>Smallest experiment and what to record</td><td>The mechanism or expected answer</td></tr>
+      <tr><td>Pass 1</td><td>Prediction, falsifier, actual baseline result, wrong assumption</td><td>Failure reconstruction, minimum mechanism, repair test</td><td>That repair or ablation succeeded</td></tr>
+      <tr><td>Pass 2</td><td>Actual modification, rerun metrics, ablation metrics</td><td>Revised model, causal claim, reconstruction and transfer</td><td>More certainty than the evidence supports</td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule">
+    <span class="lbl">One failure, not one node</span>
+    The laboratory is the experimental unit. A single failure may demand several connected concepts, so one
+    note may integrate several source nodes. No new lab is invented merely because a node exists.
+  </div>
+</section>
+
+<section id="evidence">
+  <h2><span class="num">02</span> Evidence discipline</h2>
+  <p class="sub">The note preserves the line between measurement and explanation.</p>
+
+  <table class="nw">
+    <thead><tr><th>Label</th><th>Permitted meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>[OBSERVED]</code></td><td>Present in supplied output, metrics, plans, logs, traces, or file state.</td></tr>
+      <tr><td><code>[PREDICTED]</code></td><td>Committed before the run whose result it predicts.</td></tr>
+      <tr><td><code>[INFERRED]</code></td><td>A causal interpretation supported by evidence but not directly measured.</td></tr>
+      <tr><td><code>[UNKNOWN]</code></td><td>Not established; either test next or park as concept debt.</td></tr>
+    </tbody>
+  </table>
+
+<pre>[PREDICTED] system will do X
+                 |
+                 X contradicted by
+                 |
+                 v
+[OBSERVED] system did Y
+                 |
+                 v
+[INFERRED] mechanism M explains the delta
+                 |
+                 v
+[UNKNOWN] competing explanation C
+                 |
+                 v
+NEXT RUN discriminates M from C</pre>
+</section>
+
+<section id="generator">
+  <h2><span class="num">03</span> The generator</h2>
+  <p class="sub">One canonical prompt selects the valid pass from the evidence supplied.</p>
+
+  <div class="cpy">
+    <span class="lbl">Canonical artifact</span>
+    Open <a href="generator.md"><strong>the Atmos lab-first field-note generator</strong></a>. Attach or paste
+    it with the invocation block completed. Empty baseline fields trigger the experiment gate; empty closure
+    fields keep the artifact provisional.
+  </div>
+
+<pre>ATMOS FIELD NOTE
+
+SOURCE
+exact node(s) + existing lab + entry problem
+
+BASELINE
+environment + command + workload + prediction + falsifier
++ actual observation + surprise + wrong assumption + raw evidence
+
+REPAIR
+committed repair hypothesis + predicted result + falsifier
+
+CLOSURE
+actual modification + rerun metrics + ablation metrics
++ remaining unknown + changed constraint + transfer prediction</pre>
+
+  <div class="note">
+    <span class="lbl">Investigation box</span>
+    At 25 minutes, classify the investigation as <strong>resolved</strong>, <strong>parked</strong>, or
+    <strong>wrong rung</strong>. Parked questions become explicit concept debt. A wrong rung is reduced;
+    the same material is not reread indefinitely.
+  </div>
+</section>
+
+<section id="closure">
+  <h2><span class="num">04</span> What closes a note</h2>
+  <p class="sub">Explanation is necessary. Prediction under changed conditions is the stronger test.</p>
+
+<pre>BASELINE           REPAIR             ABLATION
+M absent           M present          M removed again
+result A     ->     result B     ->    result C
+   |                   |                  |
+   +-------------------+------------------+
+                       |
+                       v
+              CAUSAL MODEL SUPPORTED?
+                       |
+                       v
+              CHANGED CONSTRAINT
+                       |
+                       v
+              NEW PREDICTION + DEFENCE</pre>
+
+  <table>
+    <thead><tr><th>Check</th><th>Why it exists</th></tr></thead>
+    <tbody>
+      <tr><td>Rerun</td><td>Tests whether the committed repair prediction survives contact with the system.</td></tr>
+      <tr><td>Ablation</td><td>Tests whether the proposed mechanism caused the change rather than merely accompanying it.</td></tr>
+      <tr><td>Cold reconstruction</td><td>Tests whether the mechanism can be rebuilt without the note.</td></tr>
+      <tr><td>Transfer</td><td>Tests whether the model predicts behavior after one constraint changes.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="boundary">
+  <h2><span class="num">05</span> Atmos and Forge</h2>
+  <p class="sub">The dependency map, mechanism reference, and experimental record remain different artifacts.</p>
+
+<pre>FORGE                    ATMOS REFERENCE               ATMOS FIELD NOTE
+dependency map     ->    visual mechanism model  ->   measured reconstruction
+existing labs            source-grounded              prediction preserved
+what to investigate      expected behavior            rerun + ablation evidence
+
+Forge is not modified by this path.
+Reference collections link back to their source; they do not claim lab completion.</pre>
+</section>
+
+<section id="reference">
+  <h2><span class="num">06</span> Reference collections</h2>
+  <p class="sub">All 102 Forge concepts, compressed into diagram-first mechanism notes.</p>
+
+  <table>
+    <thead><tr><th>Branch</th><th>Collection</th><th>Nodes</th><th>Organising mechanism</th></tr></thead>
+    <tbody>
+      <tr><td>L0</td><td><a href="notes/l0-substrate.html"><strong>The Substrate</strong></a></td><td>11</td><td>Byte layout decides work; one atomic pointer decides visibility.</td></tr>
+      <tr><td>L1</td><td><a href="notes/l1-modelling.html"><strong>Data Architecture &amp; Modelling</strong></a></td><td>12</td><td>Grain decides which questions remain answerable.</td></tr>
+      <tr><td>L2</td><td><a href="notes/l2-spark.html"><strong>Apache Spark</strong></a></td><td>13</td><td>A shuffle materialises a new partitioning across stage boundaries.</td></tr>
+      <tr><td>L3</td><td><a href="notes/l3-kafka.html"><strong>Apache Kafka</strong></a></td><td>12</td><td>The partition is the unit of ordering, replication, assignment, and lag.</td></tr>
+      <tr><td>L4</td><td><a href="notes/l4-stream-semantics.html"><strong>Stream Processing Semantics</strong></a></td><td>12</td><td>Watermarks turn estimated progress into bounded waiting and state.</td></tr>
+      <tr><td>L5</td><td><a href="notes/l5-pipelines.html"><strong>Pipelines &amp; Orchestration</strong></a></td><td>12</td><td>Every pipeline will run again against data that has changed.</td></tr>
+      <tr><td>L6</td><td><a href="notes/l6-reliability.html"><strong>Reliability &amp; Governance</strong></a></td><td>12</td><td>Data failures return plausible numbers, so invariants must detect them.</td></tr>
+      <tr><td>L7</td><td><a href="notes/l7-system-design.html"><strong>Data System Design</strong></a></td><td>7 + method</td><td>A design is a quantified trade, not a stack of product names.</td></tr>
+      <tr><td>L8</td><td><a href="notes/l8-platform.html"><strong>Data Platform Engineering</strong></a></td><td>11</td><td>Every shared capability becomes a promise that must be operated and retired.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="lbl">How to read them</span>
+    Each node follows pressure &rarr; naive failure &rarr; mechanism &rarr; observable consequence &rarr;
+    tradeoff or guarantee boundary. A <strong>VERIFY</strong> block names the measurement that would turn the
+    reference model into evidence.
+  </div>
+</section>
+
+<section id="notes">
+  <h2><span class="num">::</span> Evidence-closed field notes</h2>
+  <p class="sub">This register accepts only predictions, reruns, and ablations that actually happened.</p>
+
+  <div class="empty">No experimental field note has been closed yet. The nine reference collections above are complete; the first measured failure creates the first evidence-closed entry.</div>
+</section>
+
+</main>
+</div>
+
+<footer>Atmos &middot; prediction, evidence, reconstruction, transfer</footer>
+
+</body>
+</html>

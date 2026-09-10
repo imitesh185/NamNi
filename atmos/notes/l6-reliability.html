@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L6 Reliability and Governance - Atmos Reference Notes</title>
+<meta name="description" content="Diagram-first reference notes for Forge L6: silent wrongness, quality, contracts, observability, SLOs, incidents, lineage, governance, and cost." />
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/pages.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+<header><div class="hwrap"><div class="brand">Mitesh <span>&middot;</span> notebook</div><nav class="sitenav">
+<a href="../../index.html">Home</a><a href="../../tracks/index.html">Tracks</a><a href="../../atlas/index.html">Atlas</a><a href="../../forge/index.html">Forge</a><a href="../index.html" class="on">Atmos</a>
+</nav></div><div id="bar"></div></header>
+<div class="shell">
+<nav id="toc">
+<h4>Orientation</h4><a href="#model">One-screen model</a>
+<h4>Detection</h4><a href="#r1">R1 · The asymmetry</a><a href="#r2">R2 · Quality dimensions</a><a href="#r3">R3 · Referential integrity</a><a href="#r4">R4 · Anomaly economics</a>
+<h4>Contracts and operation</h4><a href="#r5">R5 · Data contracts</a><a href="#r6">R6 · Compatibility</a><a href="#r7">R7 · Observability</a><a href="#r8">R8 · SLA and SLO</a><a href="#r9">R9 · Incident response</a>
+<h4>Control plane</h4><a href="#r10">R10 · Lineage</a><a href="#r11">R11 · Governance</a><a href="#r12">R12 · Cost attribution</a>
+<h4>Boundary</h4><a href="#depth">Depth boundary</a><a href="#connections">Forge connections</a>
+</nav>
+<main>
+<p class="crumbs"><a href="../../index.html">Home</a><span>/</span><a href="../index.html">Atmos</a><span>/</span>L6 · Reliability</p>
+<div class="hero">
+<div class="kicker">Reference collection L6 &middot; 12 mechanisms &middot; source-grounded, not lab evidence</div>
+<h1>Reliability &amp; Governance</h1>
+<p class="dropcap">A broken service often returns an error. A broken data pipeline can return a
+plausible number that is believed and acted on. Reliability is the machinery that shortens that silent interval.</p>
+<div class="why"><b>The reconstruction test.</b> For any wrong dataset, identify when corruption began,
+which invariant could have detected it, who consumed it, which columns propagated, and how long the wrong
+answer remained trusted.</div>
+<div class="tags"><span class="tag">#silent-failure</span><span class="tag t2">#contracts</span><span class="tag t3">#lineage</span><span class="tag">#unit-economics</span></div>
+</div>
+
+<section id="model">
+<h2><span class="num">00</span> One-screen mental model</h2>
+<p class="sub">Reliability converts hidden wrongness into an observable, bounded, traceable incident.</p>
+<pre>PRODUCER CHANGE / PIPELINE DEFECT
+              |
+              v
+        WRONG BUT PLAUSIBLE DATA
+              |
+      +-------+--------+
+      v                v
+QUALITY + CONTRACTS   OBSERVABILITY
+detect invariant      detect time-series deviation
+      |                |
+      +-------+--------+
+              v
+INCIDENT: scope + notify + contain + repair + reconcile
+              |
+              v
+LINEAGE GRAPH
+upstream cause -> affected columns/tables -> consumers
+              |
+      +-------+--------+
+      v                v
+GOVERNANCE           COST ATTRIBUTION
+who may use data     who caused/benefited from spend
+
+impact ~= wrongness x consumers x decision value x detection delay</pre>
+<div class="note"><span class="lbl">Evidence status</span>This is a source-grounded mechanism reference. VERIFY blocks identify measurements; no production result is claimed.</div>
+</section>
+
+<section id="r1">
+<h2><span class="num">R1</span> The silent-failure asymmetry</h2>
+<p class="sub">Data defects often preserve type and shape while changing meaning.</p>
+<pre>SERVICE FAILURE                    DATA FAILURE
+request -> exception / 500         pipeline -> rows -> plausible total
+                                          |                                      |
+                                          v                                      v
+page within minutes                 dashboard consumed for weeks
+
+wrong join duplicates 2%
+ -> no exception
+ -> number remains in expected range
+ -> downstream decisions amplify it
+ -> discovery begins with doubt, not an alert
+
+incident cost grows with detection delay and consumer reach</pre>
+<table><thead><tr><th>Control</th><th>What it changes</th><th>Cannot guarantee</th></tr></thead><tbody>
+<tr><td>Invariant check</td><td>Turns known wrongness into loud failure</td><td>Unknown failure modes</td></tr>
+<tr><td>Distribution monitor</td><td>Surfaces unexpected shape shifts</td><td>Whether change is bad</td></tr>
+<tr><td>Lineage</td><td>Bounds downstream blast-radius search</td><td>Completeness without instrumentation</td></tr>
+</tbody></table>
+</section>
+
+<section id="r2">
+<h2><span class="num">R2</span> Five quality dimensions</h2>
+<p class="sub">Each dimension is a falsifiable property, not a generic quality score.</p>
+<pre>TABLE RUN t
+      +-- FRESHNESS:    max(event_time), source lag
+      +-- VOLUME:       row count, bytes, input/output ratio
+      +-- DISTRIBUTION: nulls, quantiles, categories, cardinality
+      +-- SCHEMA:       fields, types, required/optional, meaning version
+      `-- UNIQUENESS:   one row per declared grain
+
+example: rows=1,000,000 and task green
+      freshness: 2 days old       -> stale success
+      volume:     expected 10 M    -> partial load
+      uniqueness: 990k keys       -> duplicated grain
+      all are different failures</pre>
+<table><thead><tr><th>Dimension</th><th>Cheap first signal</th><th>Blind spot</th></tr></thead><tbody>
+<tr><td>Freshness</td><td>Maximum source/event timestamp</td><td>Fresh duplicate or corrupt rows</td></tr>
+<tr><td>Volume</td><td>Count against historical/expected bounds</td><td>Equal-count substitutions</td></tr>
+<tr><td>Distribution</td><td>Null/category/quantile/cardinality shifts</td><td>Legitimate business change</td></tr>
+<tr><td>Schema</td><td>Contract diff</td><td>Same field with changed meaning</td></tr>
+<tr><td>Uniqueness</td><td>Duplicate count on grain columns</td><td>Wrong grain declaration</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Inject one deterministic fault per dimension and measure whether the check fires, detection delay, and false positives on known-valid runs.</div>
+</section>
+
+<section id="r3">
+<h2><span class="num">R3</span> Referential integrity across systems</h2>
+<p class="sub">A foreign-key constraint usually ends at one database boundary; analytical joins cross many such boundaries.</p>
+<pre>SOURCE ORDERS keys:    {1,2,3,4}
+SOURCE CUSTOMERS keys: {A,B,C}
+
+WAREHOUSE FACT foreign customer keys: {A,B,D}
+WAREHOUSE DIM keys:                 {A,B,C}
+                                                                                                                  |
+                                                                                                                  v
+orphan set = fact_keys - dim_keys = {D}
+
+KEY-SET RECONCILIATION
+source IDs - target IDs -> missing
+target IDs - source IDs -> stale/extra
+
+cheaper than row-by-row comparison; hash/range partitions can localize drift</pre>
+<table><thead><tr><th>Check</th><th>Finds</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Anti-join fact to dimension</td><td>Orphan facts</td><td>Unknown/default keys may be intentional</td></tr>
+<tr><td>Source-target key difference</td><td>Missing and stale entities</td><td>Snapshots must represent comparable times</td></tr>
+<tr><td>Aggregate reconciliation</td><td>Material financial/count drift</td><td>Equal totals can hide compensating row errors</td></tr>
+</tbody></table>
+</section>
+
+<section id="r4">
+<h2><span class="num">R4</span> Anomaly detection and false-positive economics</h2>
+<p class="sub">A detector consumes attention; repeated false alarms destroy the channel that carries real incidents.</p>
+<pre>metric: daily transactions
+normal weekday 100k
+sale day        400k  <- legitimate structural change
+broken load      80k  <- incident
+
+NAIVE fixed band 90k..110k
+      -> pages on every sale/weekend/holiday
+      -> responders learn to ignore channel
+      -> true 80k incident waits
+
+detector value
+      ~= incidents caught x avoided impact
+       - false alerts x investigation cost
+       - missed incidents x residual impact</pre>
+<table><thead><tr><th>Method</th><th>Gives</th><th>Failure</th></tr></thead><tbody>
+<tr><td>Static threshold</td><td>Simple auditable invariant</td><td>Cannot follow seasonality/growth</td></tr>
+<tr><td>Seasonal baseline</td><td>Compares like time periods</td><td>Regime change invalidates history</td></tr>
+<tr><td>Peer/ratio check</td><td>Controls for shared business movement</td><td>Shared corruption can cancel signal</td></tr>
+<tr><td>Human suppression</td><td>Handles known event</td><td>Manual exceptions become permanent blind spots</td></tr>
+</tbody></table>
+<div class="rule"><span class="lbl">Calibration</span>Measure precision, recall where labels exist, alert rate, acknowledgment time, and actionability. A statistically unusual point is not automatically an incident.</div>
+</section>
+<section id="r5">
+<h2><span class="num">R5</span> Data contracts</h2>
+<p class="sub">A schema describes shape; a contract also names meaning, guarantees, ownership, and change procedure.</p>
+<pre>PRODUCER CONTRACT
++ schema: fields, types, required/optional
++ semantics: what each field/event means
++ identity and grain
++ timeliness, ordering, duplicate expectations
++ compatibility/change policy
++ owner and incident path
+                   |
+                   v
+PRODUCER CI / DEPLOY GATE ---- reject breaking change before emission
+                   |
+                   v
+REGISTRY / CATALOG ---------- consumers discover version and owner
+
+consumer-only validation detects damage after publication</pre>
+<table><thead><tr><th>Placement</th><th>Gives</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Producer CI</td><td>Prevents known structural break before deploy</td><td>Cannot detect runtime semantic bugs</td></tr>
+<tr><td>Runtime producer validation</td><td>Stops malformed instances</td><td>Adds latency/cost and may block traffic</td></tr>
+<tr><td>Consumer validation</td><td>Protects individual consumer</td><td>Duplicated rules and late detection</td></tr>
+</tbody></table>
+</section>
+
+<section id="r6">
+<h2><span class="num">R6</span> Compatibility, precisely defined</h2>
+<p class="sub">Compatibility names which reader/writer version pair must continue to work.</p>
+<pre>OLD DATA written by W1       NEW DATA written by W2
+                              |                            |
+                              v                            v
+             NEW READER R2                OLD READER R1
+
+BACKWARD COMPATIBLE: R2 reads W1 data
+FORWARD COMPATIBLE:  R1 reads W2 data
+FULL COMPATIBLE:     both directions
+
+adding optional field with default
+      -> old data supplies default to new reader
+      -> old reader can ignore unknown new field if format permits
+
+renaming/removing required field
+      -> identity is lost unless alias/migration protocol exists</pre>
+<table><thead><tr><th>Change</th><th>Potentially safe when</th><th>Hidden semantic risk</th></tr></thead><tbody>
+<tr><td>Add optional field</td><td>Default/absence is defined</td><td>Consumers interpret missing differently</td></tr>
+<tr><td>Widen numeric type</td><td>Readers support promotion</td><td>Downstream storage may not</td></tr>
+<tr><td>Rename field</td><td>Stable field identity/alias and migration</td><td>Often appears as delete + add</td></tr>
+<tr><td>Change meaning only</td><td>New version/name and explicit transition</td><td>Schema checker sees no break</td></tr>
+</tbody></table>
+</section>
+
+<section id="r7">
+<h2><span class="num">R7</span> Data observability</h2>
+<p class="sub">A data pipeline needs time series about datasets and runs, not only request traces.</p>
+<pre>RUN LEDGER
+run_id | code_version | input_snapshot | output_snapshot
+start/end | status | rows_in/out | bytes | checks | owner
+                                                                         |
+                                                                         v
+TABLE TIME SERIES
+freshness | volume | nulls | distinct | schema | duration | cost
+                                                                         |
+                                     +-----------+-----------+
+                                     v                       v
+                   alert/change point        incident comparison
+
+single current dashboard value cannot answer "when did drift begin?"</pre>
+<table><thead><tr><th>Signal</th><th>Question answered</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Freshness</td><td>How far behind the source is this table?</td><td>Fresh wrong data passes</td></tr>
+<tr><td>Rows in/out</td><td>Where did volume change?</td><td>Equal-count substitutions pass</td></tr>
+<tr><td>Check history</td><td>Which invariant first failed?</td><td>Only registered invariants exist</td></tr>
+<tr><td>Version/snapshot IDs</td><td>Which code and inputs produced result?</td><td>Must be captured at execution</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Inject a quiet data defect and ask whether the telemetry identifies first bad run, affected table, code/input versions, and detection delay without reading raw logs manually.</div>
+</section>
+
+<section id="r8">
+<h2><span class="num">R8</span> Data SLAs and SLOs</h2>
+<p class="sub">An objective becomes operational only when its indicator, window, owner, and response are explicit.</p>
+<pre>SLI: measurable signal
+      freshness lag = now - max(source_commit_time represented)
+
+SLO: internal target
+      99% of hourly partitions available within 20 minutes over 30 days
+
+SLA: external commitment
+      defined consequence when commitment is missed
+
+ERROR BUDGET
+allowed bad events/time in window
+                  |
+                  +-- budget healthy -> ship/change
+                  `-- budget exhausted -> reliability work / restriction</pre>
+<table><thead><tr><th>Weak statement</th><th>Operational form</th></tr></thead><tbody>
+<tr><td>"Data should be fresh"</td><td>Named timestamp, lag threshold, percentile/window, owner</td></tr>
+<tr><td>"Pipeline is 99.9% reliable"</td><td>Define successful data outcome, denominator, and exclusions</td></tr>
+<tr><td>"SLA is 30 minutes"</td><td>Name consumer, clock start/end, consequence, and response</td></tr>
+</tbody></table>
+</section>
+
+<section id="r9">
+<h2><span class="num">R9</span> Incident response for silent failure</h2>
+<p class="sub">Consumers may already have acted; communication and containment precede a quiet overwrite.</p>
+<pre>DETECT DOUBT / FAILED INVARIANT
+                              |
+                              v
+DECLARE + timestamp suspected bad interval
+                              |
+                              v
+CONTAIN: stop publication / mark data unreliable
+                              |
+                              v
+NOTIFY consumers with known scope and uncertainty
+                              |
+                              v
+TRACE LINEAGE + identify first bad version/run
+                              |
+                              v
+REPAIR in shadow -> reconcile -> republish/version
+                              |
+                              v
+confirm downstream correction + prevent recurrence
+
+silently overwrite first -> consumers cannot know which decisions used bad data</pre>
+<table><thead><tr><th>Question</th><th>Evidence required</th></tr></thead><tbody>
+<tr><td>When did wrongness begin?</td><td>Run/table metric history and version IDs</td></tr>
+<tr><td>Who consumed it?</td><td>Lineage, query/access logs, extracts</td></tr>
+<tr><td>Can history be restated?</td><td>Input snapshots, code versions, metric contract</td></tr>
+<tr><td>Did repair converge?</td><td>Independent reconciliation and downstream confirmation</td></tr>
+</tbody></table>
+</section>
+<section id="r10">
+<h2><span class="num">R10</span> Lineage</h2>
+<p class="sub">Lineage is an observed dependency graph used for impact and root-cause traversal.</p>
+<pre>source.customer.email
+                              |
+                              v
+stg_customer.email_hash
+                              |
+             +----+----------------+
+             v                     v
+dim_customer.email_hash   fraud_features.email_domain
+             |                     |
+             v                     v
+marketing audience       model endpoint
+
+TABLE-LEVEL lineage:
+source.customer -> dim_customer
+answers "what might be affected?"
+
+COLUMN-LEVEL lineage:
+source.email -> email_hash -> audience
+answers "which outputs actually depend on this field?"</pre>
+<table><thead><tr><th>Capture method</th><th>Gives</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Runtime instrumentation</td><td>Observed jobs, inputs, outputs, versions</td><td>Only instrumented paths appear</td></tr>
+<tr><td>SQL/static parsing</td><td>Column transformations before execution</td><td>Dynamic SQL/UDF semantics may be opaque</td></tr>
+<tr><td>Manual declaration</td><td>Business/non-code dependencies</td><td>Drifts without enforcement</td></tr>
+</tbody></table>
+<h4>Traversal</h4>
+<pre>schema change at node X
+ -> forward graph traversal
+ -> affected columns/tables/jobs/dashboards
+ -> owners + usage rank
+ -> migration order and notification
+
+wrong dashboard
+ -> backward traversal
+ -> candidate upstream transformations and source versions</pre>
+</section>
+
+<section id="r11">
+<h2><span class="num">R11</span> Governance</h2>
+<p class="sub">Policy should follow data classification through lineage, not be hand-coded per table name.</p>
+<pre>CLASSIFY FIELD
+email -> PII / personal contact
+card_number -> PCI / highly restricted
+country -> non-sensitive
+                   |
+                   v
+POLICY ENGINE
+classification + purpose + role + region + expiry
+                   |
+                   +-- allow / deny
+                   +-- mask / tokenize
+                   +-- audit access
+                   `-- retention / deletion action
+
+derived email_hash
+      -> lineage carries sensitivity unless declassification is justified
+
+immutable backups + deletion request
+      -> logical deletion / key destruction / expiry policy
+      -> deletion guarantee must name its physical boundary</pre>
+<table><thead><tr><th>Control</th><th>Gives</th><th>Failure boundary</th></tr></thead><tbody>
+<tr><td>Classification policy</td><td>Consistent rules across tables</td><td>Unclassified/derived data escapes</td></tr>
+<tr><td>Mask/tokenize</td><td>Reduced direct exposure</td><td>Linkability and privileged reversal may remain</td></tr>
+<tr><td>Time-bound access</td><td>Privilege expires automatically</td><td>Copied/exported data may outlive grant</td></tr>
+<tr><td>Crypto-shredding</td><td>Encrypted bytes become unreadable by deleting key</td><td>Unencrypted replicas, caches, and prior exports remain</td></tr>
+</tbody></table>
+</section>
+
+<section id="r12">
+<h2><span class="num">R12</span> Cost attribution</h2>
+<p class="sub">Optimization needs a unit, owner, and value comparison; a monthly total names no decision.</p>
+<pre>RAW PLATFORM BILL
+compute + storage + scan + network + licenses = 100 units
+                                                                         |
+                                                                         v
+ATTRIBUTION TAGS + QUERY/JOB LINEAGE
+team | product | pipeline | table | tenant | environment
+                                                                         |
+                                    +------------+------------+
+                                    v                         v
+cost per successful pipeline run   cost per TB/query/customer
+                                    |                         |
+                                    +------------+------------+
+                                                                         v
+VALUE / SLO COMPARISON
+spend 10 to save 1? remove
+spend 10 to avoid 100 incident loss? defend</pre>
+<table><thead><tr><th>Stage</th><th>Mechanism</th><th>Behavioral effect</th></tr></thead><tbody>
+<tr><td>Attribute</td><td>Map resource events to owner/workload</td><td>Unknown spend becomes actionable</td></tr>
+<tr><td>Showback</td><td>Expose cost without billing team</td><td>Teams see consequences</td></tr>
+<tr><td>Budget + alert</td><td>Notify on rate/forecast deviation</td><td>Intervene before month-end</td></tr>
+<tr><td>Chargeback</td><td>Transfer cost to consumer</td><td>Strong incentive, but allocation disputes and avoidance</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Boundary</span>Allocated cost is a model. Shared clusters, caches, reserved capacity, and platform labor require explicit allocation rules; false precision creates political rather than engineering arguments.</div>
+</section>
+
+<section id="depth"><h2><span class="num">::</span> Depth boundary</h2>
+<table><thead><tr><th>Must understand now</th><th>Useful later</th><th>Source-code / research depth</th></tr></thead><tbody><tr><td>Silent-failure asymmetry; five dimensions; key reconciliation; alert economics; contract enforcement; compatibility directions; table-level telemetry; SLA/SLO; incident ordering; lineage levels; classification policy; unit cost</td><td>Distribution tests, seasonality models, column-lineage parsers, policy engines, crypto-shredding implementation, cost allocation models</td><td>Automated anomaly detection, causal data observability, static lineage analysis, differential privacy and governance systems</td></tr></tbody></table>
+</section>
+
+<section id="connections"><h2><span class="num">::</span> Connection to the rest of the Forge</h2>
+<pre>L1 grain + dimensions -------> R2 uniqueness + R3 references
+L4 late corrections --------> R5 producer/consumer contract
+L5 run ledger + checks ------> R7 observability + R9 incident
+R5 contract -> R6 compatibility -> L8 deprecation
+R10 lineage ----------------> R9 blast radius
+        +--------------------> R11 policy
+        `--------------------> R12 cost -> L8 chargeback
+
+reliability evidence -------> L7 correctness and recovery design axes</pre>
+<div class="cpy"><span class="lbl">Source branch</span>Use <a href="../../forge/reliability.html"><strong>Forge L6 · Reliability &amp; Governance</strong></a> for dependencies, resources, and laboratories. This page explains mechanisms; it does not claim lab completion.</div>
+</section>
+</main>
+</div>
+<nav class="pagenav"><a class="pn prev" href="l5-pipelines.html"><span class="pnk">Previous</span><span class="pnt">L5 · Pipelines</span></a><a class="pn up" href="../index.html"><span class="pnk">All</span><span class="pnt">Atmos notes</span></a><a class="pn next" href="l7-system-design.html"><span class="pnk">Next</span><span class="pnt">L7 · System design</span></a></nav>
+<footer>Atmos · L6 reference collection · mechanisms to verify, not observations claimed</footer>
+</body>
+</html>

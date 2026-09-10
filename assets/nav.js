@@ -62,6 +62,30 @@
     return decodeURIComponent(window.location.pathname);
   }
 
+  function normalizeSiteNav() {
+    var nav = document.querySelector('.sitenav');
+    if (!nav) return;
+
+    Array.prototype.slice.call(nav.querySelectorAll('a')).forEach(function (item) {
+      var label = item.textContent.trim();
+      if (label === 'Log' || label === 'Work') item.remove();
+    });
+
+    var hasAtmos = Array.prototype.some.call(nav.querySelectorAll('a'), function (item) {
+      return item.textContent.trim() === 'Atmos';
+    });
+    if (hasAtmos) return;
+
+    var atmos = link(rootPrefix() + 'atmos/index.html', 'Atmos');
+    if (/\/atmos(?:\/|$)/.test(currentPath())) atmos.className = 'on';
+
+    var forge = Array.prototype.find.call(nav.querySelectorAll('a'), function (item) {
+      return item.textContent.trim() === 'Forge';
+    });
+    if (forge) forge.insertAdjacentElement('afterend', atmos);
+    else nav.appendChild(atmos);
+  }
+
   function locate(path) {
     for (var t = 0; t < TRACKS.length; t++) {
       for (var i = 0; i < TRACKS[t].items.length; i++) {
@@ -186,6 +210,7 @@
   }
 
   function init() {
+    normalizeSiteNav();
     contentsToggle();
 
     var spot = locate(currentPath());

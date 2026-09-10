@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L2 Apache Spark - Atmos Reference Notes</title>
+<meta name="description" content="Diagram-first reference notes for Forge L2: Spark architecture, stages, shuffle, Catalyst, Tungsten, AQE, memory, joins, skew, I/O, and the UI." />
+<link rel="stylesheet" href="../../assets/base.css" /><link rel="stylesheet" href="../../assets/pages.css" /><script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+<header><div class="hwrap"><div class="brand">Mitesh <span>&middot;</span> notebook</div><nav class="sitenav"><a href="../../index.html">Home</a><a href="../../tracks/index.html">Tracks</a><a href="../../atlas/index.html">Atlas</a><a href="../../forge/index.html">Forge</a><a href="../index.html" class="on">Atmos</a></nav></div><div id="bar"></div></header>
+<div class="shell">
+<nav id="toc">
+  <h4>Orientation</h4><a href="#model">One-screen model</a>
+  <h4>Execution</h4><a href="#s1">S1 · Architecture</a><a href="#s2">S2 · Execution model</a><a href="#s3">S3 · Shuffle</a><a href="#s4">S4 · Partitioning</a>
+  <h4>Engine</h4><a href="#s5">S5 · Catalyst</a><a href="#s6">S6 · Tungsten</a><a href="#s7">S7 · AQE</a><a href="#s8">S8 · Memory and spill</a>
+  <h4>Workloads</h4><a href="#s9">S9 · Joins</a><a href="#s10">S10 · Skew</a><a href="#s11">S11 · I/O and caching</a><a href="#s12">S12 · UI as instrument</a><a href="#s13">S13 · When not to use Spark</a>
+  <h4>Boundary</h4><a href="#depth">Depth boundary</a><a href="#connections">Forge connections</a>
+</nav>
+<main>
+<p class="crumbs"><a href="../../index.html">Home</a><span>/</span><a href="../index.html">Atmos</a><span>/</span>L2 · Spark</p>
+<div class="hero">
+  <div class="kicker">Reference collection L2 &middot; 13 mechanisms &middot; source-grounded, not lab evidence</div>
+  <h1>Apache Spark</h1>
+  <p class="dropcap">Most slow Spark jobs are paying to move data. The central reconstruction is:
+  <em>logical operation -> stage boundary -> shuffle files -> network fetch -> partition-level work</em>.</p>
+  <div class="why"><b>The reconstruction test.</b> Do not propose a configuration first. Point to the
+  slow stage, identify its dependency, compare task distributions, and name the bytes or records that moved.</div>
+  <div class="tags"><span class="tag">#shuffle</span><span class="tag t2">#query-plan</span><span class="tag t3">#skew</span><span class="tag">#spark-ui</span></div>
+</div>
+
+<section id="model">
+  <h2><span class="num">00</span> One-screen mental model</h2>
+  <p class="sub">The driver plans; executors run one task per partition; wide dependencies materialize a new partitioning.</p>
+<pre>USER TRANSFORMATIONS
+       |
+       v
+LOGICAL PLAN -- Catalyst rules + statistics --> PHYSICAL PLAN
+       |                                           |
+       | DAG scheduler                             v
+       v                                     generated operators
+STAGE 0: tasks read source partitions               |
+       |                                            |
+       | WIDE DEPENDENCY = SHUFFLE                  |
+       v                                            |
+map: partition + sort + spill + write local files   |
+       |                                            |
+       | network fetch                              |
+       v                                            |
+STAGE 1: merge + aggregate/join + output <----------+
+       |
+       v
+SPARK UI / EVENT LOG
+task duration | bytes | records | spill | GC | locality | failures
+
+slow job -> find slow stage -> find unequal or excessive task work
+         -> explain from plan + partition data</pre>
+  <div class="note"><span class="lbl">Evidence status</span>This is a source-grounded mechanism reference. VERIFY blocks name metrics to collect; they do not claim a Spark run occurred.</div>
+</section>
+
+<section id="s1">
+  <h2><span class="num">S1</span> Architecture</h2>
+  <p class="sub">Pressure: coordinate distributed work while isolating retry, process loss, and application lifetime.</p>
+<pre>CLUSTER MANAGER
+   | grants processes/resources
+   v
+DRIVER
+  SparkSession / SparkContext
+  logical + physical planning
+  DAG scheduler + task scheduler
+   |
+   +--------------+---------------+
+   v              v               v
+EXECUTOR A      EXECUTOR B       EXECUTOR C
+task p0         task p2          task p4
+task p1         task p3          cached blocks
+
+APPLICATION = driver + its executors
+STAGE       = tasks with no shuffle boundary between them
+TASK        = one stage's work for one partition</pre>
+<table><thead><tr><th>Unit</th><th>Owns</th><th>Failure consequence</th></tr></thead><tbody>
+  <tr><td>Task</td><td>One partition attempt</td><td>Retry that partition; side effects may repeat</td></tr>
+  <tr><td>Executor</td><td>Task slots, shuffle/cached blocks, process memory</td><td>Running tasks fail; cached data and sometimes shuffle outputs are lost</td></tr>
+  <tr><td>Driver</td><td>Plan, scheduling state, result collection</td><td>Application normally ends unless external recovery is configured</td></tr>
+  <tr><td>Application</td><td>Isolation and billing boundary</td><td>Resources released; persistent outputs remain</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Boundary</span>Cluster manager placement is not data execution. It allocates processes; Spark's driver decides stages and tasks.</div>
+</section>
+
+<section id="s2">
+  <h2><span class="num">S2</span> Lazy execution and stages</h2>
+  <p class="sub">Laziness preserves a whole computation long enough for the engine to rewrite and schedule it.</p>
+<pre>df = read(...)
+df2 = df.filter(...).select(...).groupBy(...).sum(...)
+                |
+                v
+          PLAN OBJECT ONLY
+          no source scanned
+
+df2.write(...)  ACTION
+       |
+       v
+analyze complete plan -> optimize -> choose operators -> create stages -> tasks
+
+NARROW DEPENDENCY                 WIDE DEPENDENCY
+parent partition -> one child     records from many parents -> child partition
+map/filter/project                groupBy/join/repartition/orderBy
+same stage                         shuffle boundary -> next stage</pre>
+<h4>Causal chain</h4>
+<pre>defer execution
+   -> optimizer sees filter + projection + join together
+   -> push filter/projection toward source
+   -> reduce rows/columns before expensive operators
+   -> less downstream work and movement</pre>
+<div class="life"><span class="lbl">Verify</span>Call transformations without an action and inspect source access. Then compare parsed, analyzed, optimized, and physical plans after an action is defined.</div>
+</section>
+
+<section id="s3">
+  <h2><span class="num">S3</span> The shuffle</h2>
+  <p class="sub">A global key operation requires records with the same destination key to meet in one partition.</p>
+<pre>MAP SIDE                                      REDUCE SIDE
+input p0: A B A C                            target p0: all A
+input p1: B C A B                            target p1: all B
+     |                                             ^
+     | hash/range partition                        |
+     v                                             |
+per-destination buffers                            |
+     | memory full                                 |
+     v                                             |
+spill sorted runs -> merge -> shuffle files -------+ network fetch
+                                                   |
+                                                   v
+                                            merge/sort/aggregate
+
+COST = serialize + memory copies + spill I/O + network + merge + straggler</pre>
+<h4>Why one stage waits</h4>
+<pre>reduce task needs outputs from every relevant map task
+      -> map stage must materialize shuffle outputs
+      -> failed/lost output must be recomputed or refetched
+      -> shuffle boundary becomes synchronization + recovery boundary</pre>
+<table><thead><tr><th>Signal</th><th>Mechanism suggested</th><th>Do not conclude yet</th></tr></thead><tbody>
+  <tr><td>High shuffle write</td><td>Wide dependency repartitioned many records</td><td>That shuffle is avoidable</td></tr>
+  <tr><td>High spill</td><td>Sorter/aggregate exceeded execution memory</td><td>More executor memory is the best fix</td></tr>
+  <tr><td>Long fetch wait</td><td>Remote blocks unavailable/slow or network constrained</td><td>CPU is slow</td></tr>
+  <tr><td>One long reduce task</td><td>Skew or anomalous executor</td><td>All partitions are too large</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Record shuffle read/write bytes, records, spill, fetch wait, and task-duration distribution for the exact stage. Compare to input/output size.</div>
+</section>
+
+<section id="s4">
+  <h2><span class="num">S4</span> Partitioning</h2>
+  <p class="sub">A partition is simultaneously a scheduling unit, memory unit, and data-movement decision.</p>
+<pre>1 TB / 10 partitions  = ~100 GB per task -> little parallelism, likely spill/OOM
+1 TB / 10,000 parts   = ~100 MB per task -> more scheduling/file overhead
+
+repartition(200)
+old partitions -- full redistribution --> 200 balanced partitions
+                 costs a shuffle
+
+coalesce(1)
+old partitions -- narrow merge --> one output partition
+                 avoids shuffle, but one downstream task
+                 may pull a narrow upstream chain into one bottleneck</pre>
+<table><thead><tr><th>Choice</th><th>Gives</th><th>Costs / boundary</th></tr></thead><tbody>
+  <tr><td>Hash partition</td><td>Same key colocated; good equality joins/aggregates</td><td>Hot key remains indivisible</td></tr>
+  <tr><td>Range partition</td><td>Ordered ranges and range-query locality</td><td>Sampling and boundary skew</td></tr>
+  <tr><td>repartition</td><td>Explicit redistribution and potential rebalance</td><td>Full shuffle</td></tr>
+  <tr><td>coalesce</td><td>Cheap reduction without full redistribution</td><td>Can preserve imbalance and collapse parallelism</td></tr>
+</tbody></table>
+</section>
+
+<section id="s5">
+  <h2><span class="num">S5</span> Catalyst</h2>
+  <p class="sub">The optimizer can only transform semantics it can see.</p>
+<pre>SQL / DATAFRAME EXPRESSIONS
+          |
+          v
+PARSE: unresolved syntax tree
+          |
+          v
+ANALYZE: bind tables, columns, types
+          |
+          v
+LOGICAL OPTIMIZE: push filters, prune columns, fold constants
+          |
+          v
+PHYSICAL PLANNING: enumerate joins/exchanges/scans using statistics
+          |
+          v
+CODE GENERATION: fuse compatible operators
+
+OPAQUE UDF
+input row -> [unknown Python/JVM function] -> output
+             optimizer cannot reason through it
+             pushdown/folding/codegen may stop at boundary</pre>
+<h4>Mechanism to consequence</h4>
+<pre>declarative expression visible
+  -> Catalyst proves equivalent rewrite
+  -> filter and projection move before scan/join
+  -> fewer rows/columns enter expensive path
+
+stale statistics
+  -> wrong cardinality estimate
+  -> wrong physical join may still be logically correct
+  -> performance failure, not answer failure</pre>
+<div class="life"><span class="lbl">Verify</span>Change one built-in expression to an equivalent UDF. Diff optimized and physical plans, pushed filters, whole-stage codegen regions, and runtime metrics.</div>
+</section>
+
+<section id="s6">
+  <h2><span class="num">S6</span> Tungsten</h2>
+  <p class="sub">Remove per-row object overhead and interpreter/virtual-call work from the hot loop.</p>
+<pre>OBJECT PATH
+row object -> field objects -> pointers -> virtual operators -> GC pressure
+   |             |              |
+ scattered memory, weak cache locality, many allocations
+
+BINARY / VECTORIZED PATH
+[null bits | fixed-width fields | offsets -> variable bytes]
+                  |
+                  v
+contiguous batches -> generated tight loop -> CPU-friendly operations
+
+WHOLE-STAGE CODEGEN
+scan -> filter -> project
+  three logical operators become one generated loop
+  intermediate rows need not be materialized between each operator</pre>
+<table><thead><tr><th>Mechanism</th><th>Gain</th><th>Boundary</th></tr></thead><tbody>
+  <tr><td>Binary row format</td><td>Compact predictable layout and fewer JVM objects</td><td>Variable-width data still needs offsets/storage</td></tr>
+  <tr><td>Whole-stage codegen</td><td>Operator fusion and fewer virtual calls</td><td>Unsupported/opaque operators split codegen stages</td></tr>
+  <tr><td>Vectorized reader</td><td>Decode batches into column vectors</td><td>Per-row UDF or conversion can erase the benefit</td></tr>
+</tbody></table>
+</section>
+
+<section id="s7">
+  <h2><span class="num">S7</span> Adaptive Query Execution</h2>
+  <p class="sub">Compile-time estimates become measured facts only after a shuffle stage materializes.</p>
+<pre>INITIAL PLAN (estimates)
+sort-merge join; 200 shuffle partitions
+        |
+        | execute first query stage
+        v
+RUNTIME SHUFFLE STATISTICS
+actual side B = 8 MB; partitions mostly 2 MB; one = 600 MB
+        |
+        v
+ADAPTIVE PLAN
++ switch join to broadcast B
++ coalesce tiny partitions
++ split skewed partition ranges
+        |
+        v
+remaining stages execute revised plan</pre>
+<table><thead><tr><th>AQE action</th><th>Evidence used</th><th>Boundary</th></tr></thead><tbody>
+  <tr><td>Coalesce partitions</td><td>Actual post-shuffle partition sizes</td><td>Cannot restore parallelism before that boundary</td></tr>
+  <tr><td>Switch join</td><td>Actual relation bytes</td><td>Broadcast still must fit safely in memory</td></tr>
+  <tr><td>Split skew</td><td>Large partition relative to median/threshold</td><td>One hot key may remain logically indivisible without replication/salting</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Boundary</span>AQE is not a substitute for understanding partition keys, statistics, or data shape. It can revise remaining work at adaptive boundaries; it cannot undo bytes already read or a semantic hot-key design.</div>
+</section>
+
+<section id="s8">
+  <h2><span class="num">S8</span> Memory and spill</h2>
+  <p class="sub">"Spark OOM" names several different processes and pressure paths; each demands a different fix.</p>
+<pre>EXECUTOR CONTAINER LIMIT
+|
++-- JVM HEAP
+|   +-- execution memory: sort / aggregate / join
+|   +-- storage memory: cache
+|   `-- user objects and metadata
+|
++-- MEMORY OVERHEAD / OFF-HEAP
+|   +-- native buffers, direct memory, JVM overhead
+|   `-- Python worker processes (PySpark)
+|
+`-- OS-visible process memory
+
+execution pressure -> evict storage if possible -> spill -> continue slower
+single object/partition cannot spill safely -> OOM
+container total exceeds limit -> external kill, even if JVM heap looks fine</pre>
+<table><thead><tr><th>Failure</th><th>Diagnostic clue</th><th>Mechanism-first response</th></tr></thead><tbody>
+  <tr><td>Driver result/metadata OOM</td><td>Driver dies around collect, plan, task metadata, or broadcast creation</td><td>Keep data distributed; reduce result/metadata; inspect driver path</td></tr>
+  <tr><td>Executor heap OOM</td><td>JVM heap error in a task/operator</td><td>Find operator and per-task partition size; reduce or repartition work</td></tr>
+  <tr><td>Python worker OOM</td><td>Worker/container failure; JVM metrics look incomplete</td><td>Bound Python materialization; vectorize; inspect process memory</td></tr>
+  <tr><td>Container/overhead kill</td><td>Exit code / scheduler kill without Java heap error</td><td>Measure off-heap/native/Python overhead; adjust path or limit</td></tr>
+  <tr><td>One skewed task OOM</td><td>Single task input/spill far above median</td><td>Fix key distribution; more total executor memory may only delay it</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>For the failed attempt, collect executor lost reason, container exit, heap/GC, process RSS, input bytes, shuffle bytes, spill, and task percentile distribution before changing memory settings.</div>
+</section>
+
+<section id="s9">
+  <h2><span class="num">S9</span> Join strategies</h2>
+  <p class="sub">Join selection is a decision about which side moves, which side becomes state, and whether that state fits.</p>
+<pre>BROADCAST HASH JOIN
+small B ----broadcast----> every executor
+large A partitions local -> probe hash(B)
+gain: no shuffle of A
+risk: B expanded/deserialized in each executor; driver may collect broadcast
+
+SORT-MERGE JOIN
+A --shuffle by key-- sort --\
+                           merge -> output
+B --shuffle by key-- sort --/
+gain: bounded streaming merge
+cost: move + sort both sides
+
+SHUFFLE HASH JOIN
+A and B shuffled by key -> build smaller side per partition -> probe
+gain: avoids global sort
+risk: per-partition build must fit; skew breaks average estimate</pre>
+<table><thead><tr><th>Question</th><th>Why it controls the choice</th></tr></thead><tbody>
+  <tr><td>Bytes after filters, not source size?</td><td>Join sees the post-filter relation</td></tr>
+  <tr><td>Can build side fit with concurrency?</td><td>Several tasks share executor memory</td></tr>
+  <tr><td>Are inputs already partitioned/sorted?</td><td>Existing layout can remove exchange/sort cost</td></tr>
+  <tr><td>What is key distribution?</td><td>Median size does not protect the hottest partition</td></tr>
+</tbody></table>
+</section>
+
+<section id="s10">
+  <h2><span class="num">S10</span> Skew</h2>
+  <p class="sub">Averages describe capacity; tail partitions determine job completion.</p>
+<pre>200 REDUCE TASKS
+199 tasks: ####  2 GB, 20 s
+  1 task : ################################ 180 GB, 40 min
+                                      |
+                                      v
+stage completes when slowest required task completes
+
+CAUSE: key "UNKNOWN" owns 60% of records
+
+RESPONSES
+filter/fix bad key       if semantically invalid
+pre-aggregate            if operation is associative
+isolate heavy hitters    separate plan for known hot keys
+salt key                 split hot key across N buckets, then recombine
+AQE split                split skewed ranges where engine can preserve semantics</pre>
+<h4>Salting cost</h4>
+<pre>hot fact key K -> K#0 ... K#9
+dimension row K -> replicate to K#0 ... K#9
+                 |
+                 v
+parallel join work, but replicated small-side bytes and second aggregation</pre>
+<div class="life"><span class="lbl">Verify</span>Compare max, p99, median task input and duration; records per key; spill per task; and executor placement. One long task is a distribution question before it is a cluster-size question.</div>
+</section>
+
+<section id="s11">
+  <h2><span class="num">S11</span> I/O and caching</h2>
+  <p class="sub">The cheapest byte is the byte rejected by metadata before it crosses storage or serialization boundaries.</p>
+<pre>QUERY
+  |
+  +-- partition pruning ----> directories/files never considered
+  +-- predicate pushdown ---> row groups rejected by statistics
+  +-- column pruning -------> chunks never fetched
+  `-- vectorized decode ----> selected bytes decoded in batches
+
+CACHE PATH
+first use: source -> decode/compute -> cache block -> consumer
+next use : cache block ---------------------------> consumer
+
+cache helps only when:
+reuse savings > materialize + memory pressure + eviction/recompute cost</pre>
+<table><thead><tr><th>Signal</th><th>Question</th><th>Common wrong move</th></tr></thead><tbody>
+  <tr><td>Bytes scanned</td><td>Did pruning happen?</td><td>Cache an unnecessarily wide scan</td></tr>
+  <tr><td>Input records vs output</td><td>Could filter move earlier?</td><td>Add executors before reducing work</td></tr>
+  <tr><td>Cache hit / eviction</td><td>Was data reused before eviction?</td><td>Cache everything by habit</td></tr>
+  <tr><td>Serialized cache size</td><td>What representation occupies memory?</td><td>Compare logical dataset size to heap directly</td></tr>
+</tbody></table>
+</section>
+
+<section id="s12">
+  <h2><span class="num">S12</span> The UI as an instrument</h2>
+  <p class="sub">Diagnosis moves from application -> job -> stage -> task distribution -> executor/process evidence.</p>
+<pre>JOB SLOW
+  |
+  v
+WHICH STAGE OWNS WALL TIME?
+  |
+  +-- no tasks start? -------- scheduling/resources/dependencies
+  +-- all tasks slow? -------- excessive common work / I/O / CPU
+  +-- tail tasks slow? ------- skew / host / locality / fetch
+  +-- retries? --------------- failure reason and lost outputs
+  `-- long gap between stages? driver/planning/broadcast/commit
+               |
+               v
+TASK DISTRIBUTION
+duration | input | shuffle | spill | GC | scheduler delay | fetch wait
+               |
+               v
+PHYSICAL PLAN NODE + SQL METRIC
+               |
+               v
+one falsifiable change</pre>
+<div class="rule"><span class="lbl">Diagnostic order</span>Plan explains intended work. UI metrics show actual work. Logs explain exceptional events. Configuration is changed only after those three point to a mechanism.</div>
+</section>
+
+<section id="s13">
+  <h2><span class="num">S13</span> When not to use Spark</h2>
+  <p class="sub">Distributed scheduling and shuffle are fixed costs; some workloads never earn them back.</p>
+<pre>WORKLOAD
+  |
+  +-- fits comfortably on one machine? ----> DuckDB / Polars / database
+  +-- needs millisecond request latency? ---> serving DB / cache / stream processor
+  +-- per-record network side effects? -----> bounded concurrency service/worker
+  +-- tiny periodic transform? -------------> SQL / script / warehouse task
+  `-- large parallel scan + shuffle? -------> Spark may fit
+
+Spark adds:
+startup + serialization + scheduling + network + shuffle + operational surface</pre>
+<table><thead><tr><th>Use Spark when</th><th>Avoid it when</th></tr></thead><tbody>
+  <tr><td>Data/work exceeds one node, work is parallelizable, latency is batch-scale, ecosystem integration matters</td><td>One node is sufficient, response latency is tight, work is inherently sequential, or coordination dominates useful compute</td></tr>
+</tbody></table>
+</section>
+
+<section id="depth">
+  <h2><span class="num">::</span> Depth boundary</h2>
+  <table><thead><tr><th>Must understand now</th><th>Useful later</th><th>Source-code / research depth</th></tr></thead><tbody>
+    <tr><td>Driver/executor/task boundaries; narrow/wide dependencies; complete shuffle path; partition sizing; plan phases; codegen/vectorization; AQE boundaries; OOM categories; joins; skew evidence; pruning/cache; UI diagnosis</td><td>Push-based shuffle, shuffle service variants, detailed unified-memory fractions, bucketing edge cases, scheduler pools, state-store internals</td><td>DAGScheduler/TaskScheduler source, Catalyst rules, UnsafeRow/codegen, shuffle manager implementations, AQE cost models</td></tr>
+  </tbody></table>
+</section>
+
+<section id="connections">
+  <h2><span class="num">::</span> Connection to the rest of the Forge</h2>
+<pre>L0 Parquet/layout -------> S11 scan/pruning -> S6 vectorization
+
+S2 stages -> S3 shuffle -> S4 partitions -> S8 memory
+                 |              |                |
+                 +------------> S9 joins <-------+
+                 |              |
+                 `------------> S10 skew
+
+S5 Catalyst + S3 metrics -----> S7 adaptive execution
+
+S3 partition pressure --------> Kafka hot partitions
+                            `--> streaming keyed-state hot keys
+
+S12 diagnosis ----------------> L6 observability + L7 defended design</pre>
+  <div class="cpy"><span class="lbl">Source branch</span>Use <a href="../../forge/spark.html"><strong>Forge L2 · Apache Spark</strong></a> for dependencies, resources, and lab specifications. This page explains mechanisms; it does not claim lab completion.</div>
+</section>
+</main></div>
+<nav class="pagenav"><a class="pn prev" href="l1-modelling.html"><span class="pnk">Previous</span><span class="pnt">L1 · Modelling</span></a><a class="pn up" href="../index.html"><span class="pnk">All</span><span class="pnt">Atmos notes</span></a><a class="pn next" href="l3-kafka.html"><span class="pnk">Next</span><span class="pnt">L3 · Kafka</span></a></nav>
+<footer>Atmos · L2 reference collection · mechanisms to verify, not observations claimed</footer>
+</body></html>

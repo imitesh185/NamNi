@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L1 Data Architecture and Modelling - Atmos Reference Notes</title>
+<meta name="description" content="Diagram-first reference notes for Forge L1: lifecycle, OLTP and OLAP, grain, facts, dimensions, SCDs, physical design, and semantic layers." />
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/pages.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+<header><div class="hwrap"><div class="brand">Mitesh <span>&middot;</span> notebook</div><nav class="sitenav">
+  <a href="../../index.html">Home</a><a href="../../tracks/index.html">Tracks</a><a href="../../atlas/index.html">Atlas</a><a href="../../forge/index.html">Forge</a><a href="../index.html" class="on">Atmos</a>
+</nav></div><div id="bar"></div></header>
+
+<div class="shell">
+<nav id="toc">
+  <h4>Orientation</h4><a href="#model">One-screen model</a>
+  <h4>System shape</h4><a href="#m1">M1 · Data lifecycle</a><a href="#m2">M2 · OLTP vs OLAP</a><a href="#m3">M3 · Warehouse, lake, lakehouse</a><a href="#m4">M4 · Batch and streaming</a>
+  <h4>Logical model</h4><a href="#m5">M5 · Grain</a><a href="#m6">M6 · Facts</a><a href="#m7">M7 · Dimensions</a><a href="#m8">M8 · Star vs snowflake</a><a href="#m9">M9 · SCD types 1-6</a><a href="#m10">M10 · 3NF, Vault, OBT</a>
+  <h4>Physical and semantic</h4><a href="#m11">M11 · Physical design</a><a href="#m12">M12 · Semantic layers</a>
+  <h4>Boundary</h4><a href="#depth">Depth boundary</a><a href="#connections">Forge connections</a>
+</nav>
+
+<main>
+<p class="crumbs"><a href="../../index.html">Home</a><span>/</span><a href="../index.html">Atmos</a><span>/</span>L1 · Modelling</p>
+
+<div class="hero">
+  <div class="kicker">Reference collection L1 &middot; 12 mechanisms &middot; source-grounded, not lab evidence</div>
+  <h1>Data Architecture &amp; Modelling</h1>
+  <p class="dropcap">A model is a set of decisions about what can still be answered. The load-bearing
+  decision is <em>grain</em>: once an event was never captured at the required grain, no later SQL can
+  reconstruct it.</p>
+  <div class="why"><b>The reconstruction test.</b> For every table, complete one sentence: "one row represents
+  exactly..." Then prove that every measure, key, history rule, and metric definition is compatible with it.</div>
+  <div class="tags"><span class="tag">#grain</span><span class="tag t2">#temporal</span><span class="tag t3">#facts-dimensions</span><span class="tag">#semantic-layer</span></div>
+</div>
+
+<section id="model">
+  <h2><span class="num">00</span> One-screen mental model</h2>
+  <p class="sub">Business events become rows only after the modeller chooses what one row means.</p>
+<pre>REAL-WORLD CHANGE
+       |
+       v
+SOURCE TRANSACTION ---------> operational current state
+       |
+       | preserve at chosen resolution
+       v
+GRAIN: one row per [event/entity] per [scope] per [time]
+       |
+       +-------------------+
+       v                   v
+     FACTS              DIMENSIONS
+ measures + keys        descriptive context
+       |                   |
+       +---------+---------+
+                 v
+           TEMPORAL RULE
+       as-is? as-was? both?
+                 |
+                 v
+          PHYSICAL DESIGN
+ partition / cluster / file
+                 |
+                 v
+           SEMANTIC LAYER
+       one governed meaning
+
+WRONG GRAIN -> missing truth -> no downstream layer can repair it</pre>
+  <div class="note"><span class="lbl">Evidence status</span>This is a source-grounded mechanism reference. Each VERIFY block names evidence to collect; it does not claim you have collected it.</div>
+</section>
+
+<section id="m1">
+  <h2><span class="num">M1</span> The data lifecycle</h2>
+  <p class="sub">Pressure: the system that records a fact is rarely the system that analyzes it.</p>
+<pre>GENERATION -> INGESTION -> STORAGE -> TRANSFORMATION -> SERVING
+    |            |           |              |             |
+ business     loss/order   retention      meaning       latency
+ semantics    contracts    + layout       + quality     + access
+
+UNDERCURRENTS CROSS EVERY STAGE
+security | orchestration | metadata | ownership | observability</pre>
+<h4>Why a pipeline-only view fails</h4>
+<pre>"move rows from A to B"
+   -> ignores where meaning entered
+   -> ignores who may see it
+   -> ignores how it changes
+   -> ignores how consumers detect staleness
+   -> successful copy can still be a failed data product</pre>
+<table><thead><tr><th>Boundary</th><th>Question that must cross it</th><th>Silent failure</th></tr></thead><tbody>
+  <tr><td>Generate -> ingest</td><td>What event and version does this record mean?</td><td>Schema-valid record with changed semantics</td></tr>
+  <tr><td>Store -> transform</td><td>Which snapshot and corrections are included?</td><td>Repeat run reads a different past</td></tr>
+  <tr><td>Transform -> serve</td><td>Which grain, freshness, and metric version?</td><td>Plausible dashboard using incompatible definitions</td></tr>
+</tbody></table>
+</section>
+
+<section id="m2">
+  <h2><span class="num">M2</span> OLTP versus OLAP</h2>
+  <p class="sub">Opposing workloads create opposing physical and logical designs.</p>
+<pre>OLTP                                      OLAP
+"update order 42"                        "revenue by region for 3 years"
+      |                                            |
+      v                                            v
+few rows + many concurrent writes          many rows + few columns
+      |                                            |
+      v                                            v
+row locality + indexes + constraints       columnar scans + compression
+      |                                            |
+      v                                            v
+normalized current state                   historical analytical model
+
+run OLAP scan on OLTP -> buffer churn + lock/contention + production risk</pre>
+<table><thead><tr><th>Axis</th><th>OLTP pressure</th><th>OLAP pressure</th></tr></thead><tbody>
+  <tr><td>Access</td><td>Point lookup and short range</td><td>Large scan and aggregation</td></tr>
+  <tr><td>Mutation</td><td>Frequent row-level insert/update</td><td>Append or bulk rewrite</td></tr>
+  <tr><td>Concurrency</td><td>Many small transactions</td><td>Fewer expensive queries</td></tr>
+  <tr><td>Shape</td><td>Normalized to protect writes</td><td>Denormalized to simplify and accelerate reads</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Profile one aggregate against normalized row storage and an analytical copy. Record rows/bytes scanned, index use, locks, and impact on transactional latency.</div>
+</section>
+
+<section id="m3">
+  <h2><span class="num">M3</span> Warehouse, lake, and lakehouse</h2>
+  <p class="sub">The useful comparison is three independent axes, not three product labels.</p>
+<pre>                 STORAGE / COMPUTE       FORMAT             SCHEMA
+WAREHOUSE        often managed/coupled  proprietary/open   write-governed
+LAKE             separated              open files         often read-late
+LAKEHOUSE        separated              open table format  governed metadata
+
+OBJECT STORAGE + TABLE METADATA + MULTIPLE ENGINES
+       |                  |                   |
+       v                  v                   v
+cheap durable bytes   transactions       compute choice
+       \                  |                  /
+        +-----------------+-----------------+
+                          v
+                 warehouse-like behavior
+                 without one compute owner</pre>
+<table><thead><tr><th>Gain</th><th>What pays for it</th><th>Boundary</th></tr></thead><tbody>
+  <tr><td>Separated storage/compute</td><td>Independent scaling and engine choice</td><td>Network I/O, cache misses, and governance move outside one system</td></tr>
+  <tr><td>Open formats</td><td>Lower engine lock-in</td><td>Compatibility becomes a multi-engine contract</td></tr>
+  <tr><td>Managed warehouse</td><td>Integrated operations and optimizer</td><td>Commercial and architectural coupling</td></tr>
+</tbody></table>
+</section>
+
+<section id="m4">
+  <h2><span class="num">M4</span> Batch, streaming, and hybrid</h2>
+  <p class="sub">The distinction is boundedness and correction behavior, not whether a tool runs every minute.</p>
+<pre>BOUNDED INPUT                       UNBOUNDED INPUT
+known end                          no final record
+   |                                  |
+   v                                  v
+run complete computation           maintain result over time
+   |                                  |
+   v                                  v
+easy replay from source            windows + state + lateness policy
+
+LAMBDA                              KAPPA
+batch truth + speed layer           one streaming path + replay log
+      |                                         |
+      v                                         v
+two implementations can diverge     replay may be operationally expensive
+
+COMMON REALITY: stream for freshness + batch reconciliation/backfill</pre>
+<div class="rule"><span class="lbl">Decision pressure</span>Choose from required staleness, correction semantics, replay cost, and source boundedness. "Real time" without a number is not a requirement.</div>
+</section>
+
+<section id="m5">
+  <h2><span class="num">M5</span> Grain</h2>
+  <p class="sub">The one irreversible modelling decision: what one row asserts about reality.</p>
+<pre>ORDER 9
+header discount = 30
+lines:
+  product A, qty 1, amount 100
+  product B, qty 2, amount 200
+
+MIXED-GRAIN TABLE
+order_id | product | line_amount | header_discount
+9        | A       | 100         | 30
+9        | B       | 200         | 30
+                                  |
+SUM(discount) --------------------+--> 60  WRONG, no error
+
+DECLARED GRAINS
+order_fact:      one row per order
+order_line_fact: one row per order line
+      |
+      v
+header discount stored once; line amounts remain additive</pre>
+<h4>Grain sentence</h4>
+<pre>ONE ROW PER
+  [business event or state]
+  x [entity/key scope]
+  x [time resolution]
+
+Example:
+one row per account per calendar day per currency</pre>
+<table><thead><tr><th>Test</th><th>Question</th><th>Failure if unanswered</th></tr></thead><tbody>
+  <tr><td>Uniqueness</td><td>Which columns identify exactly one assertion?</td><td>Merge key deletes or duplicates legitimate facts</td></tr>
+  <tr><td>Additivity</td><td>Across which dimensions may this measure be summed?</td><td>Ratios, balances, and headers silently double-count</td></tr>
+  <tr><td>Resolution</td><td>What detail was discarded before storage?</td><td>Future question cannot be reconstructed</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Write the grain sentence before schema design. Construct two records that should coexist; test the proposed key and every aggregate across each dimension.</div>
+</section>
+
+<section id="m6">
+  <h2><span class="num">M6</span> Facts</h2>
+  <p class="sub">Facts record events or states; fact type determines what time questions remain answerable.</p>
+<pre>TRANSACTIONAL FACT          PERIODIC SNAPSHOT          ACCUMULATING SNAPSHOT
+one row per event          one row per entity/time    one row updated by milestones
+
+sale happened              balance at day end         order lifecycle
+t0: +100                   D1: 500                    placed_at
+t1: -20                    D2: 620                    packed_at
+                                                        shipped_at
+
+flow                       sampled stock              evolving process</pre>
+<h4>Additivity</h4>
+<pre>conversion_rate = conversions / visits
+
+BAD:  store 10%, 20%; then SUM or AVG without weighting
+GOOD: store conversions and visits at declared grain
+      aggregate numerators + denominators
+      compute ratio at query time</pre>
+<table><thead><tr><th>Fact type</th><th>Best for</th><th>Main boundary</th></tr></thead><tbody>
+  <tr><td>Transactional</td><td>Detailed event history and arbitrary rollups</td><td>Current state requires aggregation</td></tr>
+  <tr><td>Periodic snapshot</td><td>Balances and state comparison by interval</td><td>Changes inside interval are lost</td></tr>
+  <tr><td>Accumulating</td><td>Milestone duration through a bounded workflow</td><td>Late/reopened processes mutate historical rows</td></tr>
+</tbody></table>
+</section>
+
+<section id="m7">
+  <h2><span class="num">M7</span> Dimensions</h2>
+  <p class="sub">Dimensions supply descriptive context, but relationship cardinality decides whether joins preserve fact grain.</p>
+<pre>FACT SALE                           DIMENSIONS
+date_key ------------------------> date
+customer_key --------------------> customer
+product_key ---------------------> product
+amount
+
+MANY-TO-MANY ATTRIBUTE
+customer -> customer_segment_bridge -> segment
+
+one fact joined to 3 segments
+   -> 3 result rows
+   -> SUM(amount) triples unless allocation/filter rule exists</pre>
+<table><thead><tr><th>Pattern</th><th>Pressure solved</th><th>Trap</th></tr></thead><tbody>
+  <tr><td>Conformed</td><td>Shared meaning across fact tables</td><td>Local teams fork definitions</td></tr>
+  <tr><td>Degenerate</td><td>Operational identifier belongs on fact without attributes</td><td>Creating empty dimension adds no value</td></tr>
+  <tr><td>Junk</td><td>Bundle low-cardinality flags</td><td>Unrelated flags evolve at different rates</td></tr>
+  <tr><td>Role-playing</td><td>One dimension serves order_date, ship_date, etc.</td><td>Alias/semantic role must remain explicit</td></tr>
+  <tr><td>Bridge</td><td>Represent many-to-many membership</td><td>Join multiplication changes fact grain</td></tr>
+  <tr><td>Late-arriving</td><td>Fact arrives before descriptive record</td><td>Unknown key must later be repaired consistently</td></tr>
+</tbody></table>
+</section>
+
+<section id="m8">
+  <h2><span class="num">M8</span> Star versus snowflake</h2>
+  <p class="sub">The modern tradeoff is query simplicity and joins versus centralized dimension maintenance.</p>
+<pre>STAR                               SNOWFLAKE
+             product                         product
+                |                               |
+customer -- sales_fact -- date         subcategory <- product
+                |                               |
+              store                         category
+
+fewer joins                         normalized hierarchy
+easy for consumers                  updates centralized
+repeated attributes compress well   more joins + more semantic paths</pre>
+<table><thead><tr><th>Choice</th><th>Gives</th><th>Costs</th></tr></thead><tbody>
+  <tr><td>Star</td><td>Predictable joins, comprehensible query surface</td><td>Repeated dimension attributes and update pipelines</td></tr>
+  <tr><td>Snowflake</td><td>Normalized hierarchy and reduced update duplication</td><td>Join count, optimizer dependence, consumer confusion</td></tr>
+</tbody></table>
+<div class="note"><span class="lbl">Correction to an old argument</span>In columnar stores, repeated low-cardinality dimension values often compress extremely well. Storage duplication alone is no longer a decisive reason to snowflake.</div>
+</section>
+
+<section id="m9">
+  <h2><span class="num">M9</span> Slowly changing dimensions, types 1-6</h2>
+  <p class="sub">The real choice is which temporal question the model must answer.</p>
+<pre>CUSTOMER 7 MOVES: WEST -> NORTH at t2
+
+TYPE 1: overwrite
+[7, NORTH]                  answers current only
+
+TYPE 2: add version
+[surrogate 70, 7, WEST,  t0..t2)
+[surrogate 71, 7, NORTH, t2..open)  answers as-was by valid time
+
+TYPE 3: add previous column
+[7, current=NORTH, previous=WEST]   one prior value only
+
+TYPE 4: current + separate history table
+current[7,NORTH] + history[7,WEST,t0,t2]
+
+TYPE 5: mini-dimension + current-profile reference
+historical profile on fact; current profile also reachable
+
+TYPE 6: 1 + 2 + 3 hybrid
+version rows + current value propagated + prior value</pre>
+<table><thead><tr><th>Question</th><th>Required behavior</th><th>Likely pattern</th><th>Cost</th></tr></thead><tbody>
+  <tr><td>What is true now?</td><td>Latest value only</td><td>Type 1</td><td>History destroyed</td></tr>
+  <tr><td>What was true when event occurred?</td><td>Versioned valid intervals</td><td>Type 2</td><td>Row growth and interval joins</td></tr>
+  <tr><td>Restate history using current organization</td><td>Current attribute reachable from old facts</td><td>Type 5/6 or explicit dual model</td><td>More columns/joins and update logic</td></tr>
+  <tr><td>What did system believe at reporting time?</td><td>Record system time as well as valid time</td><td>Bi-temporal extension</td><td>Two time axes and correction semantics</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Boundary</span>Type 2 captures changing business validity only if effective times are trustworthy. It does not by itself preserve when the warehouse learned or corrected that history.</div>
+</section>
+
+<section id="m10">
+  <h2><span class="num">M10</span> 3NF, Data Vault, and One Big Table</h2>
+  <p class="sub">Each pattern chooses a different place to pay integration and query complexity.</p>
+<pre>3NF                         DATA VAULT                    OBT
+entities + relations       HUBS: business keys          one wide consumer table
+normalized once            LINKS: relationships         joins paid upstream
+joins at read              SATELLITES: history          fast/simple reads
+                            integration first
+
+WRITE CHANGE               SOURCE CHANGE                QUERY CHANGE
+3NF protects updates       Vault isolates sources       OBT may require rebuild</pre>
+<table><thead><tr><th>Pattern</th><th>Best pressure</th><th>Main cost / boundary</th></tr></thead><tbody>
+  <tr><td>3NF</td><td>Consistent operational entities and updates</td><td>Analytical queries traverse many relations</td></tr>
+  <tr><td>Data Vault</td><td>Auditability, source integration, historization</td><td>Many tables; business marts still required</td></tr>
+  <tr><td>OBT</td><td>Stable high-volume consumption with simple reads</td><td>Duplication, update complexity, mixed-grain risk</td></tr>
+</tbody></table>
+</section>
+
+<section id="m11">
+  <h2><span class="num">M11</span> Physical design</h2>
+  <p class="sub">Logical truth stays constant while layout changes the amount of work required to retrieve it.</p>
+<pre>TABLE: 10 TB, common predicate date + tenant_id
+
+PARTITION by date
+year/month/day directories
+   -> eliminate whole partitions
+   -> too-fine key creates small files and metadata load
+
+CLUSTER within partition by tenant_id
+similar tenant ids colocated
+   -> narrower file/row-group min-max ranges
+   -> more selective pruning
+
+FILE SIZE
+too small -> open/list/plan overhead
+too large -> weak parallelism + coarse rewrite/pruning unit</pre>
+<h4>Causal chain</h4>
+<pre>query predicate aligns with partition/cluster key
+   -> metadata rejects physical units
+   -> fewer bytes scanned
+   -> lower latency and billed scan cost
+
+wrong key / high-cardinality partition
+   -> many tiny partitions
+   -> metadata and file overhead dominate</pre>
+<div class="life"><span class="lbl">Verify</span>Hold rows and query fixed. Rewrite with two layouts; compare files opened, row groups skipped, bytes scanned, elapsed time, and rewrite cost.</div>
+</section>
+
+<section id="m12">
+  <h2><span class="num">M12</span> Semantic and metric layers</h2>
+  <p class="sub">A shared formula is insufficient unless grain, filters, time, and version are shared too.</p>
+<pre>"ACTIVE CUSTOMER"
+      |
+      +-- event: login or purchase?
+      +-- window: 7, 28, or 30 days?
+      +-- identity: user, account, household?
+      +-- exclusions: employee/test/refund?
+      +-- timezone and late corrections?
+      `-- definition version effective when?
+                    |
+                    v
+             METRIC CONTRACT
+       inputs + grain + formula + filters
+       owner + freshness + version + lineage
+                    |
+          +---------+---------+
+          v                   v
+       dashboard            experiment
+          |                   |
+          +------ same -------+
+                 meaning</pre>
+<table><thead><tr><th>Gain</th><th>Mechanism</th><th>Boundary</th></tr></thead><tbody>
+  <tr><td>Consistent metrics</td><td>Central versioned definition compiled into consumer queries</td><td>Consumers can still bypass it</td></tr>
+  <tr><td>Change impact</td><td>Metric lineage to physical columns and models</td><td>Only as complete as instrumentation</td></tr>
+  <tr><td>Temporal correctness</td><td>Definition version and effective interval</td><td>Restating old reports is a product decision, not just recomputation</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Failure</span>Two dashboards can use the same formula over different grains and both look reasonable. The semantic layer cannot repair missing source grain; it only governs meaning over data that exists.</div>
+</section>
+
+<section id="depth">
+  <h2><span class="num">::</span> Depth boundary</h2>
+  <table><thead><tr><th>Must understand now</th><th>Useful later</th><th>Source-code / research depth</th></tr></thead><tbody>
+    <tr><td>Lifecycle boundaries; OLTP/OLAP pressure; three architecture axes; grain sentence; fact types; dimension cardinality; star/snowflake; temporal questions; physical pruning; metric contract</td><td>Detailed Data Vault patterns, SCD 5/6 implementation variants, allocation bridges, bi-temporal correction workflows, semantic-layer products</td><td>Temporal database theory, automated physical design, query-aware clustering, metric compiler architecture</td></tr>
+  </tbody></table>
+</section>
+
+<section id="connections">
+  <h2><span class="num">::</span> Connection to the rest of the Forge</h2>
+<pre>L0 layout + table formats -> M3 architecture + M11 physical design
+
+M5 grain ----------------> M6 facts -> M7 dimensions -> M9 history
+   |                         |
+   |                         `-------> L6 uniqueness + reconciliation
+   `--------------------------------> L5 merge key + idempotency
+
+M4 boundedness -----------> L4 windows + watermarks
+
+M9 temporal truth -------> L5 backfills + L7 financial audit
+
+M12 metric contract -----> L6 lineage/contracts + L8 catalog</pre>
+  <div class="cpy"><span class="lbl">Source branch</span>Use <a href="../../forge/modelling.html"><strong>Forge L1 · Data Architecture &amp; Modelling</strong></a> for dependencies, resources, and lab specifications. This page explains mechanisms; it does not claim lab completion.</div>
+</section>
+
+</main></div>
+<nav class="pagenav"><a class="pn prev" href="l0-substrate.html"><span class="pnk">Previous</span><span class="pnt">L0 · Substrate</span></a><a class="pn up" href="../index.html"><span class="pnk">All</span><span class="pnt">Atmos notes</span></a><a class="pn next" href="l2-spark.html"><span class="pnk">Next</span><span class="pnt">L2 · Spark</span></a></nav>
+<footer>Atmos · L1 reference collection · mechanisms to verify, not observations claimed</footer>
+</body>
+</html>

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L8 Data Platform Engineering - Atmos Reference Notes</title>
+<meta name="description" content="Diagram-first reference notes for Forge L8: platform product thinking, golden paths, ingestion, compute, storage, catalog, DX, access, cost, and deprecation." />
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/pages.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+<header><div class="hwrap"><div class="brand">Mitesh <span>&middot;</span> notebook</div><nav class="sitenav">
+<a href="../../index.html">Home</a><a href="../../tracks/index.html">Tracks</a><a href="../../atlas/index.html">Atlas</a><a href="../../forge/index.html">Forge</a><a href="../index.html" class="on">Atmos</a>
+</nav></div><div id="bar"></div></header>
+<div class="shell">
+<nav id="toc">
+<h4>Orientation</h4><a href="#model">One-screen model</a>
+<h4>Product and paths</h4><a href="#e1">E1 · Platform as product</a><a href="#e2">E2 · Golden paths</a><a href="#e3">E3 · Self-service ingestion</a>
+<h4>Shared substrate</h4><a href="#e4">E4 · Compute platform</a><a href="#e5">E5 · Storage standard</a><a href="#e6">E6 · Catalog</a><a href="#e7">E7 · Developer experience</a>
+<h4>Promises</h4><a href="#e8">E8 · Access control</a><a href="#e9">E9 · Cost management</a><a href="#e10">E10 · Migration</a><a href="#e11">E11 · When not to build</a>
+<h4>Boundary</h4><a href="#depth">Depth boundary</a><a href="#connections">Forge connections</a>
+</nav>
+<main>
+<p class="crumbs"><a href="../../index.html">Home</a><span>/</span><a href="../index.html">Atmos</a><span>/</span>L8 · Platform</p>
+<div class="hero">
+<div class="kicker">Reference collection L8 &middot; 11 mechanisms &middot; source-grounded, not lab evidence</div>
+<h1>Data Platform Engineering</h1>
+<p class="dropcap">A platform turns one solution into a promise used by teams the builders may never meet.
+The discipline is therefore as much about <em>what not to promise</em> as what to ship.</p>
+<div class="why"><b>The reconstruction test.</b> For every capability, name the user, alternative path,
+time to first success, metadata contract, isolation boundary, unit cost, migration owner, and withdrawal plan.</div>
+<div class="tags"><span class="tag">#platform-product</span><span class="tag t2">#golden-path</span><span class="tag t3">#catalog</span><span class="tag">#deprecation</span></div>
+</div>
+
+<section id="model">
+<h2><span class="num">00</span> One-screen mental model</h2>
+<p class="sub">A platform converts repeated team work into one supported path governed by metadata and measured adoption.</p>
+<pre>DATA TEAM NEED
+     |
+     +-- build bespoke path alone
+     `-- use PLATFORM GOLDEN PATH
+                    |
+          +---------+----------+
+          v         v          v
+      scaffold   policy     observability
+          |      by default      |
+          +---------+------------+
+                    v
+              shared capabilities
+ingestion | compute | storage | catalog | CI | access | cost
+                    |
+                    v
+adoption + time-to-first-success + reliability + unit economics
+                    |
+                    v
+EXPAND -> MIGRATE CONSUMERS -> CONTRACT OLD PROMISE
+
+every adopted interface becomes compatibility and migration debt</pre>
+<div class="note"><span class="lbl">Evidence status</span>This is a source-grounded mechanism reference. VERIFY blocks name product and system evidence; no platform outcome is claimed.</div>
+</section>
+
+<section id="e1">
+<h2><span class="num">E1</span> Platform as product</h2>
+<p class="sub">Internal users have an alternative: scripts, tickets, copied data, or another platform. Capability without adoption has no leverage.</p>
+<pre>USER JOB
+"ship a governed pipeline"
+      |
+      +---+----------------+
+      v                    v
+PLATFORM PATH          ALTERNATIVE PATH
+documented?            script / direct cloud / ticket
+fast first success?    known local control
+reliable?              hidden long-term cost
+      |
+      v
+ADOPTION DECISION
+perceived platform value - switching/friction cost
+      |
+      v
+REPEATED USE -> standardization -> compounding reliability/cost leverage</pre>
+<table><thead><tr><th>Measure</th><th>What it reveals</th><th>Anti-metric</th></tr></thead><tbody>
+<tr><td>Time to first successful production use</td><td>Actual onboarding friction</td><td>Number of platform features</td></tr>
+<tr><td>Eligible workload adoption</td><td>Whether users choose the path</td><td>Total accounts created</td></tr>
+<tr><td>Task success and support burden</td><td>Reliability and usability together</td><td>Infrastructure uptime alone</td></tr>
+<tr><td>Retention/repeat use</td><td>Whether first use delivered value</td><td>Mandated enrollment</td></tr>
+</tbody></table>
+<div class="rule"><span class="lbl">Product boundary</span>A mandate can force compliance but cannot create usability. Workarounds, copied data, and shadow systems are evidence that the offered path does not solve the user job.</div>
+</section>
+
+<section id="e2">
+<h2><span class="num">E2</span> Golden paths and adoption</h2>
+<p class="sub">A golden path is the easiest supported route for the common case, not the only permitted architecture.</p>
+<pre>80% COMMON CASE
+template + defaults + CI + deployment + telemetry
+         |
+         v
+    GOLDEN PATH: one paved route
+         |
+    +--------+---------+
+    v                  v
+known extension point   escape hatch with owner/cost
+for bounded variation   for genuine exceptional need
+
+make right behavior default:
+contract + lineage + encryption + tags + alerts
+are emitted automatically, not remembered from a checklist</pre>
+<table><thead><tr><th>Design choice</th><th>Gives</th><th>Failure</th></tr></thead><tbody>
+<tr><td>Opinionated defaults</td><td>Fast consistency for common workloads</td><td>Wrong defaults become systemic</td></tr>
+<tr><td>Extension points</td><td>Variation without abandoning platform</td><td>Unbounded plugins recreate bespoke estate</td></tr>
+<tr><td>Escape hatch</td><td>Honest support for exceptions</td><td>Easy escape makes golden path irrelevant</td></tr>
+<tr><td>Measured adoption funnel</td><td>Locates friction from discover to production</td><td>Mandates distort the signal</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Give a representative team a real task without platform help. Record time, failures, documentation searches, support contacts, and points where they leave the path.</div>
+</section>
+
+<section id="e3">
+<h2><span class="num">E3</span> Self-service ingestion</h2>
+<p class="sub">Self-service compiles a bounded declaration into a complete supported lifecycle.</p>
+<pre>TEAM DECLARATION
+source: postgres/orders
+mode: cdc
+owner: payments
+classification: restricted
+freshness_slo: 10m
+retention: 7y
+    |
+    v
+VALIDATE CONTRACT + POLICY + CAPACITY
+    |
+    v
+CONTROL PLANE GENERATES
++ connector and credentials reference
++ landing table and table format
++ schema/compatibility checks
++ lineage and catalog registration
++ quality/freshness monitors
++ cost and ownership tags
++ runbook and lifecycle hooks
+    |
+    v
+OBSERVABLE DATA PRODUCT, not merely a running connector</pre>
+<table><thead><tr><th>Stage</th><th>Failure to expose</th><th>Control</th></tr></thead><tbody>
+<tr><td>Provision</td><td>Invalid source/key/retention request</td><td>Policy and contract validation before resources</td></tr>
+<tr><td>Bootstrap</td><td>Snapshot/stream gap</td><td>Versioned boundary and reconciliation</td></tr>
+<tr><td>Operate</td><td>Lag, schema break, source WAL growth</td><td>SLOs, alerts, owner/runbook</td></tr>
+<tr><td>Retire</td><td>Orphaned credentials/data/consumers</td><td>Lineage-aware decommission workflow</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Boundary</span>A form that opens an operations ticket is not self-service. The user must receive a working governed capability without synchronous platform-team intervention for the supported case.</div>
+</section>
+<section id="e4">
+<h2><span class="num">E4</span> The compute platform</h2>
+<p class="sub">Isolation by workload behavior protects promises better than one pool per organization chart.</p>
+<pre>SHARED CAPACITY
+     |
+     v
+WORKLOAD CLASSIFIER
+  +-- production streaming -> reserved, stable, strict change control
+  +-- scheduled batch -----> deadline/SLO-aware queue
+  +-- interactive/ad hoc --> short timeout, burst quota
+  `-- backfill ------------> low priority, rate-limited, preemptible
+         |
+         v
+POOLS / QUEUES + QUOTAS + PRIORITIES
+         |
+         v
+SCHEDULER places work; telemetry attributes wait/run/cost
+
+team-based pool alone:
+one team's backfill and production still compete inside same boundary</pre>
+<table><thead><tr><th>Control</th><th>Gives</th><th>Cost / boundary</th></tr></thead><tbody>
+<tr><td>Quota</td><td>Caps one workload's share</td><td>Unused capacity may strand without borrowing</td></tr>
+<tr><td>Priority/preemption</td><td>Protects urgent work</td><td>Low-priority starvation and wasted partial work</td></tr>
+<tr><td>Timeout/default limits</td><td>Stops runaway queries/jobs</td><td>Legitimate large work needs reviewed exception</td></tr>
+<tr><td>Workload pools</td><td>Failure and contention isolation</td><td>Fragmentation and scheduler complexity</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Run a production-sized workload while a backfill saturates its pool. Measure queue time, runtime, SLO impact, preemption, and unused capacity.</div>
+</section>
+
+<section id="e5">
+<h2><span class="num">E5</span> Storage and table-format standardization</h2>
+<p class="sub">One widely adopted contract creates more leverage than a technically superior format used by half the estate.</p>
+<pre>WITHOUT STANDARD
+team A: Parquet folders + custom commits
+team B: Delta conventions
+team C: Iceberg, different names/retention
+     |
+     v
+every engine/tool implements N combinations
+
+STANDARD TABLE CONTRACT
++ one table format and catalog integration
++ file-size/layout defaults
++ naming and ownership
++ schema/partition evolution rules
++ retention, snapshot expiry, compaction
++ interoperability test suite
+     |
+     v
+engine x reads every governed table
+quality/lineage/access/cost attach once</pre>
+<table><thead><tr><th>Gain</th><th>Causal mechanism</th><th>Cost</th></tr></thead><tbody>
+<tr><td>Interoperability</td><td>Shared metadata and behavior contract</td><td>Feature choice constrained to common support</td></tr>
+<tr><td>Operational leverage</td><td>One compaction/retention/tooling path</td><td>Migration and central ownership</td></tr>
+<tr><td>Governance coverage</td><td>Policy hooks at standard boundary</td><td>Nonstandard data needs explicit quarantine/exception</td></tr>
+</tbody></table>
+<div class="rule"><span class="lbl">Adoption threshold</span>Standardization compounds only when teams actually use it. Compatibility tests and migration support matter more than declaring a preferred format.</div>
+</section>
+
+<section id="e6">
+<h2><span class="num">E6</span> The catalog</h2>
+<p class="sub">Search is one view; the catalog is the shared metadata substrate queried by every platform capability.</p>
+<pre>INSTRUMENTED SYSTEMS
+pipelines | query engines | contracts | IAM | cost | quality
+     \        |             |          |      /
+      +-------+-------------+----------+-----+
+                |
+                v
+             CATALOG GRAPH
+dataset/table/column
++ schema + versions
++ owner + domain
++ lineage upstream/downstream
++ classification + policy
++ freshness + quality/SLO
++ usage + consumers
++ cost + lifecycle state
+                |
+     +----------------+----------------+
+     v                v                v
+discovery          access decision   migration impact
+     v                v                v
+user search       policy engine      deprecation workflow</pre>
+<table><thead><tr><th>Population method</th><th>Reliability</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Runtime instrumentation</td><td>Observed assets and dependencies</td><td>Uninstrumented paths invisible</td></tr>
+<tr><td>Contract/provisioning event</td><td>Ownership/classification at creation</td><td>Must evolve with runtime state</td></tr>
+<tr><td>Manual form</td><td>Captures human semantics</td><td>Stales quickly without ownership workflow</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Failure</span>A catalog populated by a one-time crawl becomes a graveyard. Metadata must be emitted by the systems whose behavior it represents and carry freshness of its own.</div>
+</section>
+
+<section id="e7">
+<h2><span class="num">E7</span> Developer experience</h2>
+<p class="sub">The platform's real interface is the feedback loop from intent to local evidence to production.</p>
+<pre>developer intent
+    |
+    v
+scaffold command -> runnable local/sandbox example
+    |
+    v
+edit definition/code
+    |
+    v
+fast checks: contract + unit + sample data + policy
+    |
+    v
+PR preview
+plan diff + output diff + cost estimate + lineage impact
+    |
+    v
+deploy through same production path
+    |
+    v
+linked run, logs, metrics, owner, rollback
+
+time-to-first-success < time-to-build-workaround</pre>
+<table><thead><tr><th>Capability</th><th>Gives</th><th>Anti-pattern</th></tr></thead><tbody>
+<tr><td>Local/sandbox parity</td><td>Cheap iteration on real contracts</td><td>Mock path unlike production</td></tr>
+<tr><td>Scaffold</td><td>Correct defaults and discoverable extension points</td><td>Generated architecture larger than problem</td></tr>
+<tr><td>CI output/plan diff</td><td>Behavior review before deploy</td><td>Green syntax tests with changed data result</td></tr>
+<tr><td>Preview environment</td><td>Integration evidence in isolation</td><td>Slow expensive environment per trivial edit</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Verify</span>Measure median/p90 time from empty directory to first governed output, edit-to-feedback latency, failure recovery time, and support contacts for a first-time user.</div>
+</section>
+<section id="e8">
+<h2><span class="num">E8</span> Access control at platform scale</h2>
+<p class="sub">Policy attached to classification and purpose scales better than grants attached manually to table names.</p>
+<pre>CATALOG METADATA
+column=card_number
+classification=PCI
+region=IN
+owner=payments
+    |
+    v
+POLICY EVALUATION
+subject role + purpose + location + approval + expiry
+    |
+    +-- deny
+    +-- allow masked/tokenized
+    `-- allow raw + audit
+
+REQUEST LIFECYCLE
+request -> owner/policy approval -> time-bound grant -> use audit -> expiry
+
+lineage propagates sensitivity to derived columns unless explicitly declassified</pre>
+<table><thead><tr><th>Control</th><th>Gives</th><th>Boundary</th></tr></thead><tbody>
+<tr><td>Role/group policy</td><td>Manage identities in aggregates</td><td>Roles become broad without lifecycle review</td></tr>
+<tr><td>Attribute/classification policy</td><td>Rules follow data meaning</td><td>Metadata quality becomes security-critical</td></tr>
+<tr><td>Mask/tokenize</td><td>Reduced exposure for common use</td><td>Linkability or privileged reversal remains</td></tr>
+<tr><td>Expiry and audit</td><td>Access does not persist silently</td><td>Exports and copied data can escape enforcement</td></tr>
+</tbody></table>
+</section>
+
+<section id="e9">
+<h2><span class="num">E9</span> Cost management and chargeback</h2>
+<p class="sub">Cost control starts by making consumption attributable and understandable, not by imposing limits blindly.</p>
+<pre>RESOURCE EVENTS
+compute seconds | bytes scanned | storage | network | licenses
+    |
+    v
+CATALOG + JOB/QUERY TAGS
+owner | workload | dataset | tenant | environment
+    |
+    v
+ATTRIBUTED UNIT COST
+per pipeline run | TB processed | query | tenant | product
+    |
+    v
+SHOWBACK -> budget/forecast alerts -> quota/optimization -> optional chargeback
+
+visibility first: team can remove waste without gaming a billing rule</pre>
+<table><thead><tr><th>Stage</th><th>Behavior created</th><th>Risk</th></tr></thead><tbody>
+<tr><td>Showback</td><td>Owners see cost consequences</td><td>No incentive when ownership lacks budget</td></tr>
+<tr><td>Budget/alert</td><td>Intervene on rate change before month end</td><td>Static budget ignores growth/value</td></tr>
+<tr><td>Quota</td><td>Bounds shared-resource harm</td><td>Can block valuable work</td></tr>
+<tr><td>Chargeback</td><td>Strong local incentive</td><td>Allocation disputes and optimization of accounting rather than system</td></tr>
+</tbody></table>
+<div class="rule"><span class="lbl">Decision unit</span>Compare cost with value or SLO at the same unit. "This table costs 10" is incomplete; "this certified report costs 10 per day and prevents 100 of manual/incident cost" can be defended.</div>
+</section>
+
+<section id="e10">
+<h2><span class="num">E10</span> Migration and deprecation</h2>
+<p class="sub">An adopted interface cannot simply disappear; migration is part of the original feature cost.</p>
+<pre>OLD API / FORMAT / PATH v1
+       |
+       | EXPAND
+       +-- introduce v2 alongside v1
+       +-- dual read/write or compatibility adapter
+       +-- publish migration tooling and deadline
+       |
+       | MIGRATE
+       +-- lineage finds consumers
+       +-- owners move and compare behavior
+       +-- usage telemetry proves traffic leaves v1
+       |
+       | CONTRACT
+       +-- block new v1 adoption
+       +-- remove remaining dependency by explicit exception
+       `-- retire v1 and operational burden
+
+"no queries seen" without complete telemetry != no consumers</pre>
+<table><thead><tr><th>Mechanism</th><th>Gives</th><th>Cost / boundary</th></tr></thead><tbody>
+<tr><td>Expand-migrate-contract</td><td>Compatibility during transition</td><td>Temporary dual systems and longer support</td></tr>
+<tr><td>Lineage + usage</td><td>Consumer inventory and progress</td><td>Exports/offline readers may be invisible</td></tr>
+<tr><td>Automated adapter/tool</td><td>Reduces consumer migration effort</td><td>Adapter can preserve old semantics indefinitely</td></tr>
+<tr><td>Deprecation budget at launch</td><td>Lifecycle cost recognized early</td><td>Reduces apparent initial delivery speed</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Promise accounting</span>Every new capability incurs future compatibility, support, and withdrawal work. A feature without an owner and deprecation path is permanent accidental infrastructure.</div>
+</section>
+
+<section id="e11">
+<h2><span class="num">E11</span> When not to build a platform</h2>
+<p class="sub">Platform investment pays only when repeated problems, real users, and adoption can amortize the control plane.</p>
+<pre>PROPOSED PLATFORM
+      |
+      +-- repeated problem across several teams? -------- no -> solve locally
+      +-- users and alternatives observed directly? ----- no -> discovery first
+      +-- stable common path dominates variation? ------- no -> abstractions premature
+      +-- team can own support/migration for years? ------ no -> do not promise
+      +-- adoption value exceeds switching friction? ---- no -> improve path
+      `-- measurable leverage over bespoke solutions? --- yes -> build smallest path
+
+START
+one real user + one end-to-end golden path + one reliability promise
+      |
+      v
+measure repeat use before generalizing</pre>
+<table><thead><tr><th>Build</th><th>Buy/use managed service</th><th>Keep local</th></tr></thead><tbody>
+<tr><td>Unique repeated requirement creates strategic leverage and ownership exists</td><td>Capability is commodity and vendor boundary is acceptable</td><td>One/few workloads, high variation, or no adoption evidence</td></tr>
+</tbody></table>
+<div class="life"><span class="lbl">Falsifier</span>If a representative team cannot complete the supported job faster and more safely than its existing path, the platform has not yet earned expansion.</div>
+</section>
+
+<section id="depth"><h2><span class="num">::</span> Depth boundary</h2>
+<table><thead><tr><th>Must understand now</th><th>Useful later</th><th>Source-code / research depth</th></tr></thead><tbody><tr><td>Platform user/alternative; golden-path adoption; declarative ingestion; workload-class isolation; storage standard; catalog as substrate; first-success loop; classification policy; showback/chargeback; expand-migrate-contract; build threshold</td><td>Control-plane implementation, multi-region catalogs, policy engines, workload schedulers, internal developer portals, migration automation</td><td>Platform API evolution, scheduling/fairness research, metadata graph systems, organizational platform economics</td></tr></tbody></table>
+</section>
+
+<section id="connections"><h2><span class="num">::</span> Connection to the rest of the Forge</h2>
+<pre>L0 table format ----------> E5 storage standard
+L2 compute/resource ------> E4 workload isolation
+L5 ingestion/backfill ---> E3 self-service + E4 pools
+L6 contracts/lineage ----> E6 catalog
+       |                    +-> E8 policy
+       |                    +-> E9 cost
+       `--------------------`-> E10 deprecation
+L7 user/requirements -----> E1 platform product
+
+L8 turns every earlier mechanism into a supported promise</pre>
+<div class="cpy"><span class="lbl">Source branch</span>Use <a href="../../forge/platform.html"><strong>Forge L8 · Data Platform Engineering</strong></a> for dependencies, resources, and its mini-platform laboratory. This page explains mechanisms; it does not claim lab completion.</div>
+</section>
+</main>
+</div>
+<nav class="pagenav"><a class="pn prev" href="l7-system-design.html"><span class="pnk">Previous</span><span class="pnt">L7 · System design</span></a><a class="pn up" href="../index.html"><span class="pnk">All</span><span class="pnt">Atmos notes</span></a></nav>
+<footer>Atmos · L8 reference collection · promises to evaluate, not features to collect</footer>
+</body>
+</html>

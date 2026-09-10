@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L7 Data System Design - Atmos Reference Notes</title>
+<meta name="description" content="Diagram-first reference notes for Forge L7: a data-system design method and seven worked design shapes with explicit tradeoffs and failures." />
+<link rel="stylesheet" href="../../assets/base.css" />
+<link rel="stylesheet" href="../../assets/pages.css" />
+<script src="../../assets/nav.js" defer></script>
+</head>
+<body>
+<header><div class="hwrap"><div class="brand">Mitesh <span>&middot;</span> notebook</div><nav class="sitenav">
+<a href="../../index.html">Home</a><a href="../../tracks/index.html">Tracks</a><a href="../../atlas/index.html">Atlas</a><a href="../../forge/index.html">Forge</a><a href="../index.html" class="on">Atmos</a>
+</nav></div><div id="bar"></div></header>
+<div class="shell">
+<nav id="toc">
+<h4>Orientation</h4><a href="#model">One-screen model</a><a href="#method">The method</a>
+<h4>Design cases</h4><a href="#d1">D1 · Clickstream</a><a href="#d2">D2 · Real-time analytics</a><a href="#d3">D3 · CDC warehouse</a><a href="#d4">D4 · Financial audit</a><a href="#d5">D5 · Feature platform</a><a href="#d6">D6 · Reporting</a><a href="#d7">D7 · Multi-tenant SaaS</a>
+<h4>Boundary</h4><a href="#depth">Depth boundary</a><a href="#connections">Forge connections</a>
+</nav>
+<main>
+<p class="crumbs"><a href="../../index.html">Home</a><span>/</span><a href="../index.html">Atmos</a><span>/</span>L7 · System Design</p>
+<div class="hero">
+<div class="kicker">Reference collection L7 &middot; method + 7 cases &middot; source-grounded</div>
+<h1>Data System Design</h1>
+<p class="dropcap">The task is not to name the best architecture. It is to discover the requirements
+that control the architecture, compare viable options, and state <em>what the selected design trades away</em>.</p>
+<div class="why"><b>The reconstruction test.</b> Start with a consumer decision and estimated data shape.
+Every box in the design must answer a requirement; every arrow must name data, ordering, and a failure boundary.</div>
+<div class="tags"><span class="tag">#requirements</span><span class="tag t2">#estimation</span><span class="tag t3">#tradeoffs</span><span class="tag">#failure-modes</span></div>
+</div>
+
+<section id="model">
+<h2><span class="num">00</span> One-screen mental model</h2>
+<p class="sub">Requirements and data characteristics narrow options; six axes make the sacrifice visible.</p>
+<pre>CONSUMER + DECISION
+        |
+        v
+QUANTIFIED REQUIREMENTS
+latency | correctness | retention | access | recovery
+        |
+        v
+DATA CHARACTERISTICS
+volume | velocity | cardinality | skew | lateness | mutability | retention
+        |
+        v
+AT LEAST TWO OPTIONS
+        |
+        v
+TRADEOFF MATRIX
+throughput | latency | correctness | evolution | cost | recovery
+        |
+        v
+CHOSEN DESIGN + explicit rejected option
+        |
+        v
+FAILURE SIGNAL -> CONTAINMENT -> RECOVERY -> CATCH-UP MATH</pre>
+<div class="note"><span class="lbl">Evidence status</span>These are reference design reconstructions, not claims that the systems were built. Validate estimates and failure behavior against the stated workload.</div>
+</section>
+
+<section id="method">
+<h2><span class="num">M</span> The method</h2>
+<p class="sub">Do not draw until the consumer, stakes, and data shape have constrained the options.</p>
+<pre>1. REQUIREMENTS
+        who consumes? what decision? acceptable latency/wrongness/loss?
+                         |
+2. DATA CHARACTERISTICS
+        volume, velocity, cardinality, skew, lateness, mutability, retention
+                         |
+3. OPTIONS
+        at least two viable shapes; include the simple one
+                         |
+4. TRADEOFFS
+        throughput, latency, correctness, schema evolution, cost, recovery
+                         |
+5. DESIGN
+        boxes own state; arrows name records/bytes and delivery semantics
+                         |
+6. FAILURE MODES
+        failure -> signal -> containment -> recovery -> residual loss
+                         |
+7. COST
+        storage + compute + network + operations + people</pre>
+
+<h4>The first five minutes</h4>
+<table><thead><tr><th>Question</th><th>What it controls</th></tr></thead><tbody>
+<tr><td>Who consumes this, and what decision follows?</td><td>Correctness stakes, serving shape, and latency value</td></tr>
+<tr><td>What number does "real time" mean?</td><td>Batch, micro-batch, or continuous operation</td></tr>
+<tr><td>Average and peak volume/rate?</td><td>Capacity, partitioning, burst buffer, cost</td></tr>
+<tr><td>Can data mutate or arrive late?</td><td>CDC, temporal model, corrections, state</td></tr>
+<tr><td>Retention, residency, and audience?</td><td>Storage tiers, deletion, access, regions</td></tr>
+</tbody></table>
+
+<h4>Seven characteristics</h4>
+<pre>VOLUME       bytes/day and total retained bytes
+VELOCITY     events/sec, bytes/sec, burst shape
+CARDINALITY  distinct keys and state/aggregate explosion
+SKEW         hottest key/tenant versus median
+LATENESS     event-to-arrival delay distribution
+MUTABILITY   append, update, delete, correction frequency
+RETENTION    online, replay, audit, and deletion horizons</pre>
+
+<h4>Six tradeoff axes</h4>
+<table><thead><tr><th>Axis</th><th>Quantifying question</th><th>Mechanism it pressures</th></tr></thead><tbody>
+<tr><td>Throughput</td><td>Average/peak events or bytes per second?</td><td>Partition count, batching, parallelism</td></tr>
+<tr><td>Latency</td><td>How stale may the answer be?</td><td>Batch interval, serving store, state</td></tr>
+<tr><td>Correctness</td><td>What is cost of loss, duplicate, or wrong value?</td><td>Replication, idempotency, reconciliation</td></tr>
+<tr><td>Evolution</td><td>How do old/new producers and consumers coexist?</td><td>Contracts, versions, expand-migrate-contract</td></tr>
+<tr><td>Cost</td><td>Storage, compute, network, and staffing?</td><td>Retention, tiers, managed versus self-run</td></tr>
+<tr><td>Recovery</td><td>How much may be lost, and how fast must backlog drain?</td><td>Replay source, spare capacity, checkpoints</td></tr>
+</tbody></table>
+
+<h4>Numbers before products</h4>
+<pre>500,000 events/s x 1 KB = 500 MB/s
+500 MB/s x 86,400 s   ~= 43.2 TB/day before replication/compression
+
+30 days x 43.2 TB/day ~= 1.30 PB logical input
+
+BACKLOG RECOVERY
+arrival rate             = r
+processing capacity      = c x r, where c > 1
+net backlog drain rate   = (c - 1) x r
+outage duration          = T
+backlog                  = r x T
+catch-up time            = T / (c - 1)
+
+At total capacity 2r: catch-up = T, not T/2.
+At total capacity 3r: catch-up = T/2.</pre>
+<div class="trap"><span class="lbl">Arithmetic correction</span>Processing at twice the ongoing arrival rate leaves only one arrival-rate of spare capacity. A 24-hour backlog therefore takes 24 hours to drain while new data continues arriving.</div>
+</section>
+<section id="d1">
+<h2><span class="num">D1</span> Clickstream and event ingestion at scale</h2>
+<p class="sub">Pressure: bursty client events need durable replay, low-loss ingestion, schema evolution, and both raw and fast aggregate consumers.</p>
+<pre>WEB / MOBILE CLIENTS
+        |
+        v
+EDGE COLLECTORS -- validate envelope, auth, batch, rate-limit
+        |
+        v
+KAFKA partitioned by stable session/device key
+        |
+        +------------------------+
+        v                        v
+RAW ARCHIVE                 STREAM PROCESSOR
+object storage              dedup + enrich + windows
+open columnar table              |
+        |                        v
+        v                   REAL-TIME STORE
+batch correction/backfill   dashboards/alerts
+        |
+        +-----------> warehouse / governed models
+
+schema registry + producer contract guard every entry</pre>
+<table><thead><tr><th>Decision</th><th>Why</th><th>Tradeoff / failure</th></tr></thead><tbody>
+<tr><td>Session/device partition key</td><td>Preserves useful local order and distributes users</td><td>Bots/shared IDs create hot partitions</td></tr>
+<tr><td>Raw immutable archive</td><td>Replay, audit, new models</td><td>Retention, privacy, and schema interpretation cost</td></tr>
+<tr><td>At-least-once ingest + event ID</td><td>Retry ambiguous network writes</td><td>Consumers must deduplicate within identity horizon</td></tr>
+<tr><td>Fast aggregate plus batch correction</td><td>Low latency and eventual reconciliation</td><td>Two result paths can temporarily disagree</td></tr>
+</tbody></table>
+<h4>Failure reconstruction</h4>
+<pre>celebrity/bot key owns 20% traffic
+ -> one Kafka partition saturates
+ -> one stream subtask lags
+ -> global watermark can stall
+ -> dashboard freshness fails while cluster average looks healthy
+
+signal: per-partition bytes/lag + key-frequency sketch + operator watermark</pre>
+</section>
+
+<section id="d2">
+<h2><span class="num">D2</span> Real-time analytics serving</h2>
+<p class="sub">Fixed aggregates, ad-hoc scans, and point lookups are different workloads and need not share one serving engine.</p>
+<pre>EVENT STREAM
+     |
+     +-- streaming transforms --> OLAP SERVING (Pinot/Druid-like)
+     |                            fixed dimensions, sub-second slices
+     |
+     +-- raw/open table --------> WAREHOUSE / LAKEHOUSE
+     |                            broad ad-hoc analysis, higher latency
+     |
+     `-- keyed projection ------> KV / CACHE
+                                  latest state and point lookup
+
+SEMANTIC CONTRACT
+same event meaning + dimension definitions + correction policy
+     |
+     v
+prevents three serving layers from becoming three truths</pre>
+<table><thead><tr><th>Workload</th><th>Shape</th><th>Main failure</th></tr></thead><tbody>
+<tr><td>Interactive aggregate</td><td>Pre-indexed/pre-aggregated dimensions</td><td>Cardinality explosion and expensive segment rebuild</td></tr>
+<tr><td>Ad-hoc analysis</td><td>Columnar scan with elastic compute</td><td>Unbounded query cost and weaker tail latency</td></tr>
+<tr><td>Point lookup</td><td>Keyed materialized current state</td><td>Weak historical/ad-hoc capability</td></tr>
+</tbody></table>
+<h4>Cardinality pressure</h4>
+<pre>dimensions: country 200 x device 20 x campaign 1M x minute 1,440
+naive cube cells ~= 5.76 trillion combinations
+                 |
+                 v
+precompute only high-value bounded combinations
+keep raw events for questions not known in advance</pre>
+</section>
+
+<section id="d3">
+<h2><span class="num">D3</span> CDC replication to a warehouse</h2>
+<p class="sub">Pressure: move committed inserts, updates, and deletes without polling production or allowing late records to overwrite newer state.</p>
+<pre>POSTGRES / SOURCE DB
+transactions -> WAL
+                |
+                v
+CDC CONNECTOR (schema + LSN/source position)
+                |
+                v
+KAFKA CHANGE TOPICS ---------> immutable raw change archive
+                |
+                v
+STREAM / MICRO-BATCH MERGE
+apply by primary key only if incoming LSN > stored LSN
+                |
+                v
+WAREHOUSE CURRENT + HISTORY TABLES
+                ^
+                |
+SCHEDULED RECONCILIATION
+source snapshot/key totals vs target at comparable boundary</pre>
+<table><thead><tr><th>Failure</th><th>Signal</th><th>Response</th></tr></thead><tbody>
+<tr><td>Connector stalls</td><td>Source-position lag and replication-slot/WAL bytes grow</td><td>Page before source disk fills; restore or advance safely</td></tr>
+<tr><td>Out-of-order delivery</td><td>Incoming LSN below stored version</td><td>Reject stale update; retain metric</td></tr>
+<tr><td>Tombstone/delete lost</td><td>Reconciliation finds source-target key difference</td><td>Repair target and fix retention horizon</td></tr>
+<tr><td>Schema change</td><td>Compatibility/decode failure</td><td>Pause at contract boundary; expand then migrate</td></tr>
+</tbody></table>
+<div class="rule"><span class="lbl">Source protection</span>The CDC consumer is part of production database reliability. Its maximum tolerable outage is bounded by WAL disk headroom and log generation rate, not merely by warehouse freshness.</div>
+</section>
+<section id="d4">
+<h2><span class="num">D4</span> Financial transaction analytics with audit requirements</h2>
+<p class="sub">Pressure: reproduce what was reported, preserve corrections, and distinguish when reality changed from when the system learned it.</p>
+<pre>PAYMENT / LEDGER SOURCE
+committed transaction + immutable business identity
+              |
+              v
+DURABLE CHANGE LOG / RAW ARCHIVE
+              |
+              v
+BI-TEMPORAL WAREHOUSE
+valid_time:  when transaction is true in business
+system_time: when this version became known to warehouse
+              |
+              +-- current corrected report
+              `-- as-reported reconstruction at snapshot ID
+
+REPORT RECORD
+definition_version + input_snapshot_ids + code_version + generated_at
+              |
+              v
+same report can be reproduced and differences explained</pre>
+<table><thead><tr><th>Failure/requirement</th><th>Mechanism</th><th>Cost</th></tr></thead><tbody>
+<tr><td>Late transaction</td><td>Versioned exception path and temporal restatement</td><td>Published totals may need controlled correction</td></tr>
+<tr><td>Audit asks "what did you know then?"</td><td>System-time history and pinned report snapshot</td><td>More storage and temporal query complexity</td></tr>
+<tr><td>Duplicate payment event</td><td>Stable transaction identity and idempotent ledger/load</td><td>Identity governance across systems</td></tr>
+<tr><td>Mutation of history</td><td>Append correction/version; never silently overwrite report basis</td><td>Consumers must choose as-is versus as-was view</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Boundary</span>Exactly-once transport does not prove financial correctness. Reconciliation to an authoritative ledger and preserved report inputs are separate controls.</div>
+</section>
+
+<section id="d5">
+<h2><span class="num">D5</span> Feature platform for ML</h2>
+<p class="sub">Pressure: training needs historical point-in-time values; serving needs the latest value at low latency; both must implement one definition.</p>
+<pre>RAW EVENTS + ENTITY CHANGES
+            |
+            v
+VERSIONED FEATURE DEFINITION
+            |
+      +----+---------------------+
+      v                          v
+OFFLINE COMPUTE              STREAM / INCREMENTAL COMPUTE
+historical feature rows      latest feature updates
+      |                          |
+      v                          v
+OFFLINE STORE                ONLINE STORE
+open table                   low-latency key lookup
+      |                          |
+point-in-time join              model serving
+      |                          |
+      +----------- parity -------+
+
+training row at label time T may use only source state available at/before T</pre>
+<table><thead><tr><th>Failure</th><th>Mechanism</th><th>Evidence</th></tr></thead><tbody>
+<tr><td>Future leakage</td><td>Point-in-time temporal join</td><td>Feature event/system time never exceeds label cutoff</td></tr>
+<tr><td>Training-serving skew</td><td>Shared definition and parity sample</td><td>Offline and online values compared by entity/version</td></tr>
+<tr><td>Stale online feature</td><td>Freshness SLO and version timestamp</td><td>Serving lag distribution</td></tr>
+<tr><td>Hot entity/key</td><td>Partition/cache design</td><td>Per-key traffic and tail latency</td></tr>
+</tbody></table>
+<div class="rule"><span class="lbl">Core boundary</span>"One feature definition" is not enough if offline and online paths use different event-time, late-data, default, or correction semantics.</div>
+</section>
+
+<section id="d6">
+<h2><span class="num">D6</span> Large-scale reporting and the semantic layer</h2>
+<p class="sub">Pressure: hundreds of consumers need consistent metrics without making every query wait for one central team.</p>
+<pre>GOVERNED SOURCES
+        |
+        v
+CONFORMED DIMENSIONS + DECLARED FACT GRAINS
+        |
+        v
+VERSIONED TRANSFORMATION MODELS
+        |
+        v
+SEMANTIC / METRIC CONTRACT
+formula + filters + grain + time + owner + version
+        |
+        +-----------+-----------+
+        v           v           v
+certified       team-owned   exploratory
+reports         derived      analysis
+high trust      bounded SLA  no production promise
+
+catalog + lineage + usage + cost make each tier visible</pre>
+<table><thead><tr><th>Pressure</th><th>Design response</th><th>Failure</th></tr></thead><tbody>
+<tr><td>Metric disagreement</td><td>Versioned semantic contract</td><td>Teams bypass slow process and fork logic</td></tr>
+<tr><td>Central bottleneck</td><td>Tiered trust and delegated ownership</td><td>Boundaries become unclear without catalog labels</td></tr>
+<tr><td>Schema change</td><td>Lineage impact and compatibility gate</td><td>Uninstrumented extracts remain invisible</td></tr>
+<tr><td>Runaway query cost</td><td>Attribution, budgets, precomputation by usage</td><td>Optimization can freeze low-value aggregates</td></tr>
+</tbody></table>
+<div class="trap"><span class="lbl">Adoption failure</span>If governed delivery is materially slower than copying data and writing local SQL, consumers route around it. The shadow system is a product signal, not merely disobedience.</div>
+</section>
+
+<section id="d7">
+<h2><span class="num">D7</span> Multi-tenant SaaS data architecture</h2>
+<p class="sub">Tenant size follows a power law; one uniform physical strategy is wrong for both the long tail and the largest tenants.</p>
+<pre>TENANTS BY DATA / TRAFFIC
+many tiny tenants -------------------------- few whales
+|..............................................####|
+
+LONG TAIL                         LARGE TENANT
+shared tables/compute             isolated partition/pool or dedicated path
+tenant_id in key/filter           explicit quota and capacity
+low unit cost                     noisy-neighbor containment
+
+CONTROL PLANE
+tenant catalog -> tier, region, retention, encryption, quota, owner
+        |
+        v
+route ingest / compute / storage / serving by policy
+
+GLOBAL VIEW requires federation/aggregation across placement tiers</pre>
+<table><thead><tr><th>Choice</th><th>Gives</th><th>Costs / boundary</th></tr></thead><tbody>
+<tr><td>Fully shared</td><td>High utilization and simple fleet</td><td>Noisy neighbors, large scans, isolation risk</td></tr>
+<tr><td>Database/schema per tenant</td><td>Stronger isolation and lifecycle</td><td>Operational explosion for long tail</td></tr>
+<tr><td>Tiered hybrid</td><td>Shared economics plus whale isolation</td><td>Routing, migration, and cross-tier query complexity</td></tr>
+<tr><td>Tenant-based partitioning</td><td>Pruning and locality</td><td>Tiny partitions for small tenants, giant partitions for whales</td></tr>
+</tbody></table>
+<h4>Failure reconstruction</h4>
+<pre>one whale launches backfill
+ -> shared pool saturated
+ -> long-tail freshness SLO fails
+ -> average utilization appears efficient
+
+signal: cost/bytes/slots/latency by tenant percentile, not only cluster average
+response: workload-class pool + tenant quota + isolated whale path</pre>
+</section>
+
+<section id="depth"><h2><span class="num">::</span> Depth boundary</h2>
+<table><thead><tr><th>Must understand now</th><th>Useful later</th><th>Source-code / research depth</th></tr></thead><tbody><tr><td>Consumer-first requirements; seven characteristics; six axes; order-of-magnitude estimates; option comparison; explicit failure signals; recovery math; all seven case-specific pressure points</td><td>Vendor selection matrices, detailed capacity benchmarks, regional topology, disaster-recovery runbooks, regulatory implementation specifics</td><td>Queueing/capacity models, formal consistency, storage-engine architecture, scheduling and cost optimization research</td></tr></tbody></table>
+</section>
+
+<section id="connections"><h2><span class="num">::</span> Connection to the rest of the Forge</h2>
+<pre>L0 layout/atomicity ----+
+L1 grain/history -------+
+L2 compute/shuffle -----+
+L3 partition/delivery --+--> L7 option and failure vocabulary
+L4 time/state ----------+
+L5 replay/CDC ----------+
+L6 contracts/lineage ---+
+                         |
+                         v
+                 L8 platform promises</pre>
+<div class="cpy"><span class="lbl">Source branch</span>Use <a href="../../forge/system-design.html"><strong>Forge L7 · Data System Design</strong></a> for the full practice cases and interview interruptions. This page is the compact reconstruction reference.</div>
+</section>
+</main>
+</div>
+<nav class="pagenav"><a class="pn prev" href="l6-reliability.html"><span class="pnk">Previous</span><span class="pnt">L6 · Reliability</span></a><a class="pn up" href="../index.html"><span class="pnk">All</span><span class="pnt">Atmos notes</span></a><a class="pn next" href="l8-platform.html"><span class="pnk">Next</span><span class="pnt">L8 · Platform</span></a></nav>
+<footer>Atmos · L7 reference collection · designs to defend, not diagrams to memorize</footer>
+</body>
+</html>
